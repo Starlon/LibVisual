@@ -1,3 +1,0 @@
-
-SUBDIRS = @BUILD_INPUT@ 
-
