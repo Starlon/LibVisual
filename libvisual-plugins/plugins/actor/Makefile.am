@@ -1,2 +1,0 @@
-SUBDIRS = @BUILD_ACTOR@
-
