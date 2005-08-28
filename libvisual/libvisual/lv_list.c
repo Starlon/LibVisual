@@ -5,7 +5,7 @@
  *			  	Sepp Wijnands <mrrazz@nerds-incorporated.org>,
  *			   	Tom Wimmenhove <nohup@nerds-incorporated.org>
  *
- *	$Id: lv_list.c,v 1.10 2004-08-25 11:23:11 synap Exp $
+ *	$Id: lv_list.c,v 1.1.1.1 2004-06-20 19:48:26 synap Exp $
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -29,10 +29,7 @@
 #include <string.h>
 #include <fcntl.h>
 
-#include <lvconfig.h>
 #include "lv_list.h"
-#include "lv_log.h"
-#include "lv_mem.h"
 
 /**
  * @defgroup VisList VisList
@@ -49,7 +46,11 @@ VisList *visual_list_new ()
 {
 	VisList *list;
 
-	list = visual_mem_new0 (VisList, 1);
+	list = malloc (sizeof (VisList));
+	if (list == NULL)
+		return NULL;
+
+	memset (list, 0, sizeof (VisList));
 
 	return list;
 }
@@ -63,11 +64,10 @@ VisList *visual_list_new ()
  */
 int visual_list_free (VisList *list)
 {
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 
-	visual_mem_free (list);
-
-	list = NULL;
+	free (list);
 
 	return 0;
 }
@@ -90,17 +90,15 @@ int visual_list_destroy (VisList *list, visual_list_destroy_func_t destroyer)
 	VisListEntry *le = NULL;
 	void *elem;
 
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 		
-	/* Walk through the given list, possibly calling the destroyer for it */
-	if (destroyer == NULL) {
-		while ((elem = visual_list_next (list, &le)) != NULL)
-			visual_list_delete (list, &le);
-	} else {
-		while ((elem = visual_list_next (list, &le)) != NULL) {
+	/* Walk through the given list and call the destroyer for it */
+	while ((elem = visual_list_next (list, &le)) != NULL) {
+		if (destroyer != NULL)
 			destroyer (elem);
-			visual_list_delete (list, &le);
-		}
+
+		visual_list_delete (list, &le);
 	}
 
 	visual_list_free (list);
@@ -125,9 +123,6 @@ int visual_list_destroy (VisList *list, visual_list_destroy_func_t destroyer)
  */
 inline void *visual_list_next(VisList *list, VisListEntry **le)
 {
-	visual_log_return_val_if_fail (list != NULL, NULL);
-	visual_log_return_val_if_fail (le != NULL, NULL);
-
 	if (*le == NULL)
 		*le = list->head;
 	else
@@ -152,13 +147,10 @@ inline void *visual_list_next(VisList *list, VisListEntry **le)
  * 	currently. To begin traversing at the end of the list do:
  * 	VisList *le = NULL and pass it as &le in the argument.
  *
- * @return The data element of the previous entry, or NULL.
+ * @return The Data element of the previous entry, or NULL.
  */
 inline void *visual_list_prev(VisList *list, VisListEntry **le)
 {
-	visual_log_return_val_if_fail (list != NULL, NULL);
-	visual_log_return_val_if_fail (le != NULL, NULL);
-
 	if (!*le)
 		*le = list->tail;
 	else
@@ -186,11 +178,10 @@ void *visual_list_get (VisList *list, int index)
 	void *data = NULL;
 	int i, lc;
 
-	visual_log_return_val_if_fail (list != NULL, NULL);
-	visual_log_return_val_if_fail (index > 0, NULL);
-
 	lc = visual_list_count (list);
 
+	if (lc <= 0)
+		return NULL;
 	if (lc - 1 < index)
 		return NULL;
 	
@@ -217,10 +208,16 @@ int visual_list_add_at_begin (VisList *list, void *data)
 {
 	VisListEntry *current, *next;
 
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 
 	/* Allocate memory for new list entry */
-	current = visual_mem_new0 (VisListEntry, 1);
+	current = malloc (sizeof (VisListEntry));
+	if (current == NULL)
+		return -1;
+
+	/* Clear out memory */
+	memset (current, 0, sizeof (VisListEntry));
 
 	/* Assign data element */
 	current->data = data;
@@ -254,9 +251,16 @@ int visual_list_add (VisList *list, void *data)
 {
 	VisListEntry *current, *prev;
 	
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 
-	current = visual_mem_new0 (VisListEntry, 1);
+	/* Allocate memory for new list entry */
+	current = malloc (sizeof (VisListEntry));
+	if (current == NULL)
+		return -1;
+
+	/* Clear out memory */
+	memset (current, 0, sizeof (VisListEntry));
 
 	/* Assign data element */
 	current->data = data;
@@ -298,11 +302,15 @@ int visual_list_insert (VisList *list, VisListEntry **le, void *data)
 {
 	VisListEntry *prev, *next, *current;
 	
-	visual_log_return_val_if_fail (list != NULL, -1);
-	visual_log_return_val_if_fail (le != NULL, -1);
-	visual_log_return_val_if_fail (data != NULL, -1);
+	if (list == NULL || le == NULL || data == NULL)
+		return -1;
 	
-	current = visual_mem_new0 (VisListEntry, 1);
+	current = malloc (sizeof (VisListEntry));
+	if (current == NULL)
+		return -1;
+
+	/* Clear out memory */
+	memset (current, 0, sizeof (VisListEntry));
 
 	/* Assign data element */
 	current->data = data;
@@ -355,16 +363,14 @@ int visual_list_delete (VisList *list, VisListEntry **le)
 {
 	VisListEntry *prev, *current, *next;
 	
-	visual_log_return_val_if_fail (list != NULL, -1);
-	visual_log_return_val_if_fail (le != NULL, -1);
+	if (list == NULL)
+		return -1;
 	
 	prev = current = next = NULL;
 
 	/* Valid list entry ? */
-	if (*le == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "There is no list entry to delete");
+	if (*le == NULL)
 		return -1; /* Nope */
-	}
 
 	/* Point new to le's previous entry */
 	current = *le;
@@ -387,7 +393,7 @@ int visual_list_delete (VisList *list, VisListEntry **le)
 
 	/* Free 'old' pointer */
 	list->count--;
-	visual_mem_free (current);
+	free (current);
 
 	return 0;
 }
@@ -404,7 +410,8 @@ int visual_list_count (VisList *list)
 	VisListEntry *le = NULL;
 	int count = 0;
 	
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 	
 	/* Walk through list */
 	while (visual_list_next (list, &le) != NULL) 
@@ -414,6 +421,54 @@ int visual_list_count (VisList *list)
 
 	return count;
 }
+
+#if 0
+int visual_list_sort(VisList *list, visual_list_sort_func_t compare)
+{
+	VisListEntry *le, **al;
+	int count, i, ptr = 0;
+	
+	if (list == NULL || compare == NULL)
+		return -1;
+	
+	count = visual_list_count (list);
+	if (count < 1)
+		return -1;
+	
+	al = malloc (count * sizeof (VisListEntry *));
+	if (al == NULL)
+		return -1;
+
+	/* Clear pointer memory */
+	memset (al, 0, count * sizeof (VisListEntry *));
+	
+	/* Copy all list entry pointers into al */
+	le = list->head;
+	while (le != NULL)  {
+		al[ptr++] = le;
+		le = le->next;
+	}
+	
+	/* Use qsort to sort this list for us */
+	qsort (al, count, sizeof (VisListEntry *), compare);
+
+	/* Empty list, reconstruct it */
+	for (i = 0; i < count - 1; i++) {
+		al[i]->next = al[i+1];
+		al[i+1]->prev = al[i];
+	}
+	
+	al[0]->prev = NULL;
+	al[count-1]->next = NULL;
+
+	list->head = al[0];
+	list->tail = al[count-1];
+
+	/* Done */
+	free (al);
+	return 0;
+}
+#endif
 
 /**
  * @}

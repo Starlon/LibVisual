@@ -17,8 +17,8 @@ inputs:
 		Esd plugin isn't timing, should be fixed when buffer queues land before 0.2 (post 0.1)
 		ESD BLOCKS ON LIKE EVERYTHING (post 0.1) (if it is fixable at all)
 	alsa:
-		Fix the small issues within the plugin
-
+		I would be VERY VERY VERY VERY (VERY) happy if someone could make a good working
+			alsa capture plugin, i tried and failed. (someone else)
 
 	usound:
 		Make an usound server plugin (someone else)
@@ -40,15 +40,6 @@ inputs:
 actors:
 	GLPLUGINS:
 		make sure the states are being resetted very well.
-
-	plazma:
-		valgrind.
-		cleanup the code.
-		translate from french to english (some of the code).
-
-	jakdaw:
-		cleanup, hang the configs to params, have some automatic
-		config cycling.
 
 	infinity:
 		build tables in strides instead of blocking (post 0.2)
@@ -86,18 +77,19 @@ x		steal from xmms
 		use the libvisual palette blender
 		fix the 24 bit mode again.
 	
+	gforce: (post 0.3)
+		port that gforce that i've got laying around to a very nice plugin
+			(if someone wants to do this, mail me so i can send
+			you my hacky, not any more working source tree, it's working again,
+			as an xmms plugin using SDL! now we need to port it to libvisual :))
+
 	a gdkpixbuf image loader:
-		implement depth requester, (needs bits in libvisual as well).
-		implement support for alpha transparency.
-		implement support for animated image files.
+		make
 
 	auto sched plugin:
 		have a auto schedded bin running in an actor so that
 			gstreamer, xine and such can easily use
 			the auto scheduler.
-
-	bin in actor:
-		have a plugin that embeds a complete bin. that is configurable through params.
 
 	More: (post 0.2)
 		When api is stable, start porting over some more xmms plugins.
@@ -111,16 +103,10 @@ morph: (lots of these effects can be taken from the demo world, this should turn
 	tentacle:
 		optimize
 
-	slide:
-		make.
-
 	flash:
 		make 16, 24, 32 bits support.
 
 	blockwise flash in, like in the ODD demo:
-		make.
-
-	negative flash:
 		make.
 
 	something:

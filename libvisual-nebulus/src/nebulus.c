@@ -78,7 +78,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (NebulusPrivate));
 	memset (priv, 0, sizeof (NebulusPrivate));
 
-	lv_nebulus->priv = priv;
+	lv_nebulus->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = lv_nebulus;
@@ -88,6 +88,8 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int lv_nebulus_init (VisActorPlugin *plugin)
 {
+	NebulusPrivate *priv = plugin->private;
+
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxtexsize);
 	if (maxtexsize < 256) {
 		visual_log (VISUAL_LOG_CRITICAL, "Nebulus: max texture size is lower than 256\n");
@@ -104,7 +106,7 @@ int lv_nebulus_init (VisActorPlugin *plugin)
 
 int lv_nebulus_cleanup (VisActorPlugin *plugin)
 {
-	NebulusPrivate *priv = plugin->priv;
+	NebulusPrivate *priv = plugin->private;
 
 	if (!face_first)
 		glDeleteLists(facedl, 1);
@@ -121,13 +123,6 @@ int lv_nebulus_cleanup (VisActorPlugin *plugin)
 	delete_gl_texture(texchild);
 	delete_gl_texture(childbg);
 	delete_gl_texture(energy);
-
-	visual_video_free_buffer (&child_image);
-	visual_video_free_buffer (&energy_image);
-	visual_video_free_buffer (&tentacle_image);
-	visual_video_free_buffer (&tunnel_image);
-	visual_video_free_buffer (&twist_image);
-	visual_video_free_buffer (&background_image);
 
 	free (priv);
 
@@ -155,6 +150,8 @@ int lv_nebulus_requisition (VisActorPlugin *plugin, int *width, int *height)
 
 int lv_nebulus_dimension (VisActorPlugin *plugin, VisVideo *video, int width, int height)
 {
+	GLfloat ratio;
+	
 	visual_video_set_dimension (video, width, height);
 
 	glViewport (0, 0, width, height);
@@ -175,8 +172,6 @@ int lv_nebulus_events (VisActorPlugin *plugin, VisEventQueue *events)
 				lv_nebulus_dimension (plugin, ev.resize.video,
 						ev.resize.width, ev.resize.height);
 				break;
-			default:
-				break;
 		}
 	}
 
@@ -190,8 +185,8 @@ VisPalette *lv_nebulus_palette (VisActorPlugin *plugin)
 
 int lv_nebulus_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio)
 {
-	nebulus_sound (plugin->priv, audio);
-	nebulus_draw (plugin->priv, video);
+	nebulus_sound (plugin->private, audio);
+	nebulus_draw (plugin->private, video);
 
 	return 0;
 }
@@ -200,7 +195,7 @@ static int nebulus_calc_fps (NebulusPrivate *priv)
 {
 	// FIXME make
 	framerate = 25;
-	return 40;
+
 }
 
 static int nebulus_random_effect ()

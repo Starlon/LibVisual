@@ -1,273 +1,78 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(Libvisual Library, 0.1.6, synap@nerds-incorporated.org, libvisual)
+AC_INIT(Libvisual Library, 0.1.5, synap@nerds-incorporated.org, libvisual)
 AM_INIT_AUTOMAKE([1.7.0 dist-bzip2])
 
-AC_CONFIG_HEADER(config.h)
+AM_CONFIG_HEADER(config.h)
 
-AC_PREFIX_DEFAULT(/usr)
+AM_DISABLE_STATIC
 
 # Checks for programs.
+AM_PROG_LIBTOOL
 AC_PROG_CC
 AC_PROG_LN_S
 
-AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+# Checks for header files.
+AC_HEADER_DIRENT
+AC_HEADER_STDC
+AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h sys/time.h unistd.h])
 
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+AC_CHECK_FUNCS([memset sqrt strdup])
+
+# Default prefix
+AC_PREFIX_DEFAULT(/usr)
+
+#
+# Find pkg-config
+#
 AC_PATH_PROG(PKG_CONFIG, [pkg-config], [no])
 if test x$PKG_CONFIG = xno ; then
   AC_MSG_WARN([*** pkg-config not found. See http://www.freedesktop.org/software/pkgconfig/.
 	       *** You will need pkg-config to compile against Libvisual Library])
 fi
+
 if $PKG_CONFIG --atleast-pkgconfig-version 0.14 ; then
   :
 else
   AC_MSG_WARN([*** pkg-config too old; version 0.14 or better recommended.])
 fi
 
-# Checks for header files.
-AC_HEADER_DIRENT
-AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h sys/types.h stdlib.h string.h sys/time.h unistd.h])
-
-#
-# In future, we will set here a flags indicating we have or not OpenGl.
-# First, CONFIG_HEADER must be removed.
-#
-#usable_opengl=0
-#AC_CHECK_HEADERS([GL/gl.h GL/glx.h GL/glu.h],opengl="yes",opengl="no")
-#if test x"$opengl" = xno; then
-#	AC_MSG_WARN([
-#*** OpenGl and Glu headers not found, the opengl examples won't be build
-#	])
-#else
-#	usable_opengl=1
-#fi
-#AC_DEFINE([USABLE_OPENGL], [$usable_opengl])
-
-# Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_C_INLINE
-AC_TYPE_SIZE_T
-
-AC_MSG_CHECKING(for ISO C99 varargs macros in C)
-AC_TRY_COMPILE([],[
-		int a(int p1, int p2, int p3);
-		#define call_a(...) a(1,__VA_ARGS__)
-		call_a(2,3);
-		],lv_have_iso_c_varargs=yes,lv_have_iso_c_varargs=no)
-AC_MSG_RESULT($lv_have_iso_c_varargs)
-
-AC_MSG_CHECKING(for GNUC varargs macros)
-AC_TRY_COMPILE([],[
-		int a(int p1, int p2, int p3);
-		#define call_a(params...) a(1,params)
-		call_a(2,3);
-		],lv_have_gnuc_varargs=yes,lv_have_gnuc_varargs=no)
-AC_MSG_RESULT($lv_have_gnuc_varargs)
-
-AC_C_BIGENDIAN(bigendian=yes, bigendian=no, )
-
-# Checks for library functions.
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
-AC_CHECK_FUNCS([memset sqrt strdup])
-# FIXME: Replace `main' with a function in `-lGL':
-AC_CHECK_LIB([GL], [main])
-# FIXME: Replace `main' with a function in `-lGLU':
-AC_CHECK_LIB([GLU], [main])
-
-# check for type sizes
-AC_CHECK_SIZEOF(short)
-AC_CHECK_SIZEOF(int)
-AC_CHECK_SIZEOF(long)
-AC_CHECK_SIZEOF(size_t)
-                                                                                                               
-dnl Try to figure out whether visual_size should be long or int
-AC_MSG_CHECKING([for the appropriate definition for size_t])
-                                                                                                               
-case $ac_cv_sizeof_size_t in
-$ac_cv_sizeof_short)
-  visual_size_type=short
-  ;;
-$ac_cv_sizeof_int)
-  visual_size_type=int
-  ;;
-$ac_cv_sizeof_long)
-  visual_size_type=long
-  ;;
-*)  AC_MSG_ERROR([No type matching size_t in size])
-	;;
-esac
-
-AC_MSG_RESULT(unsigned $visual_size_type)
-
-# Arguments to specify certain features.
-build_subdirs="libvisual tools"
-AC_ARG_ENABLE([examples],
-            AC_HELP_STRING([--enable-examples],
-                           [Build example programs @<:@default=disabled@:>@]),
-	    [examples=$enableval],
-	    [examples=no])
-AC_MSG_CHECKING([wheter to build example programs])
-if test "$examples" = yes; then
-  AC_MSG_RESULT([yes])
-  # Find SDL to build the examples.
-  AC_PATH_PROG(SDL_CONFIG, [sdl-config], [no])
-  if test x$SDL_CONFIG = xno ; then
-    AC_MSG_ERROR([
-*** sdl-config not found.
-*** If you have installed from binaries, probably you have not 
-*** installed SDL development package.
-*** See http://www.libsdl.org
-    ])
-  fi
-  # On success, this will set and substitute SDL_CFLAGS and SDL_LIBS
-  AM_PATH_SDL(1.2.0,,AC_MSG_ERROR([*** SDL >= 1.2.0 not installed - please install first]))
-  build_subdirs="$build_subdirs examples"
-else
-  AC_MSG_RESULT([no])
-fi
-AC_SUBST(BUILD_SUBDIRS, "$build_subdirs")
-
-AC_ARG_ENABLE([debug],
-            AC_HELP_STRING([--enable-debug],
-                           [Enable debug @<:@default=disabled@:>@]),
-	    [debug=$enableval],
-	    [debug=no])
-AC_MSG_CHECKING([wheter to enable debug])
-if test "$debug" = yes; then
-  AC_MSG_RESULT([yes])
-  DEBUG_CFLAGS="-ggdb3"
-else
-  AC_MSG_RESULT([no])
-  DEBUG_CFLAGS=""
-fi
-AC_SUBST(DEBUG_CFLAGS)
-
 libs_dynamic_loader="-ldl"
+AC_SUBST(CFLAGS, "-I./ -O2 -Wall -rdynamic -ggdb")
 AC_SUBST(LIBS_DYNAMIC_LOADER, "$libs_dynamic_loader")
 
-VISUAL_CFLAGS="-I${includedir}"
 VISUAL_LIBS="-L${libdir} -lvisual -lm -ldl"
+VISUAL_CFLAGS="-I${includedir}"
+
 AC_SUBST(VISUAL_CFLAGS)
 AC_SUBST(VISUAL_LIBS)
 
-# Terrible hack, but otherwise the CFLAGS are passed as last arguments
-# to compiler, and this way these arguments (probably -g -O2) overrides
-# our -O3 flag on libvisual/Makefile.am
-AC_SUBST(CFLAGS, "")
-
-dnl Output the LibVisual config file
-AC_CONFIG_COMMANDS([lvconfig.h],
-[
-	outfile=lvconfig.h-tmp
-	cat > $outfile <<\_______EOF
-/* lvconfig.h
- *
- * This is a generated file.  Please modify 'configure.ac'
- */
-
-#ifndef __LV_CONFIG_H__
-#define __LV_CONFIG_H__
-
-_______EOF
-
-        if test x$lv_have_iso_c_varargs = xyes ; then
-                cat >>$outfile <<_______EOF
-#ifndef __cplusplus
-# define LV_HAVE_ISO_VARARGS	(1)
-#endif
-_______EOF
-        fi
-
-        if test x$lv_have_gnuc_varargs = xyes ; then
-                cat >>$outfile <<_______EOF
-
-/* gcc-2.95.x supports both gnu style and ISO varargs, but if -ansi
- * is passed ISO vararg support is turned off, and there is no work
- * around to turn it on, so we unconditionally turn it off.
- */
-#if __GNUC__ == 2 && __GNUC_MINOR__ == 95
-#  undef LV_HAVE_ISO_VARARGS
-#endif
-
-#define LV_HAVE_GNUC_VARARGS	(1)
-_______EOF
-       fi
-
-        if test x$bigendian = xyes ; then
-                cat >>$outfile <<_______EOF
-
-#define VISUAL_BIG_ENDIAN	(1)
-#define VISUAL_LITTLE_ENDIAN 	(0)
-_______EOF
-	else
-                cat >>$outfile <<_______EOF
-
-#define VISUAL_BIG_ENDIAN	(0)
-#define VISUAL_LITTLE_ENDIAN	(1)
-_______EOF
-        fi
-
-  		cat >>$outfile <<_______EOF
-
-typedef unsigned $visual_size_type visual_size_t;
-#define VISUAL_SIZE_T_FORMAT	$visual_size_format
-
-_______EOF
-
-echo >>$outfile
-echo "#endif /* LV_CONFIG_H */" >>$outfile
-echo >>$outfile
-
-        if cmp -s $outfile lvconfig.h; then
-		AC_MSG_NOTICE([lvconfig.h is unchanged])
-		rm -f $outfile
-        else
-		mv $outfile lvconfig.h
-        fi
-
-],[
-   lv_have_iso_c_varargs=$lv_have_iso_c_varargs
-   lv_have_gnuc_varargs=$lv_have_gnuc_varargs
-   visual_size_type=$visual_size_type
-
-case $visual_size_type in
-short)
-  visual_size_format='"hu"'
-  ;;
-int)
-  visual_size_format='"u"'
-  ;;
-long)
-  visual_size_format='"lu"'
-  ;;
-esac
-
-])
-				    
 AC_CONFIG_FILES([
 Makefile
 libvisual.pc
 libvisual/Makefile
-examples/Makefile
-tools/Makefile
 ])
+#examples/Makefile	This are not included in the package
 #tests/Makefile		This are not included in the package
 
 AC_OUTPUT
 
 echo "
 =====================================================================
-LIBVISUAL, AN AUDIO VISUALISATION ABSTRACTION LIBRARY, VERSION $VERSION
+LIBVISUAL, AN AUDIO VISUALISATION ABSTRACTION LIBRARY $VERSION
 =====================================================================
 
-install path                         : ${prefix}/lib
-compiler                             : ${CC}
-debug enabled                        : ${debug}
-build examples                       : ${examples}
-build morph example                  : ${opengl}
+prefix:                               : ${prefix}
+source code location:                 : ${srcdir}
+compiler:                             : ${CC}
+cflags:                               : ${CFLAGS}
 "
 

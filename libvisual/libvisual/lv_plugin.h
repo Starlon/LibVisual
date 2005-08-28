@@ -11,8 +11,7 @@ extern "C" {
 #include <libvisual/lv_list.h>
 #include <libvisual/lv_songinfo.h>
 #include <libvisual/lv_event.h>
-#include <libvisual/lv_param.h>
-	
+
 /**
  * Enumerate to define the plugin type. Especially used
  * within the VisPlugin system and also used within the plugin
@@ -100,8 +99,6 @@ struct _VisActorPlugin {
 	VisPluginRef			*ref;		/**< Pointer to the plugin reference. */
 	VisPluginInfo			*info;		/**< Pointer to the VisPluginInfo data structure
 							 * containing information about the plugin. */
-	VisParamContainer		 params;	/**< The VisParamContainer that contains the
-							  * parameters for this plugin. */
 	plugin_actor_init_func_t	 init;		/**< The plugin it's initialize function. */
 	plugin_actor_cleanup_func_t	 cleanup;	/**< The plugin it's cleanup function. */
 	plugin_actor_requisition_func_t	 requisition;	/**< The requisition function. This is used to
@@ -120,7 +117,7 @@ struct _VisActorPlugin {
 							 * which is not yet supported. */
 	VisSongInfo			*songinfo;	/**< Pointer to the VisSongInfo structure containing
 							 * information about the current song being played. */
-	void				*priv;		/**< Private to interchange data
+	void				*private;	/**< Private to interchange data
 							 * between the plugin it's methods and functions.
 							 * It's highly adviced that all data is encapsulated in a 
 							 * private so the plugin is reentrant. */
@@ -139,8 +136,6 @@ struct _VisInputPlugin {
 	VisPluginRef			*ref;		/**< Pointer to the plugin reference. */
 	VisPluginInfo			*info;		/**< Pointer to the VisPluginInfo data structure
 							  * containing information about the plugin. */
-	VisParamContainer		 params;	/**< The VisParamContainer that contains the
-							  * parameters for this plugin. */
 	plugin_input_init_func_t	 init;		/**< The plugin it's initialize function. */
 	plugin_input_cleanup_func_t	 cleanup;	/**< The plugin it's cleanup function. */
 	plugin_input_upload_func_t	 upload;	/**< The sample upload function. This is the main function
@@ -149,7 +144,7 @@ struct _VisInputPlugin {
 	void				*handle;	/**< Contains the handle that is given by dlopen. */
 	int				 plugflags;	/**< Plugin flags are hint flags for the plugin loader,
 							  * which is not yet supported. */
-	void				*priv;		/**< Private to interchange data
+	void				*private;	/**< Private to interchange data
 							  * between the plugin it's methods and functions.
 							  * It's highly adviced that all data is encapsulated in a
 							  * private so the plugin is reentrant. */
@@ -169,8 +164,6 @@ struct _VisMorphPlugin {
 	VisPluginRef			*ref;		/**< Pointer to the plugin reference. */
 	VisPluginInfo			*info;		/**< Pointer to the VisPluginInfo data structure
 							  * containing information about the plugin. */
-	VisParamContainer		 params;	/**< The VisParamContainer that contains the
-							  * parameters for this plugin. */
 	plugin_morph_init_func_t	 init;		/**< The plugin it's initialize function. */
 	plugin_morph_cleanup_func_t	 cleanup;	/**< The plugin it's cleanup function. */
 	plugin_morph_palette_func_t	 palette;	/**< The plugin it's palette function. This can be used
@@ -185,7 +178,7 @@ struct _VisMorphPlugin {
 							  * @see VisVideoDepth */
 	int				 plugflags;	/**< Plugin flags are hint flags for the plugin loader,
 							  * Which is not yet supproted. */
-	void				*priv;		/**< Private to interchange data
+	void				*private;	/**< Private to interchange data
 							  * between the plugin it's methods and functions.
 							  * It's highly adviced that all data is encapsulated in a
 							  * private so the plugin is reentrant. */
@@ -205,8 +198,6 @@ struct _LVPlugin {
 	int		 realized;		/**< Is set when the plugin is realized. this
 						  * means that when the plugin it's init function
 						  * has been called. */
-	VisEventQueue	 eventqueue;		/**< The plugin it's private event queue. */
-	
 	union {
 		VisActorPlugin *actorplugin;	/**< Union entry used when the plugin is an actor plugin. */
 		VisInputPlugin *inputplugin;	/**< Union entry used when the plugin is an input plugin. */
@@ -215,43 +206,38 @@ struct _LVPlugin {
 };
 
 /* prototypes */
-int visual_plugin_events_pump (LVPlugin *plugin);
-VisEventQueue *visual_plugin_get_eventqueue (LVPlugin *plugin);
-
 VisPluginInfo *visual_plugin_info_new (char *name, char *author, char *version, char *about, char *help);
 VisPluginInfo *visual_plugin_info_duplicate (VisPluginInfo *pluginfo);
 int visual_plugin_info_free (VisPluginInfo *pluginfo);
-VisPluginInfo *visual_plugin_get_info (LVPlugin *plugin);
-VisParamContainer *visual_plugin_get_params (LVPlugin *plugin);
 
-VisPluginRef *visual_plugin_ref_new (void);
+VisPluginRef *visual_plugin_ref_new ();
 int visual_plugin_ref_free (VisPluginRef *ref);
 int visual_plugin_ref_list_destroy (VisList *list);
 
-VisActorPlugin *visual_plugin_actor_new (void);
+VisActorPlugin *visual_plugin_actor_new ();
 int visual_plugin_actor_free (VisActorPlugin *actorplugin);
 
-VisInputPlugin *visual_plugin_input_new (void);
+VisInputPlugin *visual_plugin_input_new ();
 int visual_plugin_input_free (VisInputPlugin *inputplugin);
 
-VisMorphPlugin *visual_plugin_morph_new (void);
+VisMorphPlugin *visual_plugin_morph_new ();
 int visual_plugin_morph_free (VisMorphPlugin *morphplugin);
 
-LVPlugin *visual_plugin_new (void);
+LVPlugin *visual_plugin_new ();
 int visual_plugin_free (LVPlugin *plugin);
 
-VisList *visual_plugin_get_registry (void);
+VisList *visual_plugin_get_registry ();
 VisList *visual_plugin_registry_filter (VisList *pluglist, VisPluginType type);
 
 char *visual_plugin_get_next_by_name (VisList *list, char *name);
 char *visual_plugin_get_prev_by_name (VisList *list, char *name);
 
-int visual_plugin_unload (LVPlugin *plugin);
-LVPlugin *visual_plugin_load (VisPluginRef *ref);
-int visual_plugin_realize (LVPlugin *plugin);
-VisPluginRef *visual_plugin_get_reference (VisPluginRef *refn, char *pluginpath);
-VisList *visual_plugin_get_list (char **paths);
-VisPluginRef *visual_plugin_find (VisList *list, char *name);
+int _lv_plugin_unload (LVPlugin *plugin);
+LVPlugin *_lv_plugin_load (VisPluginRef *ref);
+int _lv_plugin_realize (LVPlugin *plugin);
+VisPluginRef *_lv_plugin_get_reference (VisPluginRef *refn, char *pluginpath);
+VisList *_lv_plugin_get_list (char **paths);
+VisPluginRef *_lv_plugin_find (VisList *list, char *name);
 
 #ifdef __cplusplus
 }

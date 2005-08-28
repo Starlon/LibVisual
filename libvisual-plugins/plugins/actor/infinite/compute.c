@@ -1,5 +1,3 @@
-#include <config.h>
-
 #include <math.h>
 #include "renderer.h"
 #include "compute.h"

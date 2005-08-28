@@ -3,27 +3,24 @@
 
 #include <SDL/SDL.h>
 
-#include "../libvisual/libvisual.h"
-
+#include <libvisual/libvisual.h>
 
 /* The code in this example is written a bit hacky, but the libvisual code is as it should
  * be used so you could take that and use that as an example */
 
-static SDL_Surface *screen;
-static SDL_Color colors[256];
+SDL_Surface *screen;
+SDL_Color colors[256];
 
 /* The bin in which the visual pipe runs */
-static VisBin *bin;
+VisBin *bin;
 
 /* The video that the bin returns so sdl can draw it */
-static VisVideo *video;
+VisVideo *video;
 
-static int bppres = 1;
-
-static int have_opengl;
+int bppres = 1;
 
 /* Function prototypes */
-void sdl_fullscreen_toggle (void);
+void sdl_fullscreen_toggle ();
 void sdl_fullscreen_xy (int *x, int *y);
 int sdl_fullscreen_set (int mode);
 
@@ -128,8 +125,6 @@ int sdl_fullscreen_set (int mode)
 		default:
 			break;
 	}
-
-	return 0;
 }
 
 /* Sdl stuff */
@@ -152,7 +147,7 @@ void sdl_init (int width, int height)
 	if (SDL_Init (SDL_INIT_VIDEO) < 0)
 	{
 		fprintf (stderr, "Unable to init SDL VIDEO: %s\n", SDL_GetError ());
-		exit (1);
+		exit (0);
 	}
 
 	sdl_create (width, height);
@@ -160,16 +155,7 @@ void sdl_init (int width, int height)
 
 void sdl_create (int width, int height)
 {
-	int video_flags = SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_HWPALETTE | SDL_RESIZABLE;
-
-//	if (have_opengl)
-//		video_flags = SDL_OPENGL | SDL_GL_DOUBLEBUFFER;
-	
-	screen = SDL_SetVideoMode (width, height, bppres * 8, video_flags);
-	if (screen == NULL) {	
-		fprintf (stderr, "Unable to get an SDL video screen: %s\n", SDL_GetError ());
-		exit (1);
-	}
+	screen = SDL_SetVideoMode (width, height, bppres * 8, SDL_RESIZABLE);
 }
 
 void sdl_palette (VisPalette *pal)
@@ -180,9 +166,9 @@ void sdl_palette (VisPalette *pal)
 		return;
 
 	for (i = 0; i < 256; i ++) {
-		colors[i].r = pal->colors[i].r;
-		colors[i].g = pal->colors[i].g;
-		colors[i].b = pal->colors[i].b;
+		colors[i].r = pal->r[i];
+		colors[i].g = pal->g[i];
+		colors[i].b = pal->b[i];
 	}
 	
 	SDL_SetColors (screen, colors, 0, 256);
@@ -195,7 +181,7 @@ int main (int argc, char *argv[])
 	VisPalette *palbin;
 
 	int width = 320, height = 200;
-	VisVideoDepth depthuse = VISUAL_VIDEO_DEPTH_32BIT;
+	int depthuse = VISUAL_VIDEO_DEPTH_32BIT;
 
 	int freeze = 0;
 
@@ -218,16 +204,6 @@ int main (int argc, char *argv[])
 	/* Check libvisual version */
 	printf ("Libvisual version %s\n", visual_get_version ());
 
-	/*
-	 * In future we will conditionally set this
-	 * 
-#ifdef HAVE_OPENGL
-	have_opengl = 1;
-else
-	have_opengl = 0;
-#endif	
-	*/
-	have_opengl = 1;
 	/* Show a list of plugins */
 	if (argc < 4) {
 		printf ("usage: %s plug1 plug2 morph (targetdepth)\n", argv[0]);
@@ -285,8 +261,6 @@ else
 
 	visual_video_set_buffer (video, screen->pixels);
 	
-	visual_bin_set_supported_depth (bin, VISUAL_VIDEO_DEPTH_ALL);
-	
 	visual_bin_set_video (bin, video);
 	visual_bin_connect_by_names (bin, argv[1], "esd");
 	visual_bin_realize (bin);
@@ -318,7 +292,7 @@ else
 			if (SDL_MUSTLOCK (screen) == SDL_TRUE)
 				SDL_UnlockSurface (screen);
 
-			SDL_Flip (screen);
+			SDL_UpdateRect (screen, 0, 0, screen->w, screen->h);
 
 			if (morphing == 1) {
 				if (morph_to < alpha_var)
@@ -387,8 +361,6 @@ else
 						case SDLK_ESCAPE:
 							goto out;
 							break;
-						default: /* to avoid warnings */
-							break;
 					}
 					break;
 
@@ -399,8 +371,6 @@ else
 				case SDL_QUIT:
 					goto out;
 					break;
-				default: /* to avoid warnings */
-					break;
 			}
 		}
 	}
@@ -410,8 +380,7 @@ out:
 	end = time (NULL);
 
 	printf ("Drawn %d frames in %d seconds, average fps %d\n",
-			(int)frames, (int)(end - begin),
-			(end - begin) == 0 ? (int)frames : (int)(frames / (end - begin)));
+			frames, end - begin, (end - begin) == 0 ? frames : frames / (end - begin));
 
 	/* Destroy the bin, this will also destroy everything within the bin, if you
 	 * only want to free the bin, use visual_bin_free */
@@ -419,7 +388,5 @@ out:
 	visual_video_free (video);
 
 	visual_quit ();
-
-	return 0;
 }
 

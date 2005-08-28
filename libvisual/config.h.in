@@ -13,12 +13,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `GL' library (-lGL). */
-#undef HAVE_LIBGL
-
-/* Define to 1 if you have the `GLU' library (-lGLU). */
-#undef HAVE_LIBGLU
-
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
 #undef HAVE_MALLOC
@@ -92,18 +86,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* The size of a `int', as computed by sizeof. */
-#undef SIZEOF_INT
-
-/* The size of a `long', as computed by sizeof. */
-#undef SIZEOF_LONG
-
-/* The size of a `short', as computed by sizeof. */
-#undef SIZEOF_SHORT
-
-/* The size of a `size_t', as computed by sizeof. */
-#undef SIZEOF_SIZE_T
-
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
@@ -124,6 +106,3 @@
 
 /* Define to rpl_realloc if the replacement function should be used. */
 #undef realloc
-
-/* Define to `unsigned' if <sys/types.h> does not define. */
-#undef size_t

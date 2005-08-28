@@ -1,14 +1,8 @@
 #ifndef _LV_COMMON_H
 #define _LV_COMMON_H
 
-#include <sys/types.h>
-
-#include <libvisual/lv_mem.h>
-#include <libvisual/lv_log.h>
-
-#define uint8_t		u_int8_t
-#define uint16_t	u_int16_t
-#define uint32_t	u_int32_t
+/* Include stdint for the exact integral types */
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,21 +12,21 @@ extern "C" {
 /**
  * NULL define.
  */
-#define NULL	(0)
-#endif
-
-#ifndef FALSE
-/**
- * FALSE define.
- */
-#define FALSE	(0)
+#define NULL	0
 #endif
 
 #ifndef TRUE
 /**
  * TRUE define.
  */
-#define TRUE	(!FALSE)
+#define TRUE	1
+#endif
+
+#ifndef FALSE
+/**
+ * FALSE define.
+ */
+#define FALSE	0
 #endif
 
 #ifdef __cplusplus

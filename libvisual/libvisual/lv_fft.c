@@ -67,7 +67,7 @@ VisFFTState *_lv_fft_init () {
 	VisFFTState *state;
 	unsigned int i;
 
-	state = visual_mem_new0 (VisFFTState, 1);
+	state = malloc (sizeof (VisFFTState));
 
 	if (state == NULL)
 		return NULL;
@@ -130,7 +130,7 @@ void _lv_fft_perform (const int16_t *input, float *output, VisFFTState *state)
 void _lv_fft_close (VisFFTState *state)
 {
 	if (state != NULL)
-		visual_mem_free (state);
+		free (state);
 }
 
 /* ########################### */

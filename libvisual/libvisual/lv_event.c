@@ -3,9 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "lvconfig.h"
 #include "lv_event.h"
-#include "lv_log.h"
 
 /**
  * @defgroup VisEvent VisEvent
@@ -23,8 +21,9 @@ VisEvent *visual_event_new ()
 {
 	VisEvent *event;
 
-	event = visual_mem_new0 (VisEvent, 1);
-	
+	event = malloc (sizeof (VisEvent));
+	memset (event, 0, sizeof (VisEvent));
+
 	return event;
 }
 
@@ -37,9 +36,10 @@ VisEvent *visual_event_new ()
  */
 int visual_event_free (VisEvent *event)
 {
-	visual_log_return_val_if_fail (event != NULL, -1);
+	if (event == NULL)
+		return -1;
 
-	visual_mem_free (event);
+	free (event);
 
 	return 0;
 }
@@ -53,7 +53,8 @@ VisEventQueue *visual_event_queue_new ()
 {
 	VisEventQueue *eventqueue;
 
-	eventqueue = visual_mem_new0 (VisEventQueue, 1);
+	eventqueue = malloc (sizeof (VisEventQueue));
+	memset (eventqueue, 0, sizeof (VisEventQueue));
 
 	eventqueue->mousestate = VISUAL_MOUSE_UP;
 
@@ -69,11 +70,12 @@ VisEventQueue *visual_event_queue_new ()
  */
 int visual_event_queue_free (VisEventQueue *eventqueue)
 {
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
+	if (eventqueue == NULL)
+		return -1;
 
 	visual_list_destroy (&eventqueue->events, free);
 	
-	visual_mem_free (eventqueue);
+	free (eventqueue);
 	
 	return 0;
 }
@@ -91,9 +93,6 @@ int visual_event_queue_poll (VisEventQueue *eventqueue, VisEvent *event)
 {
 	VisEvent *lev;
 	VisListEntry *listentry = NULL;;
-
-	visual_log_return_val_if_fail (eventqueue != NULL, FALSE);
-	visual_log_return_val_if_fail (event != NULL, FALSE);
 
 	if (eventqueue->resizenew == TRUE) {
 		eventqueue->resizenew = FALSE;
@@ -128,9 +127,6 @@ int visual_event_queue_poll (VisEventQueue *eventqueue, VisEvent *event)
  */
 int visual_event_queue_add (VisEventQueue *eventqueue, VisEvent *event)
 {
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
-	visual_log_return_val_if_fail (event != NULL, -1);
-
 	/* We've got way too much on the queue, not adding events, the important
 	 * resize event got data in the event queue structure that makes sure it gets
 	 * looked at */
@@ -161,14 +157,7 @@ int visual_event_queue_add_keyboard (VisEventQueue *eventqueue, VisKey keysym, i
 {
 	VisEvent *event;
 
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
-
 	event = visual_event_new ();
-	if (event == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-				"Cannot create a new VisEvent structure");
-		return -1;
-	}
 	
 	/* FIXME name to VISUAL_KEYB_DOWN and KEYB_UP */
 	if (state == VISUAL_KEY_DOWN)
@@ -196,8 +185,6 @@ int visual_event_queue_add_keyboard (VisEventQueue *eventqueue, VisKey keysym, i
 int visual_event_queue_add_mousemotion (VisEventQueue *eventqueue, int x, int y)
 {
 	VisEvent *event;
-
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
 
 	event = visual_event_new ();
 
@@ -231,8 +218,6 @@ int visual_event_queue_add_mousemotion (VisEventQueue *eventqueue, int x, int y)
 int visual_event_queue_add_mousebutton (VisEventQueue *eventqueue, int button, VisMouseState state)
 {
 	VisEvent *event;
-
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
 
 	event = visual_event_new ();
 
@@ -272,8 +257,6 @@ int visual_event_queue_add_resize (VisEventQueue *eventqueue, VisVideo *video, i
 {
 	VisEvent *event;
 
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
-
 	event = &eventqueue->lastresize;
 	
 	event->type = VISUAL_EVENT_RESIZE;
@@ -302,40 +285,12 @@ int visual_event_queue_add_newsong (VisEventQueue *eventqueue, VisSongInfo *song
 {
 	VisEvent *event;
 
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
-
 	event = visual_event_new ();
 
 	event->type = VISUAL_EVENT_NEWSONG;
 
 	event->newsong.type = event->type;
 	event->newsong.songinfo = songinfo;
-
-	return visual_event_queue_add (eventqueue, event);
-}
-
-/**
- * Adds a new parameter change event to the event queue. By giving the pointer to the
- * VisParamEntry structure a new VisEvent will be created and added to the event queue.
- *
- * @param eventqueue Pointer to the VisEventQueue to which new events are added.
- * @param param Pointer to the VisParamEntry containing the parameter that has been changed.
- *
- * @return 0 on succes -1 on error.
- */
-int visual_event_queue_add_param (VisEventQueue *eventqueue, void *param)
-{
-	VisEvent *event;
-
-	visual_log_return_val_if_fail (eventqueue != NULL, -1);
-	visual_log_return_val_if_fail (param != NULL, -1);
-
-	event = visual_event_new ();
-	event->type = VISUAL_EVENT_PARAM;
-
-	event->param.type = event->type;
-	event->param.param = param;
 
 	return visual_event_queue_add (eventqueue, event);
 }

@@ -1,6 +1,9 @@
 ## Process this file with automake to generate a Makefile.in
 
-SUBDIRS = src po pixmaps
+PACKAGE = @PACKAGE@
+VERSION = @VERSION@
 
-EXTRA_DIST = config.rpath mkinstalldirs 
+SUBDIRS = src
+
+EXTRA_DIST = autogen.sh
 

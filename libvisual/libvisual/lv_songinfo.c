@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/time.h>
+#include <time.h>
 
-#include "lv_common.h"
 #include "lv_songinfo.h"
 
 /**
@@ -22,7 +23,8 @@ VisSongInfo *visual_songinfo_new (VisSongInfoType type)
 {
 	VisSongInfo *songinfo;
 
-	songinfo = visual_mem_new0 (VisSongInfo, 1);
+	songinfo = malloc (sizeof (VisSongInfo));
+	memset (songinfo, 0, sizeof (VisSongInfo));
 
 	songinfo->type = type;
 
@@ -38,13 +40,14 @@ VisSongInfo *visual_songinfo_new (VisSongInfoType type)
  */
 int visual_songinfo_free (VisSongInfo *songinfo)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	visual_songinfo_free_strings (songinfo);
 
 	visual_video_free_with_buffer (songinfo->cover);
 
-	visual_mem_free (songinfo);
+	free (songinfo);
 
 	return 0;
 }
@@ -60,19 +63,20 @@ int visual_songinfo_free (VisSongInfo *songinfo)
  */
 int visual_songinfo_free_strings (VisSongInfo *songinfo)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	if (songinfo->songname != NULL)
-		visual_mem_free (songinfo->songname);
+		free (songinfo->songname);
 
 	if (songinfo->artist != NULL)
-		visual_mem_free (songinfo->artist);
+		free (songinfo->artist);
 
 	if (songinfo->album != NULL)
-		visual_mem_free (songinfo->album);
+		free (songinfo->album);
 
 	if (songinfo->song != NULL)
-		visual_mem_free (songinfo->song);
+		free (songinfo->song);
 
 	return 0;
 }
@@ -90,7 +94,8 @@ int visual_songinfo_free_strings (VisSongInfo *songinfo)
  */
 int visual_songinfo_set_type (VisSongInfo *songinfo, VisSongInfoType type)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 	
 	songinfo->type = type;
 
@@ -108,7 +113,8 @@ int visual_songinfo_set_type (VisSongInfo *songinfo, VisSongInfoType type)
  */
 int visual_songinfo_set_length (VisSongInfo *songinfo, int length)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 	
 	songinfo->length = length;
 
@@ -126,7 +132,8 @@ int visual_songinfo_set_length (VisSongInfo *songinfo, int length)
  */
 int visual_songinfo_set_elapsed (VisSongInfo *songinfo, int elapsed)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 	
 	songinfo->elapsed = elapsed;
 
@@ -144,10 +151,11 @@ int visual_songinfo_set_elapsed (VisSongInfo *songinfo, int elapsed)
  */
 int visual_songinfo_set_simple_name (VisSongInfo *songinfo, char *name)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 	
 	if (songinfo->songname != NULL)
-		visual_mem_free (songinfo->songname);
+		free (songinfo->songname);
 
 	songinfo->songname = strdup (name);
 
@@ -165,10 +173,11 @@ int visual_songinfo_set_simple_name (VisSongInfo *songinfo, char *name)
  */
 int visual_songinfo_set_artist (VisSongInfo *songinfo, char *artist)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	if (songinfo->artist != NULL)
-		visual_mem_free (songinfo->artist);
+		free (songinfo->artist);
 
 	songinfo->artist = strdup (artist);
 
@@ -186,10 +195,11 @@ int visual_songinfo_set_artist (VisSongInfo *songinfo, char *artist)
  */
 int visual_songinfo_set_album (VisSongInfo *songinfo, char *album)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	if (songinfo->album != NULL)
-		visual_mem_free (songinfo->album);
+		free (songinfo->album);
 
 	songinfo->album = strdup (album);
 
@@ -207,10 +217,11 @@ int visual_songinfo_set_album (VisSongInfo *songinfo, char *album)
  */
 int visual_songinfo_set_song (VisSongInfo *songinfo, char *song)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	if (songinfo->song != NULL)
-		visual_mem_free (songinfo->song);
+		free (songinfo->song);
 
 	songinfo->song = strdup (song);
 
@@ -228,7 +239,8 @@ int visual_songinfo_set_song (VisSongInfo *songinfo, char *song)
  */
 int visual_songinfo_set_cover (VisSongInfo *songinfo, VisVideo *cover)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 
 	songinfo->cover = cover;
 
@@ -245,35 +257,33 @@ int visual_songinfo_set_cover (VisSongInfo *songinfo, VisVideo *cover)
  */
 int visual_songinfo_mark (VisSongInfo *songinfo)
 {
-	visual_log_return_val_if_fail (songinfo != NULL, -1);
+	if (songinfo == NULL)
+		return -1;
 	
-	visual_timer_start (&songinfo->timer);
+	songinfo->start = time (NULL);
 
 	return 0;
 }
 
 /**
  * Gives the age of the VisSongInfo. Returns the age in seconds
- * stored in a long.
+ * stored in a time_t.
  *
  * @param songinfo Pointer to a VisSongInfo of which the age is requested.
  *
  * @return The age in seconds.
  */
-
-long visual_songinfo_age (VisSongInfo *songinfo)
+time_t visual_songinfo_age (VisSongInfo *songinfo)
 {
-	VisTime cur;
+	time_t cur;
 
-	visual_time_get (&cur);
+	cur = time (NULL);
 
 	/* Clock has been changed */
-	if (cur.tv_sec < songinfo->timer.start.tv_sec)
-		visual_songinfo_mark (songinfo);
+	if (cur < songinfo->start)
+		songinfo->start = cur;
 
-	visual_time_difference (&cur, &songinfo->timer.start, &cur);
-
-	return cur.tv_sec;
+	return cur - songinfo->start;
 }
 
 /**
@@ -287,12 +297,13 @@ long visual_songinfo_age (VisSongInfo *songinfo)
  */
 int visual_songinfo_copy (VisSongInfo *dest, VisSongInfo *src)
 {
-	visual_log_return_val_if_fail (dest != NULL && src != NULL, -1);
-
 	dest->type = src->type;
 	dest->length = src->length;
 	dest->elapsed = src->elapsed;
-	memcpy (&dest->timer, &src->timer, sizeof (VisTimer));
+	dest->start = src->start;
+
+	if (dest == NULL || src == NULL)
+		return -1;
 
 	if (src->songname != NULL)
 		dest->songname = strdup (src->songname);
@@ -325,7 +336,8 @@ int visual_songinfo_compare (VisSongInfo *s1, VisSongInfo *s2)
 {
 	int diff = 0;
 
-	visual_log_return_val_if_fail (s1 != NULL && s2 != NULL, -1);
+	if (s1 == NULL || s2 == NULL)
+		return -1;
 
 	if (s1->songname != NULL && s2->songname != NULL) {
 		if (strcmp (s1->songname, s2->songname) != 0)

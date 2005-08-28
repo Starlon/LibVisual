@@ -1,14 +1,13 @@
-## Process this file with automake to generate a Makefile.in
-
 lib_LTLIBRARIES = actor_lv_scope.la
 
 libdir = $(prefix)/lib/libvisual/actor
 
-LIBS = -L. -L$(prefix)/lib @LIBVISUAL_LIBS@
+LIBS = -L. -L$(prefix)/lib @LV_LIBS@
 
-AM_CFLAGS = -Wall -rdynamic @DEBUG_CFLAGS@ @LIBVISUAL_CFLAGS@ -O3
+CFLAGS =
 
-INCLUDES = $(all_includes) -I$(top_srcdir) 
+INCLUDES = $(all_includes) \
+	-I$(top_srcdir) 
 
 actor_lv_scope_la_LDFLAGS = -module -avoid-version 
 

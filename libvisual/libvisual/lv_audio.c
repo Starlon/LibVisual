@@ -51,7 +51,9 @@ VisAudio *visual_audio_new ()
 {
 	VisAudio *audio;
 
-	audio = visual_mem_new0 (VisAudio, 1);
+	audio = malloc (sizeof (VisAudio));
+
+	memset (audio, 0, sizeof (VisAudio));
 
 	return audio;
 }
@@ -65,11 +67,12 @@ VisAudio *visual_audio_new ()
  */
 int visual_audio_free (VisAudio *audio)
 {
-	visual_log_return_val_if_fail (audio != NULL, -1);
+	if (audio == NULL)
+		return -1;
 
 	_lv_fft_close (audio->fft_state);
 	
-	visual_mem_free (audio);
+	free (audio);
 
 	return 0;
 }
@@ -89,8 +92,7 @@ int visual_audio_free (VisAudio *audio)
 int visual_audio_analyze (VisAudio *audio)
 {
         float tmp_out[256];
-	double scale;
-	int i, j, y;
+	int i;
 
 	/* Load the pcm data */
 	for (i = 0; i < 512; i++) {
@@ -117,24 +119,6 @@ int visual_audio_analyze (VisAudio *audio)
 	for (i = 0; i < 256; i++)
 		audio->freq[2][i] = (audio->freq[0][i] + audio->freq[1][i]) >> 1;
 
-	/* Normalized frequency analyzer */
-	/** @todo FIXME Not sure if this is totally correct */
-	for (i = 0; i < 3; i++) {
-		for (j = 0; j < 256; j++) {
-			/* (Height / log (256)) */
-			scale = 256 / log (256);
-
-			y = audio->freq[i][j];
-			y = log (y) * scale;
-
-			if (y < 0)
-				y = 0;
-
-			audio->freqnorm[i][j] = y;
-		}
-	}
-
-	
 	/* BPM stuff, used for the audio energy only right now */
 	for (i = 1023; i > 0; i--) {
 		memcpy (&audio->bpmhistory[i], &audio->bpmhistory[i - 1], 6 * sizeof (short int));

@@ -58,7 +58,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (OinksiePrivContainer));
 	memset (priv, 0, sizeof (OinksiePrivContainer));
 
-	oinksie->priv = priv;
+	oinksie->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = oinksie;
@@ -68,14 +68,8 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int act_oinksie_init (VisActorPlugin *plugin)
 {
-	OinksiePrivContainer *priv = plugin->priv;
-
-	visual_palette_allocate_colors (&priv->priv1.pal_cur, 256);
-	visual_palette_allocate_colors (&priv->priv1.pal_old, 256);
-
-	visual_palette_allocate_colors (&priv->priv2.pal_cur, 256);
-	visual_palette_allocate_colors (&priv->priv2.pal_old, 256);
-
+	OinksiePrivContainer *priv = plugin->private;
+	
 	oinksie_init (&priv->priv1, 64, 64);
 	oinksie_init (&priv->priv2, 64, 64);
 	
@@ -84,7 +78,7 @@ int act_oinksie_init (VisActorPlugin *plugin)
 
 int act_oinksie_cleanup (VisActorPlugin *plugin)
 {
-	OinksiePrivContainer *priv = plugin->priv;
+	OinksiePrivContainer *priv = plugin->private;
 
 	oinksie_quit (&priv->priv1);
 	oinksie_quit (&priv->priv2);
@@ -96,12 +90,6 @@ int act_oinksie_cleanup (VisActorPlugin *plugin)
 		free (priv->tbuf1);
 		free (priv->tbuf2);
 	}
-
-	visual_palette_free_colors (&priv->priv1.pal_cur);
-	visual_palette_free_colors (&priv->priv1.pal_old);
-
-	visual_palette_free_colors (&priv->priv2.pal_cur);
-	visual_palette_free_colors (&priv->priv2.pal_old);
 
 	free (priv);
 
@@ -137,7 +125,7 @@ int act_oinksie_requisition (VisActorPlugin *plugin, int *width, int *height)
 
 int act_oinksie_dimension (VisActorPlugin *plugin, VisVideo *video, int width, int height)
 {
-	OinksiePrivContainer *priv = plugin->priv;
+	OinksiePrivContainer *priv = plugin->private;
 	
 	visual_video_set_dimension (video, width, height);
 
@@ -188,8 +176,6 @@ int act_oinksie_events (VisActorPlugin *plugin, VisEventQueue *events)
 				act_oinksie_dimension (plugin, ev.resize.video,
 						ev.resize.width, ev.resize.height);
 				break;
-			default: /* to avoid warnings */
-				break;
 		}
 	}
 
@@ -198,7 +184,7 @@ int act_oinksie_events (VisActorPlugin *plugin, VisEventQueue *events)
 
 VisPalette *act_oinksie_palette (VisActorPlugin *plugin)
 {
-	OinksiePrivContainer *priv = plugin->priv;
+	OinksiePrivContainer *priv = plugin->private;
 	VisPalette *pal;
 	
 	pal = oinksie_palette_get (&priv->priv1);
@@ -208,9 +194,10 @@ VisPalette *act_oinksie_palette (VisActorPlugin *plugin)
 
 int act_oinksie_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio)
 {
-	OinksiePrivContainer *priv = plugin->priv;
+	OinksiePrivContainer *priv = plugin->private;
 	VisVideo transvid;
 	int pitch;
+	int i;
 
 	memcpy (&priv->priv1.audio.freq, &audio->freq, sizeof (short) * 3 * 256);
 	memcpy (&priv->priv2.audio.freq, &audio->freq, sizeof (short) * 3 * 256);

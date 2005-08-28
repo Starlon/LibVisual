@@ -3,15 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <lvconfig.h>
 #include "lv_common.h"
 #include "lv_video.h"
-#include "lv_log.h"
-#include "lv_mem.h"
-
-
-#define HAVE_ALLOCATED_BUFFER(video)	((video)->flags & VISUAL_VIDEO_FLAG_ALLOCATED_BUFFER)
-#define HAVE_EXTERNAL_BUFFER(video)	((video)->flags & VISUAL_VIDEO_FLAG_EXTERNAL_BUFFER)
 
 typedef struct {
 	uint16_t b:5, g:6, r:5;
@@ -34,18 +27,13 @@ static int depth_transform_32_to_8_c (uint8_t *dest, uint8_t *src, int width, in
 static int depth_transform_32_to_16_c (uint8_t *dest, uint8_t *src, int width, int height, int pitch, VisPalette *pal);
 static int depth_transform_32_to_24_c (uint8_t *dest, uint8_t *src, int width, int height, int pitch, VisPalette *pal);
 
-/* BGR to RGB conversions */
-static int bgr_to_rgb16 (VisVideo *dest, VisVideo *src);
-static int bgr_to_rgb24 (VisVideo *dest, VisVideo *src);
-static int bgr_to_rgb32 (VisVideo *dest, VisVideo *src);
-
 /**
  * @defgroup VisVideo VisVideo
  * @{
  */
 
 /**
- * Creates a new VisVideo structure, without an associated screen buffer.
+ * Creates a new VisVideo structure.
  *
  * @return A newly allocated VisVideo.
  */
@@ -53,14 +41,8 @@ VisVideo *visual_video_new ()
 {
 	VisVideo *video;
 
-	video = visual_mem_new0 (VisVideo, 1);
-	
-	video->screenbuffer = NULL;
-
-	/*
-	 * By default, we suppose an external buffer will be used.
-	 */
-	video->flags = VISUAL_VIDEO_FLAG_EXTERNAL_BUFFER;
+	video = malloc (sizeof (VisVideo));
+	memset (video, 0, sizeof (VisVideo));
 
 	return video;
 }
@@ -77,37 +59,19 @@ VisVideo *visual_video_new ()
 VisVideo *visual_video_new_with_buffer (int width, int height, VisVideoDepth depth)
 {
 	VisVideo *video;
-	int ret;
 	
 	video = visual_video_new ();
 
 	visual_video_set_depth (video, depth);
 	visual_video_set_dimension (video, width, height);
 
-	video->screenbuffer = NULL;
-	ret = visual_video_allocate_buffer (video);
-
-	if (ret < 0) {
-		/*
-		 * Restore the flag set by visual_video_new().
-		 */
-		video->flags = VISUAL_VIDEO_FLAG_EXTERNAL_BUFFER;
-		visual_video_free (video);
-		return NULL;
-	}
+	visual_video_allocate_buffer (video);
 
 	return video;
 }
 
 /**
- * Frees the VisVideo.
- *
- * This frees the VisVideo data structure which was previously 
- * created with visual_video_new().
- *
- * @warning This doesn't frees a VisVideo structure created with
- * visual_video_new_with_buffer(), use visual_video_free_with_buffer()
- * for that.
+ * Frees the VisVideo. This frees the VisVideo data structure.
  *
  * @param video Pointer to a VisVideo that needs to be freed.
  *
@@ -115,26 +79,16 @@ VisVideo *visual_video_new_with_buffer (int width, int height, VisVideoDepth dep
  */
 int visual_video_free (VisVideo *video)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
-
-	if (HAVE_ALLOCATED_BUFFER(video)) {
-		visual_log (VISUAL_LOG_CRITICAL, "VisVideo structure has an allocated screen buffer, "
-				"visual_video_free_with_buffer() must be used");
+	if (video == NULL)
 		return -1;
-	}
-	
-	visual_mem_free (video);
 
-	video = NULL;
+	free (video);
 
 	return 0;
 }
 
 /**
  * Frees the VisVideo and it's buffer. This frees the VisVideo and it's screenbuffer.
- * 
- * @warning The given @a video must be a previously created one with
- * visual_video_new_with_buffer(), not visual_video_new().
  *
  * @param video Pointer to a VisVideo that needs to be freed together with
  * 	it's screenbuffer.
@@ -143,18 +97,12 @@ int visual_video_free (VisVideo *video)
  */
 int visual_video_free_with_buffer (VisVideo *video)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
-	if (HAVE_ALLOCATED_BUFFER (video)) {
-		visual_video_free_buffer (video);
-	} else {
-		visual_log (VISUAL_LOG_WARNING, "VisVideo structure doesn't have an allocated "
-				"screen buffer, visual_video_free() must be used");
-	}
+	visual_video_free_buffer (video);
 
-	visual_mem_free (video);
-
-	video = NULL;
+	free (video);
 
 	return 0;
 }
@@ -168,17 +116,10 @@ int visual_video_free_with_buffer (VisVideo *video)
  */
 int visual_video_free_buffer (VisVideo *video)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
-	visual_log_return_val_if_fail (video->screenbuffer != NULL, -1);
-
-	if (HAVE_ALLOCATED_BUFFER (video))
-		visual_mem_free (video->screenbuffer);
-	else
+	if (video == NULL || video->screenbuffer == NULL)
 		return -1;
 
-	video->screenbuffer = NULL;
-
-	video->flags = VISUAL_VIDEO_FLAG_NONE;
+	free (video->screenbuffer);
 
 	return 0;
 }
@@ -193,21 +134,14 @@ int visual_video_free_buffer (VisVideo *video)
  */
 int visual_video_allocate_buffer (VisVideo *video)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
-	if (video->screenbuffer != NULL) {
-		if (HAVE_ALLOCATED_BUFFER (video)) {
-			visual_video_free_buffer (video);
-		} else {
-			visual_log (VISUAL_LOG_CRITICAL, "Trying to allocate an screen buffer on "
-					"a VisVideo structure which points to an external screen buffer");
-			return -1;
-		}
-	}
+	printf ("[video-allocate-buffer] Allocating buffer with size: %d, width height bpp pitch %d %d %d %d calc %d\n", video->size,
+			video->width, video->height, video->bpp, video->pitch, video->pitch * video->height);
 
-	video->screenbuffer = visual_mem_malloc0 (video->size);
-
-	video->flags = VISUAL_VIDEO_FLAG_ALLOCATED_BUFFER;
+	video->screenbuffer = malloc (video->size);
+	memset (video->screenbuffer, 0, video->size);
 
 	return 0;
 }
@@ -226,44 +160,15 @@ int visual_video_allocate_buffer (VisVideo *video)
  */
 int visual_video_clone (VisVideo *dest, VisVideo *src)
 {
-	visual_log_return_val_if_fail (dest != NULL, -1);
-	visual_log_return_val_if_fail (src != NULL, -1);
+	if (dest == NULL || src == NULL)
+		return -1;
 
 	visual_video_set_depth (dest, src->depth);
 	visual_video_set_dimension (dest, src->width, src->height);
 	visual_video_set_pitch (dest, src->pitch);
 
-	dest->flags = src->flags;
-
 	return 0;
 }
-
-/**
- * Checks if two VisVideo objects are the same depth, pitch and dimension wise.
- *
- * @param src1 Pointer to the first VisVideo that is used in the compare.
- * @param src2 Pointer to the second VisVideo that is used in the compare.
- *
- * @return TRUE when they are the same and FALSE when not.
- */
-int visual_video_compare (VisVideo *src1, VisVideo *src2)
-{
-	if (src1->depth != src2->depth)
-		return FALSE;
-
-	if (src1->width != src2->width)
-		return FALSE;
-
-	if (src1->height != src2->height)
-		return FALSE;
-
-	if (src1->pitch != src2->pitch)
-		return FALSE;
-
-	/* We made it to the end, the VisVideos are likewise in depth, pitch, dimensions */
-	return TRUE;
-}
-
 
 /**
  * Sets a palette to a VisVideo. Links a VisPalette to the
@@ -276,7 +181,8 @@ int visual_video_compare (VisVideo *src1, VisVideo *src2)
  */
 int visual_video_set_palette (VisVideo *video, VisPalette *pal)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
 	video->pal = pal;
 
@@ -287,9 +193,6 @@ int visual_video_set_palette (VisVideo *video, VisPalette *pal)
  * Sets a screenbuffer to a VisVideo. Links a sreenbuffer to the
  * VisVideo.
  *
- * @warning The given @a video must be one previously created with visual_video_new(),
- * and not with visual_video_new_with_buffer().
- *
  * @param video Pointer to a VisVideo to which a screenbuffer needs to be linked.
  * @param buffer Pointer to a screenbuffer that needs to be linked with the VisVideo.
  *
@@ -297,13 +200,8 @@ int visual_video_set_palette (VisVideo *video, VisPalette *pal)
  */
 int visual_video_set_buffer (VisVideo *video, void *buffer)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
-
-	if (HAVE_ALLOCATED_BUFFER (video)) {
-		visual_log (VISUAL_LOG_CRITICAL, "Trying to set a screen buffer on "
-				"a VisVideo structure which points to an allocated screen buffer");
+	if (video == NULL)
 		return -1;
-	}
 
 	video->screenbuffer = buffer;
 
@@ -322,7 +220,8 @@ int visual_video_set_buffer (VisVideo *video, void *buffer)
  */
 int visual_video_set_dimension (VisVideo *video, int width, int height)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
 	video->width = width;
 	video->height = height;
@@ -346,7 +245,8 @@ int visual_video_set_dimension (VisVideo *video, int width, int height)
  */
 int visual_video_set_pitch (VisVideo *video, int pitch)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
 	if (video->bpp <= 0)
 		return -1;
@@ -368,7 +268,8 @@ int visual_video_set_pitch (VisVideo *video, int pitch)
  */
 int visual_video_set_depth (VisVideo *video, VisVideoDepth depth)
 {
-	visual_log_return_val_if_fail (video != NULL, -1);
+	if (video == NULL)
+		return -1;
 
 	video->depth = depth;
 	video->bpp = visual_video_bpp_from_depth (video->depth);
@@ -649,251 +550,57 @@ int visual_video_bpp_from_depth (VisVideoDepth depth)
 	return -1;
 }
 
+/* FIXME: more screwing up, just fix this with a better function */
+
 /**
- * This function blits a VisVideo into another VisVideo. Placement can be done and there
- * is support for the alpha channel.
+ * Helps fitting a smaller VisVideo surface into a bigger one, used
+ * by the fitting environment within VisActor. It's not adviced to use
+ * this function externally.
  *
- * @param dest Pointer to the destination VisVideo in which the source is overlayed.
- * @param src Pointer to the source VisVideo which is overlayed in the destination.
- * @param x Horizontal placement offset.
- * @param y Vertical placement offset.
- * @param alpha Sets if we want to check the alpha channel. Use FALSE or TRUE here/
+ * @param dest Pointer to the destination VisVideo in which the source is fitted.
+ * @param src Pointer to the source VisVideo which is fitted in the destination.
  *
  * @return 0 on succes -1 on error.
  */
-int visual_video_blit_overlay (VisVideo *dest, VisVideo *src, int x, int y, int alpha)
+int visual_video_fit_in_video (VisVideo *dest, VisVideo *src)
 {
-	VisVideo *transform = NULL, *srcp = NULL;
-	VisPalette temppal;
-	int height, wrange, hrange, amount;
-	int xa, ya;
-	int xmoff = 0, ymoff = 0;
-	int xbpp;
-	uint8_t *destbuf;
-	uint8_t *srcpbuf;
-	uint32_t *srcbuf;
+	uint8_t *destr, *srcr;
+	int space = 0;
+	int spare;
+	int pitchadd;
+	int i, j, dind = 0, sind = 0;
 
-	/* We can't overlay GL surfaces so don't even try */
-	visual_log_return_val_if_fail (dest->depth != VISUAL_VIDEO_DEPTH_GL ||
-			src->depth != VISUAL_VIDEO_DEPTH_GL, -1);
-	
-	/* Get the smallest size from both the VisVideos */
-	wrange = dest->width > src->width ? src->width : dest->width;
-	hrange = dest->height > src->height ? src->height : dest->height;
-	
-	if (x > dest->width)
-		return -1;
+	spare = dest->width - src->width;
 
-	if (y > dest->height)
-		return -1;
+	destr = dest->screenbuffer;
+	srcr = src->screenbuffer;
 
-	visual_log_return_val_if_fail (x < dest->width, -1);
-	visual_log_return_val_if_fail (y < dest->height, -1);
-
-	/* We're not the same depth, converting */
-	if (dest->depth != src->depth) {
-		transform = visual_video_new ();
-
-		visual_video_set_depth (transform, dest->depth);
-		visual_video_set_dimension (transform, src->width, src->height);
-
-		visual_video_allocate_buffer (transform);
-
-		visual_video_set_palette (src, &temppal);
-
-		visual_video_depth_transform (transform, src);
-	}
-	
-	/* Setting all the pointers right */
-	if (transform != NULL)
-		srcp = transform;
-	else
-		srcp = src;
-	
-	destbuf = dest->screenbuffer;
-	srcbuf = src->screenbuffer;
-	srcpbuf = srcp->screenbuffer;
-
-	/* Negative X offset value */
-	if (x < 0) {
-		xmoff = abs (x);
-	
-		x = 0;
-	}
-
-	/* Negative Y offset value */
-	if (y < 0) {
-		ymoff = abs (y);
-
-		y = 0;
-	}
-	
-	/** @todo fix negative, broken as it is right now... */
-
-	/* We're looking at exactly the same types of VisVideo objects */
-	if (visual_video_compare (dest, src) == TRUE && alpha == FALSE && x == 0 && y == 0) {
-		memcpy (dest->screenbuffer, src->screenbuffer, dest->size);
-
-	/* No alpha, fast method */
-	} else if (alpha == FALSE || src->depth != VISUAL_VIDEO_DEPTH_32BIT) {
-		int xps = (x * dest->bpp) + srcp->pitch;
-		/* Blit it to the dest video */
-		for (height = y; height < (hrange + y) - ymoff; height++) {
-
-			/* We've reached the end */
-			if (height > (dest->height - 1))
-				break;
-
-			if (xps > dest->pitch + (xmoff * dest->bpp)) {
-				amount = (dest->pitch - (x * dest->bpp));
-			} else {
-				if (xmoff > 0 && dest->width == wrange)
-					amount = (dest->width - (dest->width - (src->width - xmoff))) * dest->bpp;
-				else
-					amount = (wrange - xmoff) * dest->bpp;
-			}
-
-			memcpy (destbuf + (height * dest->pitch) + (x * dest->bpp),
-					srcpbuf + (((height - y) + ymoff) * srcp->pitch) + (xmoff * dest->bpp),
-					amount);
-		}
-	} else {
-		int yaddage = 0;
-		int aindex = (ymoff * (src->pitch / src->bpp)) + xmoff;
-		int si = (ymoff * srcp->pitch) + (xmoff * src->bpp);
-		int di = (y * dest->pitch) + (x * dest->bpp);
-	
-		xbpp = x * dest->bpp;
-
-		if (dest->height - src->height  < 0)
-			yaddage = abs (dest->height - (src->height));
-
-		/* Blit it to the dest video */
-		for (ya = y; ya < (hrange + yaddage) - ymoff; ya++) {
-	
-			if (ya + y > dest->height - 1)
-				break;
-			
-			if ((x * dest->bpp) + srcp->pitch > dest->pitch) {
-				amount = (dest->pitch / dest->bpp) - (dest->width - (src->width - xmoff));
-			} else {
-				printf ("BBB\n");
-				amount = wrange - xmoff;
-			}
-
-			for (xa = 0; xa < amount; xa++) {
-				uint8_t alpha;
-				int bppl;
-				
-				alpha = srcbuf[aindex++] >> 24;
-				
-				for (bppl = 0; bppl < dest->bpp; bppl++) {
-					destbuf[di] =
-						(alpha * (srcpbuf[si] -  destbuf[di]) / 255 + destbuf[di]);
-
-					si++;
-					di++;
-				}
-			}
-
-			if (amount > (dest->pitch / dest->bpp) - x) {
-				/* FIXME do something here to fix screwage */
-			}
-			
-			aindex += (src->pitch / src->bpp) - amount;
-			si += srcp->pitch - (amount * srcp->bpp);
-			di += dest->pitch - (amount * dest->bpp);
-		}
-	}
-
-	if (transform != NULL)
-		visual_video_free_with_buffer (transform);
-	
-	return 0;
-}
-
-/**
- * Sets a certain color as the alpha channel and the density for the non alpha channel
- * colors. This function can be only used on VISUAL_VIDEO_DEPTH_32BIT surfaces.
- *
- * @param video Pointer to the VisVideo in which the alpha channel is made.
- * @param r The red value for the alpha channel color.
- * @param g The green value for the alpha channel color.
- * @param b The blue value for the alpha channel color.
- * @param density The alpha density for the other colors.
- * 
- * @return 0 on succes -1 on error.
- */
-int visual_video_alpha_color (VisVideo *video, uint8_t r, uint8_t g, uint8_t b, uint8_t density)
-{
-	int col = 0;
-	int i;
-	uint32_t *vidbuf;
-
-	visual_log_return_val_if_fail (video != NULL, -1);
-	visual_log_return_val_if_fail (video->depth == VISUAL_VIDEO_DEPTH_32BIT, -1);
-
-	col = (r << 16 | g << 8 | b);
-
-	vidbuf = video->screenbuffer;
-
-	for (i = 0; i < video->size / video->bpp; i++) {
-		if ((vidbuf[i] & 0x00ffffff) == col)
-			vidbuf[i] = col;
+	/* Calculate the spacer */
+	if (spare % 2 != 0) {
+		if (spare > 1)
+			space = spare;
 		else
-			vidbuf[i] += (density << 24);
+			space = 1;
+	} else {
+		space = spare / 1;
 	}
 
-	return 0;
-}
+	/* The iamge doesn't fit */
+	if (dest->width < src->width || dest->height < src->height)
+		return -1;
 
-/**
- * Sets a certain alpha value for the complete buffer in the VisVideo. This function
- * can be only used on VISUAL_VIDEO_DEPTH_32BIT surfaces.
- *
- * @param video Pointer to the VisVideo in which the alpha channel density is set.
- * @param density The alpha density that is to be set.
- *
- * @return 0 on succes -1 on error.
- */
-int visual_video_alpha_fill (VisVideo *video, uint8_t density)
-{
-	int i;
-	uint32_t *vidbuf;
+	/* Place the image */
+	pitchadd = ((dest->pitch / src->bpp) - dest->width) * src->bpp;
 
-	visual_log_return_val_if_fail (video != NULL, -1);
-	visual_log_return_val_if_fail (video->depth == VISUAL_VIDEO_DEPTH_32BIT, -1);
+	/* FIXME use memcpy here */
+	for (i = 0; i < src->height; i++) {
+		for (j = 0; j < src->width * src->bpp; j++) {
+			destr[dind++] = srcr[sind++];
+		}
 
-	vidbuf = video->screenbuffer;
-
-	for (i = 0; i < video->size / video->bpp; i++)
-		vidbuf[i] += (density << 24);
-
-	return 0;
-}
-
-/**
- * Video color transforms one VisVideo bgr pixel ordering into bgr pixel ordering.
- * 
- * @param dest Pointer to the destination VisVideo, which should be a clone of the source VisVideo
- * 	depth, pitch, dimension wise.
- * @param src Pointer to the source VisVideo from which the bgr data is read.
- *
- * @return 0 on succes -1 on error.
- */
-int visual_video_color_bgr_to_rgb (VisVideo *dest, VisVideo *src)
-{
-	visual_log_return_val_if_fail (visual_video_compare (dest, src) == TRUE, -1);
-	visual_log_return_val_if_fail (dest->screenbuffer != NULL, -1);
-	visual_log_return_val_if_fail (src->screenbuffer != NULL, -1);
-	visual_log_return_val_if_fail (dest->depth != VISUAL_VIDEO_DEPTH_8BIT, -1);
-	
-	if (dest->depth == VISUAL_VIDEO_DEPTH_16BIT)
-		bgr_to_rgb16 (dest, src);
-	else if (dest->depth == VISUAL_VIDEO_DEPTH_24BIT)
-		bgr_to_rgb24 (dest, src);
-	else if (dest->depth == VISUAL_VIDEO_DEPTH_32BIT)
-		bgr_to_rgb32 (dest, src);
+		dind += space * src->bpp;
+		dind += pitchadd;
+	}
 
 	return 0;
 }
@@ -935,12 +642,6 @@ int visual_video_depth_transform_to_buffer (uint8_t *dest, VisVideo *video,
 	int width = video->width;
 	int height = video->height;
 
-	visual_log_return_val_if_fail (video != NULL, -1);
-	
-	if (destdepth == VISUAL_VIDEO_DEPTH_8BIT || video->depth == VISUAL_VIDEO_DEPTH_8BIT) {
-		visual_log_return_val_if_fail (pal != NULL, -1);
-	}
-
 	/* Destdepth is equal to sourcedepth case */
 	if (video->depth == destdepth) {
 		memcpy (dest, video->screenbuffer, video->width * video->height * video->bpp);
@@ -948,8 +649,6 @@ int visual_video_depth_transform_to_buffer (uint8_t *dest, VisVideo *video,
 		return 0;
 	}
 
-	visual_log_return_val_if_fail (pal != NULL && pal->ncolors == 256, -1);
-	
 	if (video->depth == VISUAL_VIDEO_DEPTH_8BIT) {
 
 		if (destdepth == VISUAL_VIDEO_DEPTH_16BIT)
@@ -1027,9 +726,9 @@ static int depth_transform_8_to_16_c (uint8_t *dest, uint8_t *src, int width, in
 
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
-			destr[i].r = pal->colors[src[j]].r >> 3;
-			destr[i].g = pal->colors[src[j]].g >> 2;
-			destr[i].b = pal->colors[src[j]].b >> 3;
+			destr[i].r = pal->r[src[j]] >> 3;
+			destr[i].g = pal->g[src[j]] >> 2;
+			destr[i].b = pal->b[src[j]] >> 3;
 			i++;
 			j++;
 		}
@@ -1048,9 +747,9 @@ static int depth_transform_8_to_24_c (uint8_t *dest, uint8_t *src, int width, in
 
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
-			dest[i++] = pal->colors[src[j]].r;
-			dest[i++] = pal->colors[src[j]].g;
-			dest[i++] = pal->colors[src[j]].b;
+			dest[i++] = pal->r[src[j]];
+			dest[i++] = pal->g[src[j]];
+			dest[i++] = pal->b[src[j]];
 			j++;
 		}
 
@@ -1071,9 +770,9 @@ static int depth_transform_8_to_32_c (uint8_t *dest, uint8_t *src, int width, in
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
 			col = 0;
-			col += pal->colors[src[j]].r << 16;
-			col += pal->colors[src[j]].g << 8;
-			col += pal->colors[src[j]].b;
+			col += pal->r[src[j]] << 16;
+			col += pal->g[src[j]] << 8;
+			col += pal->b[src[j]];
 			j++;
 
 			destr[i++] = col;
@@ -1105,9 +804,9 @@ static int depth_transform_16_to_8_c (uint8_t *dest, uint8_t *src, int width, in
 			col |= (g >> 6) << 3;
 			col |= (b >> 5) << 5;
 
-			pal->colors[col].r = r;
-			pal->colors[col].g = g;
-			pal->colors[col].b = b;
+			pal->r[col] = r;
+			pal->g[col] = g;
+			pal->b[col] = b;
 
 			dest[i++] = col;
 		}
@@ -1171,17 +870,17 @@ static int depth_transform_24_to_8_c (uint8_t *dest, uint8_t *src, int width, in
 
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
-			b = src[j++];
-			g = src[j++];
 			r = src[j++];
+			g = src[j++];
+			b = src[j++];
 
 			col  = (r >> 5);
 			col |= (g >> 6) << 3;
 			col |= (b >> 5) << 5;
 
-			pal->colors[col].r = r;
-			pal->colors[col].g = g;
-			pal->colors[col].b = b;
+			pal->r[col] = r;
+			pal->g[col] = g;
+			pal->b[col] = b;
 
 			dest[i++] = col;
 		}
@@ -1201,9 +900,9 @@ static int depth_transform_24_to_16_c (uint8_t *dest, uint8_t *src, int width, i
 	
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
-			destr[i].b = src[j++] >> 3;
-			destr[i].g = src[j++] >> 2;
 			destr[i].r = src[j++] >> 3;
+			destr[i].g = src[j++] >> 2;
+			destr[i].b = src[j++] >> 3;
 			i++;
 		}
 
@@ -1252,9 +951,9 @@ static int depth_transform_32_to_8_c (uint8_t *dest, uint8_t *src, int width, in
 			col |= (g >> 6) << 3;
 			col |= (b >> 5) << 5;
 
-			pal->colors[col].r = r;
-			pal->colors[col].g = g;
-			pal->colors[col].b = b;
+			pal->r[col] = r;
+			pal->g[col] = g;
+			pal->b[col] = b;
 
 			dest[i++] = col;
 		}
@@ -1304,82 +1003,6 @@ static int depth_transform_32_to_24_c (uint8_t *dest, uint8_t *src, int width, i
 		i += pitchdiff;
 	}
 	
-	return 0;
-}
-
-static int bgr_to_rgb16 (VisVideo *dest, VisVideo *src)
-{
-	_color16 *destbuf, *srcbuf;
-	int x, y;
-	int i = 0;
-	int pitchdiff = (dest->pitch - (dest->width * 2)) >> 1;
-	
-	destbuf = (_color16 *) dest->screenbuffer;
-	srcbuf = (_color16 *) src->screenbuffer;
-	
-	for (y = 0; y < dest->height; y++) {
-		for (x = 0; x < dest->width; x++) {
-			destbuf[i].b = srcbuf[i].r;
-			destbuf[i].g = srcbuf[i].g;
-			destbuf[i].r = srcbuf[i].b;
-			i++;
-		}
-
-		i += pitchdiff;
-	}
-	
-	return 0;
-}
-
-static int bgr_to_rgb24 (VisVideo *dest, VisVideo *src)
-{
-	uint8_t *destbuf, *srcbuf;
-	int x, y;
-	int i = 0;
-	int pitchdiff = dest->pitch - (dest->width * 3);
-
-	destbuf = dest->screenbuffer;
-	srcbuf = src->screenbuffer;
-	
-	for (y = 0; y < dest->height; y++) {
-		for (x = 0; x < dest->width; x++) {
-			destbuf[i + 2] = srcbuf[i];
-			destbuf[i + 1] = srcbuf[i + 1];
-			destbuf[i] = srcbuf[i + 2];
-		
-			i += 3;
-		}
-
-		i += pitchdiff;
-	}
-
-	return 0;
-}
-
-static int bgr_to_rgb32 (VisVideo *dest, VisVideo *src)
-{
-	uint8_t *destbuf, *srcbuf;
-	int x, y;
-	int i = 0;
-	int pitchdiff = dest->pitch - (dest->width * 4);
-
-	destbuf = dest->screenbuffer;
-	srcbuf = src->screenbuffer;
-	
-	for (y = 0; y < dest->height; y++) {
-		for (x = 0; x < dest->width; x++) {
-			destbuf[i + 2] = srcbuf[i];
-			destbuf[i + 1] = srcbuf[i + 1];
-			destbuf[i] = srcbuf[i + 2];
-
-			destbuf[i + 3] = srcbuf[i + 3];
-
-			i += 4;
-		}
-
-		i += pitchdiff;
-	}
-
 	return 0;
 }
 

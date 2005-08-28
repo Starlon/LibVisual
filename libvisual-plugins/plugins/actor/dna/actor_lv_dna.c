@@ -24,9 +24,10 @@ int lv_dna_events (VisActorPlugin *plugin, VisEventQueue *events);
 VisPalette *lv_dna_palette (VisActorPlugin *plugin);
 int lv_dna_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio);
 
-/*static void draw_bars (DNAPrivate *priv);
+static void draw_bars (DNAPrivate *priv);
 static void draw_rectangle (DNAPrivate *priv, GLfloat x1, GLfloat y1, GLfloat z1, GLfloat x2, GLfloat y2, GLfloat z2);
-static void draw_bar (DNAPrivate *priv, GLfloat x_offset, GLfloat z_offset, GLfloat height, GLfloat red, GLfloat green, GLfloat blue);*/
+static void draw_bar (DNAPrivate *priv, GLfloat x_offset, GLfloat z_offset, GLfloat height, GLfloat red, GLfloat green, GLfloat blue);
+static void draw_bars (DNAPrivate *priv);
 
 /* Main plugin stuff */
 LVPlugin *get_plugin_info (VisPluginRef *ref)
@@ -57,7 +58,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (DNAPrivate));
 	memset (priv, 0, sizeof (DNAPrivate));
 
-	lv_dna->priv = priv;
+	lv_dna->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = lv_dna;
@@ -67,6 +68,9 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int lv_dna_init (VisActorPlugin *plugin)
 {
+	DNAPrivate *priv = plugin->private;
+	int x, y;
+
 	glMatrixMode (GL_PROJECTION);
 
 	glLoadIdentity ();
@@ -87,7 +91,7 @@ int lv_dna_init (VisActorPlugin *plugin)
 
 int lv_dna_cleanup (VisActorPlugin *plugin)
 {
-	DNAPrivate *priv = plugin->priv;
+	DNAPrivate *priv = plugin->private;
 
 	free (priv);
 
@@ -143,8 +147,6 @@ int lv_dna_events (VisActorPlugin *plugin, VisEventQueue *events)
 				lv_dna_dimension (plugin, ev.resize.video,
 						ev.resize.width, ev.resize.height);
 				break;
-			default: /* to avoid warnings */
-				break;
 		}
 	}
 
@@ -158,7 +160,7 @@ VisPalette *lv_dna_palette (VisActorPlugin *plugin)
 
 int lv_dna_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio)
 {
-	DNAPrivate *priv = plugin->priv;
+	DNAPrivate *priv = plugin->private;
 	float res;
 	float sinr = 0;
 	float height = -1.0;

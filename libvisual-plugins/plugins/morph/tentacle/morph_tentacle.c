@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
@@ -52,7 +51,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (TentaclePrivate));
 	memset (priv, 0, sizeof (TentaclePrivate));
 
-	morph->priv = priv;
+	morph->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_MORPH;
 	plugin->plugin.morphplugin = morph;
@@ -67,7 +66,7 @@ int lv_morph_tentacle_init (VisMorphPlugin *plugin)
 
 int lv_morph_tentacle_cleanup (VisMorphPlugin *plugin)
 {
-	TentaclePrivate *priv = plugin->priv;
+	TentaclePrivate *priv = plugin->private;
 
 	free (priv);
 
@@ -76,9 +75,10 @@ int lv_morph_tentacle_cleanup (VisMorphPlugin *plugin)
 
 int lv_morph_tentacle_apply (VisMorphPlugin *plugin, float rate, VisAudio *audio, VisVideo *dest, VisVideo *src1, VisVideo *src2)
 {
-	TentaclePrivate *priv = plugin->priv;
+	TentaclePrivate *priv = plugin->private;
 	uint8_t *destbuf = dest->screenbuffer;
 	uint8_t *src1buf = src1->screenbuffer;
+	uint8_t *src2buf = src2->screenbuffer;
 
 	int height1;
 	int height2;

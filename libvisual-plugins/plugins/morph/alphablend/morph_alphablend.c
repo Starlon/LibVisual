@@ -10,13 +10,13 @@ typedef struct {
 	uint16_t b:5, g:6, r:5;
 } _color16;
         
-static inline int alpha_blend_buffer (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, int depth, float alpha);
+static int alpha_blend_buffer (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, int depth, float alpha);
 
 /* alpha blenders */
-static inline int alpha_blend_8_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
-static inline int alpha_blend_16_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
-static inline int alpha_blend_24_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
-static inline int alpha_blend_32_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
+static int alpha_blend_8_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
+static int alpha_blend_16_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
+static int alpha_blend_24_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
+static int alpha_blend_32_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha);
 
 int lv_morph_alpha_init (VisMorphPlugin *plugin);
 int lv_morph_alpha_cleanup (VisMorphPlugin *plugin);
@@ -28,18 +28,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	VisMorphPlugin *morph;
 
 	plugin = visual_plugin_new ();
-	if (plugin == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-			"Could not create a new plugin");
-		return NULL;
-	}
-
 	morph = visual_plugin_morph_new ();
-	if (morph == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-			"Could not create a new morph plugin");
-		return NULL;
-	}
 
 	morph->name = "alphablend";
 	morph->info = visual_plugin_info_new ("alphablend morph", "Dennis Smit <ds@nerds-incorporated.org>", "0.1",
@@ -73,16 +62,12 @@ int lv_morph_alpha_cleanup (VisMorphPlugin *plugin)
 
 int lv_morph_alpha_apply (VisMorphPlugin *plugin, float rate, VisAudio *audio, VisVideo *dest, VisVideo *src1, VisVideo *src2)
 {
-	visual_log_return_val_if_fail (dest != NULL, -1);
-	visual_log_return_val_if_fail (src1 != NULL, -1);
-	visual_log_return_val_if_fail (src2 != NULL, -1);
-
 	alpha_blend_buffer (dest->screenbuffer, src1->screenbuffer, src2->screenbuffer, dest->size, dest->depth, rate);
 
 	return 0;
 }
 
-static inline int alpha_blend_buffer (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, int depth, float alpha)
+static int alpha_blend_buffer (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, int depth, float alpha)
 {
 	if (depth == VISUAL_VIDEO_DEPTH_8BIT)
 		return alpha_blend_8_c (dest, src1, src2, size, alpha);
@@ -106,7 +91,7 @@ static inline int alpha_blend_buffer (uint8_t *dest, uint8_t *src1, uint8_t *src
  * 32                   x
  */
 
-static inline int alpha_blend_8_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
+static int alpha_blend_8_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
 {
 	uint8_t ialpha = (alpha * 255);
 	int i;
@@ -118,7 +103,7 @@ static inline int alpha_blend_8_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, 
 	return 0;
 }
 
-static inline int alpha_blend_16_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
+static int alpha_blend_16_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
 {
 	uint8_t ialpha = (alpha * 255);
 	_color16 *destr = (_color16 *) dest;
@@ -135,7 +120,7 @@ static inline int alpha_blend_16_c (uint8_t *dest, uint8_t *src1, uint8_t *src2,
 	return 0;
 }
 
-static inline int alpha_blend_24_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
+static int alpha_blend_24_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
 {
 	uint8_t ialpha = (alpha * 255);
 	int i;
@@ -147,7 +132,7 @@ static inline int alpha_blend_24_c (uint8_t *dest, uint8_t *src1, uint8_t *src2,
 	return 0;
 }
 
-static inline int alpha_blend_32_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
+static int alpha_blend_32_c (uint8_t *dest, uint8_t *src1, uint8_t *src2, int size, float alpha)
 {
 	uint8_t ialpha = (alpha * 255);
 	int i;

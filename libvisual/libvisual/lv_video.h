@@ -11,15 +11,6 @@ extern "C" {
 /* NOTE: The depth find helper code in lv_actor depends on an arrangment from low to high */
 
 /**
- * Video flags, for internal use only.
- */
-typedef enum {
-	VISUAL_VIDEO_FLAG_NONE			= 0,	/**< No flags. */
-	VISUAL_VIDEO_FLAG_ALLOCATED_BUFFER	= 1,	/**< Libvisual allocated this buffer. */
-	VISUAL_VIDEO_FLAG_EXTERNAL_BUFFER	= 2	/**< External allocated buffer. */
-} VisVideoFlags;
-
-/**
  * Enumerate that defines video depths for use within plugins, libvisual functions, etc.
  */
 typedef enum {
@@ -59,19 +50,16 @@ struct _VisVideo {
 					  * the number of bytes per line. */
 	void		*screenbuffer;	/**< Pointer to the screen buffer. */
 	VisPalette	*pal;		/**< Optional pointer to the palette. */
-
-	VisVideoFlags	flags;		/**< Private field */
 };
 
 /* prototypes */
-VisVideo *visual_video_new (void);
+VisVideo *visual_video_new ();
 VisVideo *visual_video_new_with_buffer (int width, int height, VisVideoDepth depth);
 int visual_video_free (VisVideo *video);
 int visual_video_free_with_buffer (VisVideo *video);
 int visual_video_free_buffer (VisVideo *video);
 int visual_video_allocate_buffer (VisVideo *video);
 int visual_video_clone (VisVideo *dest, VisVideo *src);
-int visual_video_compare (VisVideo *src1, VisVideo *src2);
 
 int visual_video_set_palette (VisVideo *video, VisPalette *pal);
 int visual_video_set_buffer (VisVideo *video, void *buffer);
@@ -91,12 +79,7 @@ VisVideoDepth visual_video_depth_enum_from_value (int depthvalue);
 
 int visual_video_bpp_from_depth (VisVideoDepth depth);
 
-int visual_video_blit_overlay (VisVideo *dest, VisVideo *src, int x, int y, int alpha);
-
-int visual_video_alpha_color (VisVideo *video, uint8_t r, uint8_t g, uint8_t b, uint8_t density);
-int visual_video_alpha_fill (VisVideo *video, uint8_t density);
-
-int visual_video_color_bgr_to_rgb (VisVideo *dest, VisVideo *src);
+int visual_video_fit_in_video (VisVideo *dest, VisVideo *src);
 
 int visual_video_depth_transform (VisVideo *viddest, VisVideo *vidsrc);
 int visual_video_depth_transform_to_buffer (uint8_t *dest, VisVideo *video,

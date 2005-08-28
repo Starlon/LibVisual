@@ -5,11 +5,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-const char *visual_get_version (void);
-VisParamContainer *visual_get_params (void);
+const char *visual_get_version ();
 int visual_init_path_add (char *pathadd);
-int visual_init (int *argc, char ***argv);
-int visual_quit (void);
+int visual_init (int *argc, char **argv[]);
+int visual_quit ();
 
 #ifdef __cplusplus
 }

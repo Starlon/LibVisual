@@ -4,6 +4,7 @@ LEGAL:
 Plugin:
 	Rewrite complete plugin after the managed bin has been rewritten.
 
+
 	startup with opengl bugs (also with forced resos paktie niet de goede)
 	fix opengl support with the new morph stuff.
 	fix songinfo with the new morph stuff.
@@ -11,7 +12,9 @@ Plugin:
 	resolution/depth change, also check what sdl supports
 
 	When opengl is not found, disable opengl support and set this in the plugin (post 0.1)
+	Good fullscreen support	(post 0.1)
 	gtkclist with plugins to select out
+	Cap FPS (post 0.1)
 	extensive error checking.
 	disable plugin hooks (crashes, no idea why)
 	remember place of the plugin window
@@ -20,12 +23,4 @@ Plugin:
 	deactivate xscreensaver:
 		system ("xscreensaver-command -deactivate >&- 2>&- &");
 	deactivate dpms and xblank (look at mplayer)
-
-	add a configure dialog that let configure every available plugin (we need
-	support on Libvisual Library to do this reusable).
-
-	let the user choose the color depth.
-
-Config:
-	Remove keys from an old config format
 

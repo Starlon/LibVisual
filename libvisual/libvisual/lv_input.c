@@ -25,18 +25,6 @@ static VisInputPlugin *get_input_plugin (VisInput *input)
  */
 
 /**
- * Gives the encapsulated LVPlugin from a VisInput.
- *
- * @param input Pointer of a VisInput of which the LVPlugin needs to be returned.
- *
- * @return LVPlugin that is encapsulated in the VisInput, possibly NULL.
- */
-LVPlugin *visual_input_get_plugin (VisInput *input)
-{
-	        return input->plugin;
-}
-
-/**
  * Gives a list of input plugins in the current plugin registry.
  *
  * @return An VisList containing the input plugins in the plugin registry.
@@ -84,7 +72,7 @@ char *visual_input_get_prev_by_name (char *name)
  */
 int visual_input_valid_by_name (char *name)
 {
-	if (visual_plugin_find (visual_input_get_list (), name) == NULL)
+	if (_lv_plugin_find (visual_input_get_list (), name) == NULL)
 		return FALSE;
 	else
 		return TRUE;
@@ -104,23 +92,20 @@ VisInput *visual_input_new (char *inputname)
 	VisInput *input;
 	VisPluginRef *ref;
 
-//	visual_log_return_val_if_fail (__lv_plugins_input != NULL && inputname == NULL, NULL);
-
-	if (__lv_plugins_input == NULL && inputname != NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "the plugin list is NULL");
+	if (__lv_plugins_input == NULL && inputname != NULL)
 		return NULL;
-	}
-	
-	input = visual_mem_new0 (VisInput, 1);
-	
+
+	input = malloc (sizeof (VisInput));
+	memset (input, 0, sizeof (VisInput));
+
 	input->audio = visual_audio_new ();
 	
 	if (inputname == NULL)
 		return input;
 	
-	ref = visual_plugin_find (__lv_plugins_input, inputname);
+	ref = _lv_plugin_find (__lv_plugins_input, inputname);
 	
-	input->plugin = visual_plugin_load (ref);
+	input->plugin = _lv_plugin_load (ref);
 
 	return input;
 }
@@ -138,7 +123,7 @@ int visual_input_realize (VisInput *input)
 		return -1;
 
 	if (input->plugin != NULL && input->callback == NULL)
-		visual_plugin_realize (input->plugin);
+		_lv_plugin_realize (input->plugin);
 
 	return 0;
 }
@@ -157,7 +142,7 @@ int visual_input_destroy (VisInput *input)
 		return -1;
 
 	if (input->plugin != NULL)
-		visual_plugin_unload (input->plugin);
+		_lv_plugin_unload (input->plugin);
 
 	return visual_input_free (input);
 		
@@ -181,7 +166,7 @@ int visual_input_free (VisInput *input)
 	if (input->audio != NULL)
 		visual_audio_free (input->audio);
 	
-	visual_mem_free (input);
+	free (input);
 	
 	return 0;
 }
@@ -193,17 +178,17 @@ int visual_input_free (VisInput *input)
  *
  * @param input Pointer to a VisInput that to which a callback needs to be set.
  * @param callback The in app callback function that should be used instead of a plugin.
- * @param priv A private that can be read within the callback function.
+ * @param private A private that can be read within the callback function.
  *
  * @return 0 on succes -1 on error.
  */
-int visual_input_set_callback (VisInput *input, input_upload_callback_func_t callback, void *priv)
+int visual_input_set_callback (VisInput *input, input_upload_callback_func_t callback, void *private)
 {
 	if (input == NULL)
 		return -1;
 
 	input->callback = callback;
-	input->priv = priv;
+	input->private = private;
 
 	return 0;
 }
@@ -229,7 +214,7 @@ int visual_input_run (VisInput *input)
 
 		inplugin->upload (inplugin, input->audio);
 	} else
-		input->callback (input, input->audio, input->priv);
+		input->callback (input, input->audio, input->private);
 
 	visual_audio_analyze (input->audio);
 

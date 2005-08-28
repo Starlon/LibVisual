@@ -5,14 +5,11 @@
 #include <dlfcn.h>
 #include <dirent.h>
 
-#include <lvconfig.h>
 #include "lv_plugin.h"
-#include "lv_log.h"
-#include "lv_mem.h"
 
 extern VisList *__lv_plugins;
 
-static void ref_list_destroy (void *ref);
+static void ref_list_destroy (VisPluginRef *ref);
 
 static int plugin_add_dir_to_list (VisList *list, char *dir);
 static int plugin_init (LVPlugin *plugin);
@@ -21,14 +18,11 @@ static char *plugin_get_name (LVPlugin *plugin);
 static VisPluginInfo *plugin_get_info (LVPlugin *plugin);
 static int plugin_destroy (LVPlugin *plugin);
 
-static void ref_list_destroy (void *data)
+static void ref_list_destroy (VisPluginRef *ref)
 {
-	VisPluginRef *ref;
-
-	if (data == NULL)
+	if (ref == NULL)
 		return;
 
-	ref = (VisPluginRef *) data;
 	if (ref->info != NULL)
 		visual_plugin_info_free (ref->info);
 
@@ -39,62 +33,6 @@ static void ref_list_destroy (void *data)
  * @defgroup VisPlugin VisPlugin
  * @{
  */
-
-/**
- * Pumps the queued events into the plugin it's event handler if it has one.
- *
- * @param plugin Pointer to a LVPlugin of which the events need to be pumped into
- *	the handler.
- *
- * @return 0 on succes -1 on error.
- */
-int visual_plugin_events_pump (LVPlugin *plugin)
-{
-	visual_log_return_val_if_fail (plugin != NULL, -1);
-
-	switch (plugin->type) {
-		case VISUAL_PLUGIN_TYPE_NULL:
-			return -1;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_ACTOR:
-			if (plugin->plugin.actorplugin->events != NULL)
-				plugin->plugin.actorplugin->events (plugin->plugin.actorplugin, &plugin->eventqueue);
-
-			break;
-
-		case VISUAL_PLUGIN_TYPE_INPUT:
-			return -1;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_MORPH:
-			return -1;
-			break;
-			
-		default:
-			return -1;
-			break;
-	}
-
-	return 0;
-}
-
-/**
- * Gives the event queue from a LVPlugin. This queue needs to be used
- * when you want to send events to the plugin.
- *
- * @see visual_plugin_events_pump
- *
- * @param plugin Pointer to the LVPlugin from which we want the queue.
- *
- * @return A pointer to the requested VisEventQueue or NULL on error.
- */
-VisEventQueue *visual_plugin_get_eventqueue (LVPlugin *plugin)
-{
-	visual_log_return_val_if_fail (plugin != NULL, NULL);
-
-	return &plugin->eventqueue;
-}
 
 /**
  * Creates a new VisPluginInfo structure. Creates a VisPluginInfo and add information to it.
@@ -111,13 +49,10 @@ VisPluginInfo *visual_plugin_info_new (char *name, char *author, char *version, 
 {
 	VisPluginInfo *pluginfo;
 
-	visual_log_return_val_if_fail (name != NULL, NULL);
-	visual_log_return_val_if_fail (author != NULL, NULL);
-	visual_log_return_val_if_fail (version != NULL, NULL);
-	visual_log_return_val_if_fail (about != NULL, NULL);
-	visual_log_return_val_if_fail (help != NULL, NULL);
-	
-	pluginfo = visual_mem_new0 (VisPluginInfo, 1);
+	pluginfo = malloc (sizeof (VisPluginInfo));
+
+	if (pluginfo == NULL)
+		return NULL;
 
 	pluginfo->name = strdup (name);
 	pluginfo->author = strdup (author);
@@ -139,8 +74,6 @@ VisPluginInfo *visual_plugin_info_duplicate (VisPluginInfo *pluginfo)
 {
 	VisPluginInfo *plugnew;
 
-	visual_log_return_val_if_fail (pluginfo != NULL, NULL);
-
 	plugnew = visual_plugin_info_new (pluginfo->name, pluginfo->author,
 			pluginfo->version, pluginfo->about, pluginfo->help);
 
@@ -156,98 +89,27 @@ VisPluginInfo *visual_plugin_info_duplicate (VisPluginInfo *pluginfo)
  */
 int visual_plugin_info_free (VisPluginInfo *pluginfo)
 {
-	visual_log_return_val_if_fail (pluginfo != NULL, -1);
+	if (pluginfo == NULL)
+		return -1;
 
 	if (pluginfo->name != NULL)
-		visual_mem_free (pluginfo->name);
+		free (pluginfo->name);
 
 	if (pluginfo->author != NULL)
-		visual_mem_free (pluginfo->author);
+		free (pluginfo->author);
 
 	if (pluginfo->version != NULL)
-		visual_mem_free (pluginfo->version);
+		free (pluginfo->version);
 
 	if (pluginfo->about != NULL)
-		visual_mem_free (pluginfo->about);
+		free (pluginfo->about);
 
 	if (pluginfo->help != NULL)
-		visual_mem_free (pluginfo->help);
+		free (pluginfo->help);
 
-	visual_mem_free (pluginfo);
+	free (pluginfo);
 
 	return 0;
-}
-
-/**
- * Gives the VisPluginInfo related to a LVPlugin.
- *
- * @param plugin The LVPlugin of which the VisPluginInfo is requested.
- *
- * @return The VisPluginInfo within the LVPlugin, or NULL on error.
- */
-VisPluginInfo *visual_plugin_get_info (LVPlugin *plugin)
-{
-	visual_log_return_val_if_fail (plugin != NULL, NULL);
-
-	switch (plugin->type) {
-		case VISUAL_PLUGIN_TYPE_NULL:
-			return NULL;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_ACTOR:
-			return plugin->plugin.actorplugin->info;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_INPUT:
-			return plugin->plugin.inputplugin->info;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_MORPH:
-			return plugin->plugin.morphplugin->info;
-			break;
-
-		default:
-			return NULL;
-			break;
-	}
-
-	return NULL;
-}
-
-/**
- * Gives the VisParamContainer related to a LVPlugin.
- *
- * @param plugin The LVPlugin of which the VisParamContainer is requested.
- *
- * @return The VisParamContainer within the LVPlugin, or NULL on error.
- */
-VisParamContainer *visual_plugin_get_params (LVPlugin *plugin)
-{
-	visual_log_return_val_if_fail (plugin != NULL, NULL);
-
-	switch (plugin->type) {
-		case VISUAL_PLUGIN_TYPE_NULL:
-			return NULL;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_ACTOR:
-			return &plugin->plugin.actorplugin->params;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_INPUT:
-			return &plugin->plugin.inputplugin->params;
-			break;
-
-		case VISUAL_PLUGIN_TYPE_MORPH:
-			return &plugin->plugin.morphplugin->params;
-			break;
-
-		default:
-			return NULL;
-			break;
-	}
-
-	return NULL;
 }
 
 /**
@@ -259,7 +121,12 @@ VisParamContainer *visual_plugin_get_params (LVPlugin *plugin)
  */
 VisPluginRef *visual_plugin_ref_new ()
 {
-	return (visual_mem_new0 (VisPluginRef, 1));
+	VisPluginRef *ref;
+
+	ref = malloc (sizeof (VisPluginRef));
+	memset (ref, 0, sizeof (VisPluginRef));
+
+	return ref;
 }
 
 /**
@@ -271,15 +138,16 @@ VisPluginRef *visual_plugin_ref_new ()
  */
 int visual_plugin_ref_free (VisPluginRef *ref)
 {
-	visual_log_return_val_if_fail (ref != NULL, -1);
+	if (ref == NULL)
+		return -1;
 
 	if (ref->file != NULL)
-		visual_mem_free (ref->file);
+		free (ref->file);
 
 	if (ref->name != NULL)
-		visual_mem_free (ref->name);
+		free (ref->name);
 
-	visual_mem_free (ref);
+	free (ref);
 
 	return 0;
 }
@@ -295,15 +163,14 @@ int visual_plugin_ref_free (VisPluginRef *ref)
  */
 int visual_plugin_ref_list_destroy (VisList *list)
 {
-	int ret1;
-
-	visual_log_return_val_if_fail (list != NULL, -1);
+	if (list == NULL)
+		return -1;
 	
-	ret1 = visual_list_destroy (list, ref_list_destroy);
+	visual_list_destroy (list, ref_list_destroy);
 
-	list = NULL;
+	visual_list_free (list);
 
-	return ((ret1 == 0) ? 0 : -1);
+	return 0;
 }
 
 /**
@@ -313,7 +180,12 @@ int visual_plugin_ref_list_destroy (VisList *list)
  */
 VisActorPlugin *visual_plugin_actor_new ()
 {
-	return (visual_mem_new0 (VisActorPlugin, 1));
+	VisActorPlugin *actorplugin;
+	
+	actorplugin = malloc (sizeof (VisActorPlugin));
+	memset (actorplugin, 0, sizeof (VisActorPlugin));
+
+	return actorplugin;
 }
 
 /**
@@ -325,11 +197,10 @@ VisActorPlugin *visual_plugin_actor_new ()
  */
 int visual_plugin_actor_free (VisActorPlugin *actorplugin)
 {
-	visual_log_return_val_if_fail (actorplugin != NULL, -1);
+	if (actorplugin == NULL)
+		return -1;
 
-	visual_mem_free (actorplugin);
-
-	actorplugin = NULL;
+	free (actorplugin);
 
 	return 0;
 }
@@ -341,7 +212,12 @@ int visual_plugin_actor_free (VisActorPlugin *actorplugin)
  */
 VisInputPlugin *visual_plugin_input_new ()
 {
-	return (visual_mem_new0 (VisInputPlugin, 1));
+	VisInputPlugin *inputplugin;
+
+	inputplugin = malloc (sizeof (VisInputPlugin));
+	memset (inputplugin, 0, sizeof (VisInputPlugin));
+
+	return inputplugin;
 }
 
 /**
@@ -353,12 +229,11 @@ VisInputPlugin *visual_plugin_input_new ()
  */
 int visual_plugin_input_free (VisInputPlugin *inputplugin)
 {
-	visual_log_return_val_if_fail (inputplugin != NULL, -1);
+	if (inputplugin == NULL)
+		return -1;
 
-	visual_mem_free (inputplugin);
+	free (inputplugin);
 
-	inputplugin = NULL;
-	
 	return 0;
 }
 
@@ -369,7 +244,12 @@ int visual_plugin_input_free (VisInputPlugin *inputplugin)
  */
 VisMorphPlugin *visual_plugin_morph_new ()
 {
-	return (visual_mem_new0 (VisMorphPlugin, 1));
+	VisMorphPlugin *morphplugin;
+
+	morphplugin = malloc (sizeof (VisMorphPlugin));
+	memset (morphplugin, 0, sizeof (VisMorphPlugin));
+
+	return morphplugin;
 }
 
 /**
@@ -381,11 +261,10 @@ VisMorphPlugin *visual_plugin_morph_new ()
  */
 int visual_plugin_morph_free (VisMorphPlugin *morphplugin)
 {
-	visual_log_return_val_if_fail (morphplugin != NULL, -1);
+	if (morphplugin == NULL)
+		return -1;
 
-	visual_mem_free (morphplugin);
-
-	morphplugin = NULL;
+	free (morphplugin);
 
 	return 0;
 }
@@ -397,7 +276,12 @@ int visual_plugin_morph_free (VisMorphPlugin *morphplugin)
  */
 LVPlugin *visual_plugin_new ()
 {
-	return (visual_mem_new0 (LVPlugin, 1));
+	LVPlugin *plugin;
+
+	plugin = malloc (sizeof (LVPlugin));
+	memset (plugin, 0, sizeof (LVPlugin));
+
+	return plugin;
 }
 
 /**
@@ -409,11 +293,10 @@ LVPlugin *visual_plugin_new ()
  */
 int visual_plugin_free (LVPlugin *plugin)
 {
-	visual_log_return_val_if_fail (plugin != NULL, -1);
+	if (plugin == NULL)
+		return -1;
 
-	visual_mem_free (plugin);
-
-	plugin = NULL;
+	free (plugin);
 
 	return 0;
 }
@@ -446,14 +329,7 @@ VisList *visual_plugin_registry_filter (VisList *pluglist, VisPluginType type)
 	VisListEntry *entry = NULL;
 	VisPluginRef *ref;
 
-	visual_log_return_val_if_fail (pluglist != NULL, NULL);
-
 	list = visual_list_new ();
-
-	if (list == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot create a new list");
-		return NULL;
-	}
 
 	while ((ref = visual_list_next (pluglist, &entry)) != NULL) {
 		if (ref->type == type)
@@ -480,8 +356,6 @@ char *visual_plugin_get_next_by_name (VisList *list, char *name)
 	VisListEntry *entry = NULL;
 	VisPluginRef *ref;
 	int tagged = FALSE;
-
-	visual_log_return_val_if_fail (list != NULL, NULL);
 
 	while ((ref = visual_list_next (list, &entry)) != NULL) {
 		if (name == NULL)
@@ -514,8 +388,6 @@ char *visual_plugin_get_prev_by_name (VisList *list, char *name)
 	VisListEntry *entry = NULL;
 	VisPluginRef *ref, *pref = NULL;
 	
-	visual_log_return_val_if_fail (list != NULL, NULL);
-
 	if (name == NULL) {
 		ref = visual_list_get (list, visual_list_count (list) - 1);
 		
@@ -552,8 +424,8 @@ static int plugin_add_dir_to_list (VisList *list, char *dir)
 		return -1;
 
 	/* Free the . and .. entries */
-	visual_mem_free (namelist[0]);
-	visual_mem_free (namelist[1]);
+	free (namelist[0]);
+	free (namelist[1]);
 
 	for (i = 2; i < n; i++) {
 		ref = NULL;
@@ -562,14 +434,14 @@ static int plugin_add_dir_to_list (VisList *list, char *dir)
 
 		len = strlen (temp);
 		if (len > 3 && (strncmp (&temp[len - 3], ".so", 3)) == 0)
-			ref = visual_plugin_get_reference (NULL, temp);
+			ref = _lv_plugin_get_reference (NULL, temp);
 
 		if (ref != NULL)
 			visual_list_add (list, ref);
 		
-		visual_mem_free (namelist[i]);
+		free (namelist[i]);
 	}
-	visual_mem_free (namelist);
+	free (namelist);
 
 	return 0;
 }
@@ -582,17 +454,14 @@ static int plugin_init (LVPlugin *plugin)
 			break;
 
 		case VISUAL_PLUGIN_TYPE_ACTOR:
-			plugin->plugin.actorplugin->ref = plugin->ref;
 			plugin->plugin.actorplugin->init (plugin->plugin.actorplugin);
 			break;
 
 		case VISUAL_PLUGIN_TYPE_INPUT:
-			plugin->plugin.inputplugin->ref = plugin->ref;
 			plugin->plugin.inputplugin->init (plugin->plugin.inputplugin);
 			break;
 
 		case VISUAL_PLUGIN_TYPE_MORPH:
-			plugin->plugin.morphplugin->ref = plugin->ref;
 			plugin->plugin.morphplugin->init (plugin->plugin.morphplugin);
 			break;
 			
@@ -722,20 +591,15 @@ static int plugin_destroy (LVPlugin *plugin)
  *
  * @return 0 on succes -1 on error.
  */
-int visual_plugin_unload (LVPlugin *plugin)
+int _lv_plugin_unload (LVPlugin *plugin)
 {
 	VisPluginRef *ref;
 
-	visual_log_return_val_if_fail (plugin != NULL, -1);
-
 	/* Not loaded */
-	if (plugin->handle == NULL) {
-		visual_log (VISUAL_LOG_DEBUG, "The plugin was never loaded");
+	if (plugin->handle == NULL)
 		return -1;
-	}
 
 	ref = plugin->ref;
-	visual_log_return_val_if_fail (ref != NULL, -1);
 	
 	if (plugin->realized == TRUE)
 		plugin_cleanup (plugin);
@@ -750,8 +614,6 @@ int visual_plugin_unload (LVPlugin *plugin)
 	return 0;
 }
 
-
-
 /**
  * Private function to load a plugin.
  *
@@ -760,18 +622,19 @@ int visual_plugin_unload (LVPlugin *plugin)
  *
  * @return A newly created and loaded LVPlugin.
  */
-LVPlugin *visual_plugin_load (VisPluginRef *ref)
+LVPlugin *_lv_plugin_load (VisPluginRef *ref)
 {
 	LVPlugin *plugin;
 	plugin_load_func_t init;
 	void *handle;
 
-	visual_log_return_val_if_fail (ref != NULL, NULL);
+	if (ref == NULL)
+		return NULL;
 
 	handle = dlopen (ref->file, RTLD_LAZY);
 
 	if (handle == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot load plugin: %s", dlerror ());
+		fprintf (stderr, "libvisual fatal: %s\n", dlerror ());
 
 		return NULL;
 	}
@@ -779,7 +642,7 @@ LVPlugin *visual_plugin_load (VisPluginRef *ref)
 	init = (plugin_load_func_t) dlsym (handle, "get_plugin_info");
 
 	if (init == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot initialize plugin: %s", dlerror ());
+		fprintf (stderr, "can't initialize plugin: %s\n", dlerror ());
 
 		dlclose (handle);
 
@@ -788,18 +651,14 @@ LVPlugin *visual_plugin_load (VisPluginRef *ref)
 
 	plugin = init (ref);
 
-	if (plugin != NULL) {
-		plugin->ref = ref;
-		plugin->handle = handle;
+	plugin->ref = ref;
+	plugin->handle = handle;
 
-		ref->usecount++;
+	ref->usecount++;
 
-		plugin->realized = FALSE;
+	plugin->realized = FALSE;
 
-		return plugin;
-	} else {
-		return NULL;
-	}
+	return plugin;
 }
 
 /**
@@ -809,20 +668,13 @@ LVPlugin *visual_plugin_load (VisPluginRef *ref)
  * 
  * @return 0 on succes -1 on error.
  */
-int visual_plugin_realize (LVPlugin *plugin)
+int _lv_plugin_realize (LVPlugin *plugin)
 {
-	VisParamContainer *paramcontainer;
-
-	visual_log_return_val_if_fail (plugin != NULL, -1);
-
 	if (plugin->realized == TRUE)
 		return -1;
 
 	plugin_init (plugin);
 	plugin->realized = TRUE;
-
-	paramcontainer = visual_plugin_get_params (plugin);
-	visual_param_set_eventqueue (paramcontainer, &plugin->eventqueue);
 
 	return 0;
 }
@@ -837,20 +689,16 @@ int visual_plugin_realize (LVPlugin *plugin)
  *
  * @return The optionally newly allocated VisPluginRef for the plugin.
  */
-VisPluginRef *visual_plugin_get_reference (VisPluginRef *refn, char *pluginpath)
+VisPluginRef *_lv_plugin_get_reference (VisPluginRef *refn, char *pluginpath)
 {
 	LVPlugin *plugin;
 	VisPluginRef *ref;
-	VisPluginInfo *plug_info;
-	char *plug_name;
 	plugin_load_func_t init;
 	void *handle;
 
-	visual_log_return_val_if_fail (pluginpath != NULL, NULL);
-
 	handle = dlopen (pluginpath, RTLD_LAZY);
 	if (handle == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot load plugin: %s", dlerror ());
+		fprintf (stderr, "libvisual fatal: %s\n", dlerror ());
 
 		return NULL;
 	}
@@ -858,15 +706,15 @@ VisPluginRef *visual_plugin_get_reference (VisPluginRef *refn, char *pluginpath)
 	init = (plugin_load_func_t) dlsym (handle, "get_plugin_info");
 
 	if (init == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot initialize plugin: %s", dlerror ());
-
+		fprintf (stderr, "libvisual fatal: %s\n", dlerror ());
 		dlclose (handle);
 
 		return NULL;
 	}
 
 	if (refn == NULL) {
-		ref = visual_plugin_ref_new ();
+		ref = malloc (sizeof (VisPluginRef));
+		memset (ref, 0, sizeof (VisPluginRef));
 	} else {
 		ref = refn;
 	}
@@ -874,30 +722,16 @@ VisPluginRef *visual_plugin_get_reference (VisPluginRef *refn, char *pluginpath)
 	plugin = init (ref);
 
 	if (plugin == NULL) {
-		if (refn == NULL && ref != NULL)
-			visual_mem_free (ref);
+		if (refn == NULL)
+			free (ref);
 
 		dlclose (handle);
 		return NULL;
 	}
 
-	plug_name = plugin_get_name (plugin);
-	if (plug_name == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot get plugin name");
-		dlclose (handle);
-		return NULL;
-	}
-
-	plug_info = plugin_get_info (plugin);
-	if (plug_info == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, "Cannot get plugin info");
-		dlclose (handle);
-		return NULL;
-	}
-
-	ref->name = strdup (plug_name);
-	ref->info = visual_plugin_info_duplicate (plug_info);
 	ref->file = strdup (pluginpath);
+	ref->name = strdup (plugin_get_name (plugin));
+	ref->info = visual_plugin_info_duplicate (plugin_get_info (plugin));
 	ref->type = plugin->type;
 
 	plugin_cleanup (plugin);
@@ -915,18 +749,14 @@ VisPluginRef *visual_plugin_get_reference (VisPluginRef *refn, char *pluginpath)
  *
  * @return A newly allocated VisList containing the plugin registry for the set of paths.
  */
-VisList *visual_plugin_get_list (char **paths)
+VisList *_lv_plugin_get_list (char **paths)
 {
 	VisList *list = visual_list_new();
 	int i = 0;
 
-	while (paths[i] != NULL) {
-		if (plugin_add_dir_to_list (list, paths[i++]) < 0) {
-			visual_list_destroy (list, NULL);
-			return NULL;
-		}
-	}
-	
+	while (paths[i] != NULL)
+		plugin_add_dir_to_list (list, paths[i++]);
+
 	return list;
 }
 
@@ -939,7 +769,7 @@ VisList *visual_plugin_get_list (char **paths)
  *
  * @return The VisPluginRef for the plugin if found, or NULL when not found.
  */
-VisPluginRef *visual_plugin_find (VisList *list, char *name)
+VisPluginRef *_lv_plugin_find (VisList *list, char *name)
 {
 	VisListEntry *entry = NULL;
 	VisPluginRef *ref;

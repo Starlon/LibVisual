@@ -13,6 +13,9 @@
 
 typedef struct {
 	PluginInfo	*goominfo; /* The goom internal private struct */
+
+	char		*prevname;
+	int		 name_changed;
 } GoomPrivate;
 
 int lv_goom_init (VisActorPlugin *plugin);
@@ -49,9 +52,10 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 	goom->depth = VISUAL_VIDEO_DEPTH_32BIT;
 
-	priv = visual_mem_malloc0 (sizeof (GoomPrivate));
+	priv = malloc (sizeof (GoomPrivate));
+	memset (priv, 0, sizeof (GoomPrivate));
 
-	goom->priv = priv;
+	goom->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = goom;
@@ -61,7 +65,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int lv_goom_init (VisActorPlugin *plugin)
 {
-	GoomPrivate *priv = plugin->priv;
+	GoomPrivate *priv = plugin->private;
 
 	priv->goominfo = goom_init (128, 128);
 	
@@ -70,12 +74,15 @@ int lv_goom_init (VisActorPlugin *plugin)
 
 int lv_goom_cleanup (VisActorPlugin *plugin)
 {
-	GoomPrivate *priv = plugin->priv;
+	GoomPrivate *priv = plugin->private;
 
 	if (priv->goominfo != NULL)
 		goom_close (priv->goominfo);
 
-	visual_mem_free (priv);
+	if (priv->prevname != NULL)
+		free (priv->prevname);
+
+	free (priv);
 
 	return 0;
 }
@@ -89,7 +96,7 @@ int lv_goom_requisition (VisActorPlugin *plugin, int *width, int *height)
 
 int lv_goom_dimension (VisActorPlugin *plugin, VisVideo *video, int width, int height)
 {
-	GoomPrivate *priv = plugin->priv;
+	GoomPrivate *priv = plugin->private;
 
 	visual_video_set_dimension (video, width, height);
 
@@ -139,8 +146,6 @@ int lv_goom_events (VisActorPlugin *plugin, VisEventQueue *events)
 						ev.keyboard.keysym.sym,
 						ev.keyboard.keysym.mod);
 				break;
-			default: /* to avoid warnings */
-				break;
 		}
 	}
 
@@ -154,29 +159,25 @@ VisPalette *lv_goom_palette (VisActorPlugin *plugin)
 
 int lv_goom_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio)
 {
-	GoomPrivate *priv = plugin->priv;
+	GoomPrivate *priv = plugin->private;
 	VisSongInfo *songinfo = plugin->songinfo;
-	VisParamContainer *paramcontainer;
-	VisParamEntry *param;
 	short pcmdata[2][512];
 	uint32_t *buf;
-	int showinfo = TRUE;
+	int i;
 
-	memcpy (pcmdata, audio->pcm, sizeof (short) * 512 * 2);
+	for (i = 0; i < 512; i++) {
+		pcmdata[0][i] = audio->pcm[0][i];
+		pcmdata[1][i] = audio->pcm[1][i];
+	}
 
-	/* Check the global parameter for showing songinfo in plugins */
-	paramcontainer = visual_get_params ();
-	param = visual_param_container_get (paramcontainer, "songinfo in plugin");
-	if (param != NULL)
-		showinfo = visual_param_entry_get_integer (param);
-	
+	/* FIXME add a prop to disable songinfo display, make that a global prop */
 	/* FIXME goom should support setting a pointer, so we don't need that final memcpy */
-	if (songinfo != NULL && visual_songinfo_age (songinfo) <= 1 && showinfo == TRUE) {
-		if (songinfo->type == VISUAL_SONGINFO_TYPE_SIMPLE)
+	if (songinfo != NULL && visual_songinfo_age (songinfo) <= 1) {
+		if (songinfo->type == VISUAL_SONGINFO_TYPE_SIMPLE) {
 			buf = goom_update (priv->goominfo, pcmdata, 0, 0, songinfo->songname, NULL);
-		else if (songinfo->type == VISUAL_SONGINFO_TYPE_ADVANCED)
+		} else if (songinfo->type == VISUAL_SONGINFO_TYPE_ADVANCED) {
 			buf = goom_update (priv->goominfo, pcmdata, 0, 0, songinfo->song, NULL);
-		else
+		} else
 			buf = goom_update (priv->goominfo, pcmdata, 0, 0, NULL, NULL);
 	}
 	else

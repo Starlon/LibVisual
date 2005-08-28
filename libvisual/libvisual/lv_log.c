@@ -3,10 +3,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
-#include <assert.h>
+#include <sys/types.h>
 
-#include "lv_common.h"
 #include "lv_log.h"
+
+extern char *__lv_progname;
 
 static const char *log_severity_to_string (VisLogSeverity severity);
 
@@ -29,13 +30,10 @@ static const char *log_severity_to_string (VisLogSeverity severity)
 			return "ERROR";
 
 		default:
-			/*
-			 * FIXME This cannot happen! We must abort
-			 */
 			return "INVALID LOG LOG";
 	}
 
-	assert (0);
+	return "ERROR WITHIN LOG SYSTEM";
 }
 
 /**
@@ -51,49 +49,27 @@ static const char *log_severity_to_string (VisLogSeverity severity)
  * @see visual_log
  * 
  * @param severity Severity of the log message.
- * @param file Char pointer to a string that contains the source filename.
- * @param line Line number for which the log message is.
- * @param funcname Function name in which the log message is called.
  * @param fmt Format string to display the log message.
  *
  * @return 0 on succes -1 on error.
  */
-void _lv_log (VisLogSeverity severity, const char *file,
-			int line, const char *funcname, const char *fmt, ...)
+int _lv_log (VisLogSeverity severity, const char *fmt, ...)
 {
 	char str[1024];
 	va_list va;
 	
-	assert (fmt != NULL);
+	if (fmt == NULL)
+		return -1;
 
 	va_start (va, fmt);
 	vsnprintf (str, 1023, fmt, va);
 	va_end (va);
 
-	if (funcname == NULL) { /* The system is not GNUC */
-		if (severity == VISUAL_LOG_INFO) {
-			printf ("libvisual %s: %s: %s\n",
-					log_severity_to_string (severity),
-					__lv_progname, str);
-		} else {
-			fprintf (stderr, "libvisual %s: %s [(%s,%d)]: %s\n",
-					log_severity_to_string (severity), __lv_progname,
-					file, line, str);
-		}
-	} else {
-		if (severity == VISUAL_LOG_INFO) {
-			printf ("libvisual %s: %s: %s\n",
-					log_severity_to_string (severity),
-					__lv_progname, str);
-		} else {
-			fprintf (stderr, "libvisual %s: %s: %s [(%s,%d)]: %s\n",
-					log_severity_to_string (severity), __lv_progname,
-					funcname, file, line, str);
-		}
-	}
+	fprintf (stderr, "(%s:%d): libvisual-%s **: %s\n",
+			__lv_progname, getpid (), log_severity_to_string (severity),
+			str);
 
-	if (severity == VISUAL_LOG_ERROR)
-		exit (1);
+	return 0;
 }
 
 /**

@@ -33,9 +33,7 @@ struct _VisMorph {
 					 * color depths. */
 };
 
-LVPlugin *visual_morph_get_plugin (VisMorph *morph);
-
-VisList *visual_morph_get_list (void);
+VisList *visual_morph_get_list ();
 char *visual_morph_get_next_by_name (char *name);
 char *visual_morph_get_prev_by_name (char *name);
 int visual_morph_valid_by_name (char *name);

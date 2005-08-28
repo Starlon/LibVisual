@@ -1,10 +1,9 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <SDL/SDL.h>
 
-#include "../libvisual/libvisual.h"
+#include <libvisual/libvisual.h>
 
 /* The code in this example is written a bit hacky, but the libvisual code is as it should
  * be used so you could take that and use that as an example */
@@ -29,14 +28,14 @@ VisBin *bin;
 int bpp = 1;
 int gl_plug = 0;
 
-void sdl_fullscreen_toggle (void);
+void sdl_fullscreen_toggle ();
 void sdl_fullscreen_xy (int *x, int *y);
 int sdl_fullscreen_set (int mode);
 void sdl_size_request (int width, int height);
 void sdl_init (int width, int height);
 void sdl_create (int width, int height);
-void sdl_draw_buf (void);
-void sdl_set_pal (void);
+void sdl_draw_buf ();
+void sdl_set_pal ();
 	
 /* Fullscreen stuff */
 void sdl_fullscreen_toggle ()
@@ -132,8 +131,6 @@ int sdl_fullscreen_set (int mode)
 		default:
 			break;
 	}
-
-	return 0;
 }
 
 /* Sdl stuff */
@@ -204,6 +201,7 @@ void sdl_create (int width, int height)
 void sdl_draw_buf ()
 {
 	unsigned char *str = (unsigned char *) screen->pixels;
+	int i;
 	
 	memcpy (str, scrbuf, video->size);
 
@@ -215,9 +213,9 @@ void sdl_set_pal ()
 	int i;
 
 	for (i = 0; i < 256; i ++) {
-		colors[i].r = pal->colors[i].r;
-		colors[i].g = pal->colors[i].g;
-		colors[i].b = pal->colors[i].b;
+		colors[i].r = pal->r[i];
+		colors[i].g = pal->g[i];
+		colors[i].b = pal->b[i];
 	}
 	
 	SDL_SetColors (screen, colors, 0, 256);
@@ -235,14 +233,11 @@ int main (int argc, char *argv[])
 	
 	time_t begin = time (NULL), end;
 	int frames = 0;
-	char *input_name = NULL;
 	
-	
-	if (visual_init (&argc, &argv) < 0)
-		visual_log (VISUAL_LOG_ERROR, "Could not initialize Libvisual");
+	visual_init (&argc, &argv);
 	
 	/* Check libvisual version */
-	visual_log (VISUAL_LOG_INFO, "Libvisual version %s", visual_get_version ());
+	printf ("Libvisual version %s\n", visual_get_version ());
 
 	/* Make a new actor from actlist, with pluginname */
 	if (argc > 1)
@@ -251,7 +246,7 @@ int main (int argc, char *argv[])
 		actor = visual_actor_new ("oinksie");
 
 	if (actor->plugin == NULL) {
-		visual_log (VISUAL_LOG_ERROR, "Couldn't create actor plugin");
+		printf ("Couldn't create actor plugin\n");
 		return -1;
 	}
 	
@@ -263,14 +258,14 @@ int main (int argc, char *argv[])
 				
 		/* Check if the depth is supported */
 		if (visual_video_depth_is_supported (depthflag, depth) < 1) {
-			visual_log (VISUAL_LOG_INFO, "Plugin doesn't support this depth, but we'll set up an transformation enviroment.");
-			visual_log (VISUAL_LOG_INFO, "However showing you a nice list of supported depths anyway");
+			printf ("Plugin doesn't support this depth, but we'll set up an transformation enviroment.\n");
+			printf ("However showing you a nice list of supported depths anyway\n");
 
 			/* Show a list of supported depths */
 			i = VISUAL_VIDEO_DEPTH_NONE;
 
 			if (visual_video_depth_is_supported (depthflag, i) == 1)
-				visual_log (VISUAL_LOG_INFO, "Support visual video context NONE");
+				printf ("Support visual video context NONE\n");
 
 			do {
 				j = i;
@@ -279,7 +274,7 @@ int main (int argc, char *argv[])
 				if (i == j)
 					break;
 				
-				visual_log (VISUAL_LOG_INFO, "Support visual depth %d",
+				printf ("Support visual depth %d\n",
 						visual_video_depth_value_from_enum (i));
 
 			} while (i < VISUAL_VIDEO_DEPTH_GL);
@@ -315,8 +310,10 @@ int main (int argc, char *argv[])
 	
 	/* Negotiate with video, if needed, the actor will set up and enviroment
 	 * for depth transformation and it does all the size negotation stuff */
-	if (visual_actor_video_negotiate (actor, 0, FALSE, FALSE) == -1)
-		visual_log (VISUAL_LOG_ERROR, "Couldn't negotiate the actor with the video");
+	if (visual_actor_video_negotiate (actor, 0, FALSE, FALSE) == -1) {
+		printf ("Couldn't negotiate the actor with the video\n");
+		exit (-1);
+	}
 
 	if (gl_plug == 0) {
 		/* Retrieve the bpp from the depth so we can use that for buffer
@@ -331,23 +328,7 @@ int main (int argc, char *argv[])
 		visual_video_set_buffer (video, scrbuf);
 	}
 	
-	if (argc >= 4)
-	        input_name = argv[3];
-	else
-	        input_name = "alsa";
-
-	input = visual_input_new (input_name);
-	visual_log_return_val_if_fail(input != NULL, -1 );
-	if (input->plugin)
-	  visual_log(VISUAL_LOG_INFO, "Input plugin: \"%s\" by %s.\n", 
-		 input->plugin->plugin.inputplugin->name, 
-		 input->plugin->plugin.inputplugin->info->author);
-	else {
-	  visual_log(VISUAL_LOG_ERROR, 
-		     "Plugin \"%s\" doesn't exist or could not be loaded.\n",
-		     input_name);
-	  return -1;
-	}
+	input = visual_input_new ("esd");
 
 	/* Create a new bin, a bin is a container for easy
 	 * management of an working input, actor, render, output pipeline */
@@ -387,17 +368,8 @@ int main (int argc, char *argv[])
 		usleep (5000);
 		
 		while (SDL_PollEvent (&event)) {
-			VisEventQueue *vevent;
-
-			vevent = visual_plugin_get_eventqueue (visual_actor_get_plugin (visual_bin_get_actor (bin)));
-			
 			switch (event.type) {
-				case SDL_KEYUP:
-					visual_event_queue_add_keyboard (vevent, event.key.keysym.sym, event.key.keysym.mod, VISUAL_KEY_UP);
-					break;
-				
 				case SDL_KEYDOWN:
-					visual_event_queue_add_keyboard (vevent, event.key.keysym.sym, event.key.keysym.mod, VISUAL_KEY_DOWN);
 					switch (event.key.keysym.sym) {
 						case SDLK_F11:
 							sdl_fullscreen_toggle ();
@@ -410,8 +382,6 @@ int main (int argc, char *argv[])
 						case SDLK_ESCAPE:
 							goto out;
 							break;
-						default: /* to avoid warnings */
-							break;
 					}
 					break;
 
@@ -422,8 +392,6 @@ int main (int argc, char *argv[])
 				case SDL_QUIT:
 					goto out;
 					break;
-				default: /* to avoid warnings */
-					break;
 			}
 		}
 	}
@@ -432,9 +400,8 @@ out:
 
 	end = time (NULL);
 
-	visual_log (VISUAL_LOG_INFO, "Drawn %d frames in %d seconds, average fps %d",
-			(int)frames, (int)(end - begin),
-			(end - begin) == 0 ? (int)frames : (int)(frames / (end - begin)));
+	printf ("Drawn %d frames in %d seconds, average fps %d\n",
+			frames, end - begin, (end - begin) == 0 ? frames : frames / (end - begin));
 
 	/* Destroy the bin, this will also destroy everything within the bin, if you
 	 * only want to free the bin, use visual_bin_free */
@@ -442,7 +409,5 @@ out:
 	visual_video_free (video);
 
 	visual_quit ();
-
-	return 0;
 }
 

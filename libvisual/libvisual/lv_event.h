@@ -26,8 +26,7 @@ typedef enum {
 	VISUAL_EVENT_MOUSEBUTTONDOWN,	/**< Mouse button pressed event. */
 	VISUAL_EVENT_MOUSEBUTTONUP,	/**< Mouse button released event. */
 	VISUAL_EVENT_NEWSONG,		/**< Song change event. */
-	VISUAL_EVENT_RESIZE,		/**< Window dimension change event. */
-	VISUAL_EVENT_PARAM,		/**< Param set event, gets emitted when a parameter has been changed. */
+	VISUAL_EVENT_RESIZE		/**< Window dimension change event. */
 } VisEventType;
 
 /**
@@ -51,9 +50,9 @@ typedef struct _VisEventMouseMotion VisEventMouseMotion;
 typedef struct _VisEventMouseButton VisEventMouseButton;
 typedef struct _VisEventResize VisEventResize;
 typedef struct _VisEventNewSong VisEventNewSong;
-typedef struct _VisEventParam VisEventParam;
 typedef struct _VisEvent VisEvent;
 typedef struct _VisEventQueue VisEventQueue;
+
 /**
  * Keyboard event data structure.
  *
@@ -126,19 +125,6 @@ struct _VisEventNewSong {
 };
 
 /**
- * Param change event data structure.
- *
- * Contains information about parameter changes.
- *
- * @see visual_event_queue_add_param
- */
-struct _VisEventParam {
-	VisEventType	 type;		/**< Event type of the event being emitted. */
-	/* FiXME: Having VisEventParam here creates a circulair depency in lv_event.h and lv_param.h */
-	void		*param;		/**< The parameter entry which has been changed. */
-};
-
-/**
  * The main event data structure.
  * 
  * All events are encapsulated using the VisEvent structure.
@@ -152,7 +138,6 @@ struct _VisEvent {
 	VisEventMouseButton	mousebutton;	/**< Mouse button event. */
 	VisEventResize		resize;		/**< Dimension change event. */
 	VisEventNewSong		newsong;	/**< Song change event. */
-	VisEventParam		param;		/**< Param change event. */
 };
 
 /**
@@ -175,9 +160,9 @@ struct _VisEventQueue {
 	VisMouseState	 mousestate;	/**< Current mouse button state. */
 };
 
-VisEvent *visual_event_new (void);
+VisEvent *visual_event_new ();
 int visual_event_free (VisEvent *event);
-VisEventQueue *visual_event_queue_new (void);
+VisEventQueue *visual_event_queue_new ();
 int visual_event_queue_free (VisEventQueue *eventqueue);
 int visual_event_queue_poll (VisEventQueue *eventqueue, VisEvent *event);
 int visual_event_queue_add (VisEventQueue *eventqueue, VisEvent *event);
@@ -186,7 +171,6 @@ int visual_event_queue_add_mousemotion (VisEventQueue *eventqueue, int x, int y)
 int visual_event_queue_add_mousebutton (VisEventQueue *eventqueue, int button, VisMouseState state);
 int visual_event_queue_add_resize (VisEventQueue *eventqueue, VisVideo *video, int width, int height);
 int visual_event_queue_add_newsong (VisEventQueue *eventqueue, VisSongInfo *songinfo);
-int visual_event_queue_add_param (VisEventQueue *eventqueue, void *param);
 
 #ifdef __cplusplus
 }

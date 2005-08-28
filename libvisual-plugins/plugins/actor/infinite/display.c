@@ -1,5 +1,3 @@
-#include <config.h>
-
 #include <string.h>
 #include <stdlib.h>
 #include <math.h> 
@@ -47,9 +45,9 @@ void _inf_change_color(InfinitePrivate *priv, int t2,int t1,int w)
 		g=(priv->color_table[t1][i].g*w+priv->color_table[t2][i].g*(256-w))>>8;
 		b=(priv->color_table[t1][i].b*w+priv->color_table[t2][i].b*(256-w))>>8;
 
-		priv->pal.colors[i].r = r;
-		priv->pal.colors[i].g = g;
-		priv->pal.colors[i].b = b;
+		priv->pal.r[i] = r;
+		priv->pal.g[i] = g;
+		priv->pal.b[i] = b;
 	}
 }
 

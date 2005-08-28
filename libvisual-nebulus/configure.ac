@@ -7,7 +7,6 @@ AM_INIT_AUTOMAKE([1.7.0 dist-bzip2])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADER([config.h])
 
-AC_PREFIX_DEFAULT(/usr)
 
 # Checks for programs.
 AC_PROG_CC
@@ -34,7 +33,7 @@ AC_CHECK_LIB([GL], [main])
 # FIXME: Replace `main' with a function in `-lGLU':
 AC_CHECK_LIB([GLU], [main])
 
-PKG_CHECK_MODULES(LIBVISUAL, libvisual = 0.1.6, [libvis="yes"], [libvis="no"])
+PKG_CHECK_MODULES(LIBVISUAL, libvisual = 0.1.5, [libvis="yes"], [libvis="no"])
 if test x"$libvis" = xno; then
 	AC_MSG_ERROR([
 *** libvisual not found or version mismatch.
@@ -76,11 +75,10 @@ else
 fi
 AC_SUBST(DEBUG_CFLAGS)
 
-# Terrible hack, but otherwise the CFLAGS are passed as last arguments
-# to compiler, and this way these arguments (probably -g -O2) overrides
-# our -O3 flag on src/Makefile.am
-AC_SUBST(CFLAGS, "")
 
+AC_PREFIX_DEFAULT(/usr)
+
+# cflags, ld flags
 libs_dynamic_loader="-ldl"
 AC_SUBST(LIBS_DYNAMIC_LOADER, "$libs_dynamic_loader")
 
@@ -93,15 +91,16 @@ AC_OUTPUT
 
 echo "
 =====================================================================
-LIBVISUAL-NEBULA, THE NEBULA PLUGIN FOR LIBVISUAL, VERSION $VERSION
+LIBVISUAL-NEBULA, THE NEBULA PLUGIN FOR LIBVISUAL $VERSION
 =====================================================================
 
 Packages found:
 opengl:                               : ${opengl}
 
 Build options:
-install path                          : ${prefix}/lib/libvisual/actor
-source code location                  : ${srcdir}
-compiler                              : ${CC}
+prefix:                               : ${prefix}
+source code location:                 : ${srcdir}
+compiler:                             : ${CC}
+cflags:                               : ${CFLAGS}
 "
 

@@ -1,12 +1,10 @@
-## Process this file with automake to generate a Makefile.in
-
 lib_LTLIBRARIES = morph_flash.la
 
 libdir = $(prefix)/lib/libvisual/morph
 
-LIBS = -L. -L$(prefix)/lib @LIBVISUAL_LIBS@
+LIBS = -L. -L$(prefix)/lib @LV_LIBS@
 
-AM_CFLAGS = -Wall -rdynamic @DEBUG_CFLAGS@ @LIBVISUAL_CFLAGS@ -O3
+CFLAGS =
 
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) 

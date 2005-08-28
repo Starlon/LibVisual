@@ -1,14 +1,9 @@
-FIX the VERSION define
-
-Fix that lv-inspect builds, after the lib has been installed.
-
-
-replace stdint.h with sys/types.h and have defines so we don't have to change all
-the code (besides u_int16_t sounds less nice than uint16_t :))
-
-
 This file is not very ordered and kinda a scrapbook, but it contains all
 the future planning.
+
+cvsclean adden:
+	find . -type d -name CVS -exec rm -rf {} \;
+
 
 Soon:
 	bin:
@@ -33,14 +28,19 @@ x		* property to force morphs in high bpp
 		* easily filter out gl plugins
 
 	examples:
-		* find a way to compile examples AFTER installing the current library.
 		* port simplesdl to the new bin system.
 		* make an example using a NON managed bin, and also a test if this is still working :)
 
+	video:
+		* cleanup the fitter
+
 Af te werken:
 	* when the whole bin stuff is working, test excluding opengl stuff within the xmms plugin
+	* introduce major.minor.nano versioning scheme.
+	* the fitter should still draw even if the buffer is too small
 
 Automakeify todo:
+x	include tests from src root.
 x	fix lib version
 
 LEGAL:
@@ -64,13 +64,20 @@ DOCS:
 	gcc inline assembler:
 		http://www.osdever.net/tutorials/gccasmtut.php?the_id=68
 
+buildtree:
+	make examples en tests compile again
+	check for inline through config.h
+
 plugins:
-	!(option flags, include a 'reentrant' flag that indicates that the plugin is allowed to load twice) (make a notreentrant flag rather)
+	!(option flags, include a 'reentrant' flag that indicates that the plugin is allowed to load twice) (make a notreetrant flag rather)
 
 docs:
 	plugin tutorial
+	plugin api ref
 	application tutorial
+x	application api ref
 	plugin writers guide
+	doxygen ofzo api ref maken!? (post 0.2)
 
 libvisual:
 	audio:
@@ -80,11 +87,13 @@ libvisual:
 		investigate bpm detection (post 0.4)
 
 	video:
-		hsv-rgb etc conversions for VisColor
+		visvideo in visvideo blit function (for cover art showing)
 
 		font system
 		
 		check for opengl when setting up transformation buffers
+
+		handy fps timer, limiter stuff (post 0.1)
 
 		add a superfast double pixeler (post 0.2)
 
@@ -96,6 +105,8 @@ libvisual:
 		16 bits alpha optimize:	And do two at once using 32 bits ints (post 0.2)
 
 		test >all< the video transformation stuff very well
+
+		the fitter should still draw even if the buffer is too small
 
 		sizing: When not fitting, it doesn't place in the middle, this is easy
 			to do for the fitting enviroment but a bit less easy for the
@@ -114,8 +125,6 @@ libvisual:
 			use the syneathesia in buffer stuff as an example for this ! 
 
 	settings: (post 0.5) (do we need this ?)
-		a mechanism to enable/disable VISUAL_LOG_DEBUG messages.
-		
 		a system to store plugin settings.
 
 		next plugin, prev plugin keymaps how do we do ?
@@ -125,11 +134,11 @@ libvisual:
 	
 	actor:
 		Honor plugin flags better (post 0.1)
-		Have a mechanism to request a depth from within the plugin, which is needed
-			for plugins like the pixbuf loader.
 
 	plugins:
-		have a way to version tag plugins (post 0.1) (Within the new plugin system ?)
+		have a way to set plugin parameters like "gst-pipe", "blah blah | blah".
+		have a way to version tag plugins (post 0.1)
+		have a 'plugin type namespace' policy and fix this within the plugins (discuss)
 		
 		global params:
 			a global prop to do settings for songinfo (to show, how long shown)
@@ -139,6 +148,7 @@ libvisual:
 
 	morph:
 		timed morph
+		framebuffer to gl morph thingy
 		a method to check if the morph needs audio
 
 	songinfo:
@@ -146,62 +156,27 @@ libvisual:
 	
 	libvisual:
 		After the events stuff do a good code review + cleanups.
+		make macros for the 'return if null' stuff like glib has.
 
 	cleanups:
-		functions returning strings that cannot be changed, must be
-			typed with const returns.
 		cleanup the fixmes
 		make use of the lv_log system and do better error checking
 		void * -> byte/word types on other archs !?
+		gobject like privates (!? this needs thought)
 		comment code
 		go through all the structs and cleanup naming here and there
 		find a replacement name for LVPlugin ;)
+		frequention < look that word up.
 		move the headers to include/ ?? (really ??)
 		test against: http://www.linuxbase.org/
-		I've always been declaring vars at the top of the function, however
-			Ive started to think it's cleaner to declare them in their target
-			scope.
 
 	doxygen:
 		fix alphabetic list, why is this borked for functions ?
 		rename actor, input to VisActor, etc at some places.
 		use # at places where this is useful.
-		fix docs for plugin function.
 
-	portability:
-		have byteswap helper functions and use them where endianess issues
-		arise (lv_bmp.c)
-
-	Other:
-		Make Gstreamer elements from the actors.
-			morph plugins.
-			and input plugins.
-
-		Move all our mallocs to visual_new0
-
-	Tools:
-		lv-inspect: to get detailed information about a plugin
-
-	Threading:
-		Have VisThread, VisMutex and threading api to wrap other
-			threading systems within, like pthreads or win32 native threading API.
-			this is for internal usage within the library, plugins shouldn't
-			be threaded.
-
-		Threadify some plugin opts, like the input plugin, two actor plugins at
-			morph
-
-	Params:
-		When libvisual settings backend lands, have a 'serialize' flag that does save, load parameters.
-	
-	VisCPU:
-		A small sub system to obtain information about the processor, processors, cpu flags, simd set flags.
-
-	VisTimer:
-		Good timer module
-		port over the coverart timeout stuff to this module.
-		Use this for the timed morph as well.
-
+	list:
+		Add a sort method.
 
 INTERNAL:
 	LOG: (post 0.1)
@@ -217,6 +192,11 @@ tests:
 		seems to be somewhat related to esd running as an user and
 		launching the tests as root (?!), or better sdl not using
 		x as it's backend but something else.
+
+all:
+	use AC_C_INLINE and config.h for this:
+		check for inline to use
+
 
 FUTURE:
 	* an highend API and library that also helps with displaying (do display support plugin wise ??)

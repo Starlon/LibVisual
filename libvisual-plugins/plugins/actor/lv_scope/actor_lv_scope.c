@@ -47,7 +47,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (ScopePrivate));
 	memset (priv, 0, sizeof (ScopePrivate));
 
-	lv_scope->priv = priv;
+	lv_scope->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = lv_scope;
@@ -57,18 +57,12 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int lv_scope_init (VisActorPlugin *plugin)
 {
-	ScopePrivate *priv = plugin->priv;
-
-	visual_palette_allocate_colors (&priv->pal, 256);
-
 	return 0;
 }
 
 int lv_scope_cleanup (VisActorPlugin *plugin)
 {
-	ScopePrivate *priv = plugin->priv;
-
-	visual_palette_free_colors (&priv->pal);
+	ScopePrivate *priv = plugin->private;
 
 	free (priv);
 
@@ -117,8 +111,6 @@ int lv_scope_events (VisActorPlugin *plugin, VisEventQueue *events)
 				lv_scope_dimension (plugin, ev.resize.video,
 						ev.resize.width, ev.resize.height);
 				break;
-			default: /* to avoid warnings */
-				break;
 		}
 	}
 
@@ -127,13 +119,13 @@ int lv_scope_events (VisActorPlugin *plugin, VisEventQueue *events)
 
 VisPalette *lv_scope_palette (VisActorPlugin *plugin)
 {
-	ScopePrivate *priv = plugin->priv;
+	ScopePrivate *priv = plugin->private;
 	int i;
 	
 	for (i = 0; i < 256; i++) {
-		priv->pal.colors[i].r = i;
-		priv->pal.colors[i].g = i;
-		priv->pal.colors[i].b = i;
+		priv->pal.r[i] = i;
+		priv->pal.g[i] = i;
+		priv->pal.b[i] = i;
 	}
 
 	return &priv->pal;

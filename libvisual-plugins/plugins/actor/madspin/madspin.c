@@ -17,10 +17,8 @@
 #define SPEED		715
 
 typedef struct {
-	int initialized;
-
 	int draw_mode;
-
+	
 	int texture[2];
 
 	int maxlines;
@@ -78,7 +76,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 	priv = malloc (sizeof (MadspinPrivate));
 	memset (priv, 0, sizeof (MadspinPrivate));
 
-	lv_madspin->priv = priv;
+	lv_madspin->private = priv;
 
 	plugin->type = VISUAL_PLUGIN_TYPE_ACTOR;
 	plugin->plugin.actorplugin = lv_madspin;
@@ -88,7 +86,7 @@ LVPlugin *get_plugin_info (VisPluginRef *ref)
 
 int lv_madspin_init (VisActorPlugin *plugin)
 {
-	MadspinPrivate *priv = plugin->priv;
+	MadspinPrivate *priv = plugin->private;
 
 	priv->maxlines = 1;
 	priv->texsize = 0.25f;
@@ -114,20 +112,14 @@ int lv_madspin_init (VisActorPlugin *plugin)
 	glEnable (GL_TEXTURE_2D);
 	glHint (GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-	madspin_load_textures (plugin->priv);
-
-	priv->initialized = 1;
+	madspin_load_textures (plugin->private);
 
 	return 0;
 }
 
 int lv_madspin_cleanup (VisActorPlugin *plugin)
 {
-	MadspinPrivate *priv = plugin->priv;
-
-	if (priv->initialized){
-		glDeleteTextures (2, priv->texture);
-	}
+	MadspinPrivate *priv = plugin->private;
 
 	free (priv);
 
@@ -155,6 +147,8 @@ int lv_madspin_requisition (VisActorPlugin *plugin, int *width, int *height)
 
 int lv_madspin_dimension (VisActorPlugin *plugin, VisVideo *video, int width, int height)
 {
+	GLfloat ratio;
+	
 	visual_video_set_dimension (video, width, height);
 
 	glViewport (0, 0, width, height);
@@ -172,8 +166,6 @@ int lv_madspin_events (VisActorPlugin *plugin, VisEventQueue *events)
 				lv_madspin_dimension (plugin, ev.resize.video,
 						ev.resize.width, ev.resize.height);
 				break;
-			default: /* to avoid warnings */
-				break;
 		}
 	}
 
@@ -187,19 +179,21 @@ VisPalette *lv_madspin_palette (VisActorPlugin *plugin)
 
 int lv_madspin_render (VisActorPlugin *plugin, VisVideo *video, VisAudio *audio)
 {
-	madspin_sound (plugin->priv, audio);
-	madspin_draw (plugin->priv, video);
+	madspin_sound (plugin->private, audio);
+	madspin_draw (plugin->private, video);
 
 	return 0;
 }
 
 static int madspin_load_textures (MadspinPrivate *priv)
 {
+	char file1[512] = STAR_DIR;
+	char file2[512] = STAR_DIR;
 	VisVideo *textureimage;
 
 	glGenTextures (2, &priv->texture[0]);
 
-	textureimage = visual_bitmap_load_new_video (STAR_DIR "star1.bmp");
+	textureimage = visual_bitmap_load_new_video (strcat (file1, "star1.bmp"));
 	glBindTexture (GL_TEXTURE_2D, priv->texture[0]);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -208,7 +202,7 @@ static int madspin_load_textures (MadspinPrivate *priv)
 
 	visual_video_free_with_buffer (textureimage);
 
-	textureimage = visual_bitmap_load_new_video (STAR_DIR "star2.bmp");
+	textureimage = visual_bitmap_load_new_video (strcat (file2, "star2.bmp"));
 	glBindTexture (GL_TEXTURE_2D, priv->texture[1]);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

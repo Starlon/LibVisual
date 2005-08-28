@@ -3,13 +3,10 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "lvconfig.h"
+#include <config.h>
+
 #include "lv_plugin.h"
 #include "lv_libvisual.h"
-#include "lv_log.h"
-#include "lv_param.h"
-
-#define VERSION "0.1.6"
 
 /** Set when libvisual is initialized. */
 int __lv_initialized = FALSE;
@@ -25,46 +22,10 @@ VisList *__lv_plugins_input = NULL;
 /** Contains all the morph plugins after initialize. */
 VisList *__lv_plugins_morph = NULL;
 
-/** The global params container */
-VisParamContainer *__lv_paramcontainer = NULL;
-
 /** Contains the number of plugin registry paths. */
 int __lv_plugpath_cnt = 0;
 /** Char ** list of all the plugin paths. */
 char **__lv_plugpaths = NULL;
-
-
-static int init_params (VisParamContainer *paramcontainer);
-
-static int init_params (VisParamContainer *paramcontainer)
-{
-	VisParamEntry *param;
-
-	visual_log_return_val_if_fail (paramcontainer != NULL, -1);
-
-	/* Initialize all the global parameters here */
-
-	/* Song information parameters */
-	/* Show songinfo */
-	param = visual_param_entry_new ("songinfo show");
-	visual_param_entry_set_integer (param, 1);
-	visual_param_container_add (paramcontainer, param);
-
-	/* Songinfo timeout, in seconds */
-	param = visual_param_entry_new ("songinfo timeout");
-	visual_param_entry_set_integer (param, 5);
-	visual_param_container_add (paramcontainer, param);
-	
-	/* 
-	 * Show songinfo in plugins, plugins that optionally show song
-	 * info should query this parameter
-	 */
-	param = visual_param_entry_new ("songinfo in plugin");
-	visual_param_entry_set_integer (param, 1);
-	visual_param_container_add (paramcontainer, param);
-
-	return 0;
-}
 
 /**
  * @defgroup Libvisual Libvisual
@@ -82,16 +43,6 @@ const char *visual_get_version ()
 }
 
 /**
- * Returns a pointer to the libvisual global VisParamContainer.
- *
- * @return A pointer to the libvisual global VisParamContainer.
- */
-VisParamContainer *visual_get_params ()
-{
-	return __lv_paramcontainer;
-}
-
-/**
  * Adds extra plugin registry paths.
  *
  * @param pathadd A string containing a path where plugins are located.
@@ -102,10 +53,6 @@ int visual_init_path_add (char *pathadd)
 {
 	__lv_plugpath_cnt++;
 	__lv_plugpaths = realloc (__lv_plugpaths, sizeof (char *) * __lv_plugpath_cnt);
-
-	if (__lv_plugpaths == NULL)
-		return -1;
-	
 	__lv_plugpaths[__lv_plugpath_cnt - 1] = pathadd;
 
 	return 0;
@@ -119,58 +66,30 @@ int visual_init_path_add (char *pathadd)
  *
  * @return 0 on succes -1 on error.
  */
-int visual_init (int *argc, char ***argv)
+int visual_init (int *argc, char **argv[])
 {
-	if (__lv_initialized == TRUE) {
-		visual_log (VISUAL_LOG_ERROR, "Over initialized");
-                return -1;
-        }
-		
+	if (__lv_initialized == TRUE)
+		/* FIXME use lv_log */
+		printf ("Over initialized\n");
+	
 	if (argc == NULL || argv == NULL) {
-		if (argc == NULL && argv == NULL) {
-			__lv_progname = strdup ("no progname");
-	
+		if (argc != NULL || argv != NULL)
+			printf ("OI, your argc,argv is borked\n");
+		/*  FIXME, print a warning here, one
+		 *  is NULL and one isn't */
+		__lv_progname = "no progname";
+	} else
+		__lv_progname = *argv[0];
 
-			if (__lv_progname == NULL)
-				visual_log (VISUAL_LOG_WARNING, "Could not set program name");
-		} else
-			visual_log (VISUAL_LOG_ERROR, "Initialization failed, bad argv, argc");
-		
-	} else {
-                /*
-                 * We must copy the argument, to let the client
-                 * call this method from any context.
-                 */
-#ifdef __USE_GNU
-                __lv_progname = strndup (*argv[0], 1024);
-#else
-                __lv_progname = strdup (*argv[0]);
-#endif
-                if (__lv_progname == NULL)
-                        visual_log (VISUAL_LOG_WARNING, "Could not set program name");
-        }
+	visual_init_path_add (PLUGPATH"/actor");
+	visual_init_path_add (PLUGPATH"/input");
+	visual_init_path_add (PLUGPATH"/morph");
+	visual_init_path_add (NULL);
 
-	if (visual_init_path_add (PLUGPATH"/actor") < 0)
-		return -1;
-	if (visual_init_path_add (PLUGPATH"/input") < 0)
-		return -1;
-	if (visual_init_path_add (PLUGPATH"/morph") < 0)
-		return -1;
-	
-	/* NULL terminated */
-	if (visual_init_path_add (NULL) < 0)
-		return -1;
-
-	__lv_plugins = visual_plugin_get_list (__lv_plugpaths);
-	if (__lv_plugins == NULL)
-		return -1;
-
+	__lv_plugins = _lv_plugin_get_list (__lv_plugpaths);
 	__lv_plugins_actor = visual_plugin_registry_filter (__lv_plugins, VISUAL_PLUGIN_TYPE_ACTOR);
 	__lv_plugins_input = visual_plugin_registry_filter (__lv_plugins, VISUAL_PLUGIN_TYPE_INPUT);
 	__lv_plugins_morph = visual_plugin_registry_filter (__lv_plugins, VISUAL_PLUGIN_TYPE_MORPH);
-
-	__lv_paramcontainer = visual_param_container_new ();
-	init_params (__lv_paramcontainer);
 
 	__lv_initialized = TRUE;
 
@@ -184,35 +103,15 @@ int visual_init (int *argc, char ***argv)
  */
 int visual_quit ()
 {
-	int ret;
-
 	if (__lv_initialized == FALSE) {
-                visual_log (VISUAL_LOG_WARNING, "Never initialized");
+		/* FIXME print a warning here */
 		return -1;
 	}
 
-        if (__lv_progname != NULL)
-                visual_mem_free (__lv_progname);
-
-	ret = visual_plugin_ref_list_destroy (__lv_plugins);
-	if (ret < 0)
-		visual_log (VISUAL_LOG_WARNING, "Plugins references list: destroy failed");
-
-	ret = visual_list_destroy (__lv_plugins_actor, NULL);
-	if (ret < 0)
-		visual_log (VISUAL_LOG_WARNING, "Actor plugins list: destroy failed");
-
-	ret = visual_list_destroy (__lv_plugins_input, NULL);
-	if (ret < 0)
-		visual_log (VISUAL_LOG_WARNING, "Input plugins list: destroy failed");
-
-	ret = visual_list_destroy (__lv_plugins_morph, NULL);
-	if (ret < 0)
-		visual_log (VISUAL_LOG_WARNING, "Morph plugins list: destroy failed");
-
-	ret = visual_param_container_destroy (__lv_paramcontainer);
-	if (ret < 0)
-		visual_log (VISUAL_LOG_WARNING, "Global param container: destroy failed");
+	visual_plugin_ref_list_destroy (__lv_plugins);
+	visual_list_destroy (__lv_plugins_actor, NULL);
+	visual_list_destroy (__lv_plugins_input, NULL);
+	visual_list_destroy (__lv_plugins_morph, NULL);
 
 	__lv_initialized = FALSE;
 	return 0;

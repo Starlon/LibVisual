@@ -3,11 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "lvconfig.h"
 #include "lv_log.h"
 #include "lv_list.h"
 #include "lv_actor.h"
-#include "lv_mem.h"
 
 extern VisList *__lv_plugins_actor;
 
@@ -17,8 +15,8 @@ static VisActorPlugin *get_actor_plugin (VisActor *actor)
 {
 	VisActorPlugin *actplugin;
 
-	visual_log_return_val_if_fail (actor != NULL, NULL);
-	visual_log_return_val_if_fail (actor->plugin != NULL, NULL);
+	if (actor->plugin == NULL)
+		return NULL;
 
 	actplugin = actor->plugin->plugin.actorplugin;
 
@@ -31,18 +29,6 @@ static VisActorPlugin *get_actor_plugin (VisActor *actor)
  */
 
 /**
- * Gives the encapsulated LVPlugin from a VisActor.
- *
- * @param actor Pointer of a VisActor of which the LVPlugin needs to be returned.
- *
- * @return LVPlugin that is encapsulated in the VisActor, possibly NULL.
- */
-LVPlugin *visual_actor_get_plugin (VisActor *actor)
-{
-	return actor->plugin;
-}
-
-/**
  * Gives a list of VisActors in the current plugin registry.
  *
  * @return An VisList containing the VisActors in the plugin registry.
@@ -50,158 +36,6 @@ LVPlugin *visual_actor_get_plugin (VisActor *actor)
 VisList *visual_actor_get_list ()
 {
 	return __lv_plugins_actor;
-}
-
-/**
- * Gives the next actor plugin based on the name of a plugin but skips non
- * GL plugins.
- *
- * @see visual_actor_get_prev_by_name_gl
- *
- * @param name The name of the current plugin or NULL to get the first.
- *
- * @return The name of the next plugin within the list that is a GL plugin.
- */
-char *visual_actor_get_next_by_name_gl (char *name)
-{
-	char *next = name;
-	LVPlugin *plugin;
-	VisPluginRef *ref;
-	int gl;
-
-	do {
-		next = visual_plugin_get_next_by_name (visual_actor_get_list (), next);
-
-		if (next == NULL)
-			return NULL;
-		
-		ref = visual_plugin_find (__lv_plugins_actor, next);
-		plugin = visual_plugin_load (ref);
-
-		if ((plugin->plugin.actorplugin->depth & VISUAL_VIDEO_DEPTH_GL) > 0)
-			gl = TRUE;
-		else
-			gl = FALSE;
-	
-		visual_plugin_unload (plugin);
-
-	} while (gl == FALSE);
-
-	return next;
-}
-
-/**
- * Gives the previous actor plugin based on the name of a plugin but skips non
- * GL plugins.
- *
- * @see visual_actor_get_next_by_name_gl
- *
- * @param name The name of the current plugin or NULL to get the last.
- *
- * @return The name of the previous plugin within the list that is a GL plugin.
- */
-char *visual_actor_get_prev_by_name_gl (char *name)
-{
-	char *prev = name;
-	LVPlugin *plugin;
-	VisPluginRef *ref;
-	int gl;
-
-	do {
-		prev = visual_plugin_get_prev_by_name (visual_actor_get_list (), prev);
-
-		if (prev == NULL)
-			return NULL;
-		
-		ref = visual_plugin_find (__lv_plugins_actor, prev);
-		plugin = visual_plugin_load (ref);
-
-		if ((plugin->plugin.actorplugin->depth & VISUAL_VIDEO_DEPTH_GL) > 0)
-			gl = TRUE;
-		else
-			gl = FALSE;
-	
-		visual_plugin_unload (plugin);
-
-	} while (gl == FALSE);
-
-	return prev;
-}
-
-/**
- * Gives the next actor plugin based on the name of a plugin but skips
- * GL plugins.
- *
- * @see visual_actor_get_prev_by_name_nogl
- *
- * @param name The name of the current plugin or NULL to get the first.
- *
- * @return The name of the next plugin within the list that is not a GL plugin.
- */
-char *visual_actor_get_next_by_name_nogl (char *name)
-{
-	char *next = name;
-	LVPlugin *plugin;
-	VisPluginRef *ref;
-	int gl;
-
-	do {
-		next = visual_plugin_get_next_by_name (visual_actor_get_list (), next);
-
-		if (next == NULL)
-			return NULL;
-		
-		ref = visual_plugin_find (__lv_plugins_actor, next);
-		plugin = visual_plugin_load (ref);
-
-		if ((plugin->plugin.actorplugin->depth & VISUAL_VIDEO_DEPTH_GL) > 0)
-			gl = TRUE;
-		else
-			gl = FALSE;
-	
-		visual_plugin_unload (plugin);
-
-	} while (gl == TRUE);
-
-	return next;
-}
-
-/**
- * Gives the previous actor plugin based on the name of a plugin but skips
- * GL plugins.
- *
- * @see visual_actor_get_next_by_name_nogl
- *
- * @param name The name of the current plugin or NULL to get the last.
- *
- * @return The name of the previous plugin within the list that is not a GL plugin.
- */
-char *visual_actor_get_prev_by_name_nogl (char *name)
-{
-	char *prev = name;
-	LVPlugin *plugin;
-	VisPluginRef *ref;
-	int gl;
-
-	do {
-		prev = visual_plugin_get_prev_by_name (visual_actor_get_list (), prev);
-
-		if (prev == NULL)
-			return NULL;
-		
-		ref = visual_plugin_find (__lv_plugins_actor, prev);
-		plugin = visual_plugin_load (ref);
-
-		if ((plugin->plugin.actorplugin->depth & VISUAL_VIDEO_DEPTH_GL) > 0)
-			gl = TRUE;
-		else
-			gl = FALSE;
-	
-		visual_plugin_unload (plugin);
-
-	} while (gl == TRUE);
-
-	return prev;
 }
 
 /**
@@ -241,7 +75,7 @@ char *visual_actor_get_prev_by_name (char *name)
  */
 int visual_actor_valid_by_name (char *name)
 {
-	if (visual_plugin_find (visual_actor_get_list (), name) == NULL)
+	if (_lv_plugin_find (visual_actor_get_list (), name) == NULL)
 		return FALSE;
 	else
 		return TRUE;
@@ -266,14 +100,15 @@ VisActor *visual_actor_new (char *actorname)
 		return NULL;
 	}
 	
-	actor = visual_mem_new0 (VisActor, 1);
-
+	actor = malloc (sizeof (VisActor));
+	memset (actor, 0, sizeof (VisActor));
+	
 	if (actorname == NULL)
 		return actor;
 
-	ref = visual_plugin_find (__lv_plugins_actor, actorname);
+	ref = _lv_plugin_find (__lv_plugins_actor, actorname);
 
-	actor->plugin = visual_plugin_load (ref);
+	actor->plugin = _lv_plugin_load (ref);
 
 	return actor;
 }
@@ -287,10 +122,17 @@ VisActor *visual_actor_new (char *actorname)
  */
 int visual_actor_realize (VisActor *actor)
 {
-	visual_log_return_val_if_fail (actor != NULL, -1);
-	visual_log_return_val_if_fail (actor->plugin != NULL, -1);
+	if (actor == NULL) {
+		visual_log (VISUAL_LOG_CRITICAL, "the actor is NULL");
+		return -1;
+	}
 
-	visual_plugin_realize (actor->plugin);
+	if (actor->plugin == NULL) {
+		visual_log (VISUAL_LOG_CRITICAL, "the actor->plugin element is NULL");
+		return -1;
+	}
+
+	_lv_plugin_realize (actor->plugin);
 
 	return 0;
 }
@@ -305,10 +147,11 @@ int visual_actor_realize (VisActor *actor)
  */ 
 int visual_actor_destroy (VisActor *actor)
 {
-	visual_log_return_val_if_fail (actor != NULL, -1);
+	if (actor == NULL)
+		return -1;
 
 	if (actor->plugin != NULL)
-		visual_plugin_unload (actor->plugin);
+		_lv_plugin_unload (actor->plugin);
 
 	return visual_actor_free (actor);
 }
@@ -325,7 +168,8 @@ int visual_actor_destroy (VisActor *actor)
  */
 int visual_actor_free (VisActor *actor)
 {
-	visual_log_return_val_if_fail (actor != NULL, -1);
+	if (actor == NULL)
+		return -1;
 
 	if (actor->transform != NULL)
 		visual_video_free_with_buffer (actor->transform);
@@ -345,6 +189,49 @@ int visual_actor_free (VisActor *actor)
 }
 
 /**
+ * Pumps events from the VisActor into the plugin event handler. When visual_actor_run
+ * is used to run the actor, which is highly adviced. Events get pumped automaticly
+ * and there is no need to call this function manually.
+ *
+ * @param actor Pointer to a VisActor of which the events needs to be pumped.
+ *
+ * @return 0 on succes -1 on error.
+ */
+int visual_actor_events_pump (VisActor *actor)
+{
+	VisActorPlugin *actplugin;
+
+	if (actor == NULL)
+		return -1;
+
+	actplugin = get_actor_plugin (actor);
+
+	if (actplugin->events != NULL)
+		actplugin->events (actplugin, &actor->events);
+
+	return 0;
+}
+
+/**
+ * Gives a pointer to the event queue within the VisActor. This event queue can be used to
+ * queue user events like mouse and keyboard that need to be handled by the plugin.
+ * 
+ * @see VisEventQueue
+ * @see VisEvent
+ * 
+ * @param actor Pointer to a VisActor of which the event queue is needed.
+ *
+ * @return Pointer to the event queue structure on succes or NULL on error.
+ */
+VisEventQueue *visual_actor_get_eventqueue (VisActor *actor)
+{
+	if (actor == NULL)
+		return NULL;
+
+	return &actor->events;
+}
+
+/**
  * Gives a pointer to the song info data within the VisActor. This song info data can be used
  * to set name, artist and even coverart which can be used by the plugins and the framework itself.
  *
@@ -356,7 +243,8 @@ int visual_actor_free (VisActor *actor)
  */
 VisSongInfo *visual_actor_get_songinfo (VisActor *actor)
 {
-	visual_log_return_val_if_fail (actor != NULL, NULL);
+	if (actor == NULL)
+		return NULL;
 
 	if (actor->songinfo == NULL)
 		actor->songinfo = visual_songinfo_new (VISUAL_SONGINFO_TYPE_NULL);
@@ -380,16 +268,11 @@ VisPalette *visual_actor_get_palette (VisActor *actor)
 {
 	VisActorPlugin *actplugin;
 
-	visual_log_return_val_if_fail (actor != NULL, NULL);
+	if (actor == NULL)
+		return NULL;
 
 	actplugin = get_actor_plugin (actor);
 	
-	if (actplugin == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-			"The given actor does not reference any actor plugin");
-		return NULL;
-	}
-
 	if (actor->transform != NULL &&
 		actor->video->depth == VISUAL_VIDEO_DEPTH_8BIT) {
 		
@@ -431,16 +314,9 @@ VisPalette *visual_actor_get_palette (VisActor *actor)
 int visual_actor_video_negotiate (VisActor *actor, int rundepth, int noevent, int forced)
 {
 	VisActorPlugin *actplugin = get_actor_plugin (actor);
+	VisVideo tempv;
 	int tmpwidth, tmpheight, tmppitch;
 	int depthflag;
-
-	/*
-	 * Uhau, we really check the structure sanity.
-	 */
-	visual_log_return_val_if_fail (actor != NULL, -1);
-	visual_log_return_val_if_fail (actor->plugin != NULL, -1);
-	visual_log_return_val_if_fail (actor->plugin->ref != NULL, -1);
-	visual_log_return_val_if_fail (actor->video != NULL, -1);
 
 	if (actor->transform != NULL) {
 		visual_video_free_with_buffer (actor->transform);
@@ -459,7 +335,7 @@ int visual_actor_video_negotiate (VisActor *actor, int rundepth, int noevent, in
 
 	depthflag = visual_actor_get_supported_depth (actor);
 
-	visual_log (VISUAL_LOG_INFO, "negotiating plugin %s", actor->plugin->ref->name);
+	printf ("[actor-negotiate] negotiating plugin %s\n", actor->plugin->ref->name);
 	/* Set up depth transformation enviroment */
 	if (visual_video_depth_is_supported (depthflag, actor->video->depth) != TRUE ||
 			(forced == TRUE && actor->video->depth != rundepth)) {
@@ -469,31 +345,28 @@ int visual_actor_video_negotiate (VisActor *actor, int rundepth, int noevent, in
 		 * the dest video context */
 		actor->transform = visual_video_new ();
 
-		visual_log (VISUAL_LOG_INFO, "run depth %d forced %d\n", rundepth, forced);
-		
 		if (forced == TRUE)
 			visual_video_set_depth (actor->transform, rundepth);
 		else
 			visual_video_set_depth (actor->transform,
 					visual_video_depth_get_highest_nogl (depthflag));
 
-		visual_log (VISUAL_LOG_INFO, "transpitch1 %d depth %d bpp %d", actor->transform->pitch, actor->transform->depth,
-				actor->transform->bpp);
+		printf ("[actor-negotiate] transpitch1 %d\n", actor->transform->pitch);
 		/* If there is only GL (which gets returned by highest nogl if
 		 * nothing else is there, stop here */
 		if (actor->transform->depth == VISUAL_VIDEO_DEPTH_GL)
 			return -1;
 
 		visual_video_set_dimension (actor->transform, actor->video->width, actor->video->height);
-		visual_log (VISUAL_LOG_INFO, "transpitch2 %d %d", actor->transform->width, actor->transform->pitch);
+		printf ("[actor-negotiate] transpitch2 %d %d\n", actor->transform->width, actor->transform->pitch);
 		
 		actplugin->requisition (actplugin, &actor->transform->width, &actor->transform->height);
-		visual_log (VISUAL_LOG_INFO, "transpitch3 %d", actor->transform->pitch);
+		printf ("[actor-negotiate] transpitch3 %d\n", actor->transform->pitch);
 		
 		if (noevent == FALSE) {
-			visual_event_queue_add_resize (&actor->plugin->eventqueue, actor->transform,
+			visual_event_queue_add_resize (&actor->events, actor->transform,
 					actor->transform->width, actor->transform->height);
-			visual_plugin_events_pump (actor->plugin);
+			visual_actor_events_pump (actor);
 		} else {
 			/* Normally a visual_video_set_dimension get's called within the
 			 * event handler, but we won't come there right now so we've
@@ -502,11 +375,11 @@ int visual_actor_video_negotiate (VisActor *actor, int rundepth, int noevent, in
 					actor->transform->width, actor->transform->height);
 		}
 		
-		visual_log (VISUAL_LOG_INFO, "rundepth: %d transpitch %d\n", rundepth, actor->transform->pitch);
+		printf ("[actor-negotiate] rundepth: %d transpitch %d\n", rundepth, actor->transform->pitch);
 		visual_video_allocate_buffer (actor->transform);
 
 		if (actor->video->depth == VISUAL_VIDEO_DEPTH_8BIT)
-			actor->ditherpal = visual_palette_new (256);
+			actor->ditherpal = visual_palette_new ();
 
 	} else {
 		tmpwidth = actor->video->width;
@@ -517,9 +390,9 @@ int visual_actor_video_negotiate (VisActor *actor, int rundepth, int noevent, in
 		actplugin->requisition (actplugin, &actor->video->width, &actor->video->height);
 		
 		if (noevent == FALSE) {
-			visual_event_queue_add_resize (&actor->plugin->eventqueue, actor->video,
+			visual_event_queue_add_resize (&actor->events, actor->video,
 					actor->video->width, actor->video->height);
-			visual_plugin_events_pump (actor->plugin);
+			visual_actor_events_pump (actor);
 		}
 
 		/* Size fitting enviroment */
@@ -549,15 +422,13 @@ int visual_actor_get_supported_depth (VisActor *actor)
 {
 	VisActorPlugin *actplugin;
 
-	visual_log_return_val_if_fail (actor != NULL, -1);
+	if (actor == NULL)
+		return -1;
 
 	actplugin = get_actor_plugin (actor);
 
-	if (actplugin == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-			"The given actor does not reference any actor plugin");
+	if (actplugin == NULL)
 		return -1;
-	}
 
 	return actplugin->depth;
 }
@@ -581,7 +452,8 @@ int visual_actor_get_supported_depth (VisActor *actor)
  */
 int visual_actor_set_video (VisActor *actor, VisVideo *video)
 {
-	visual_log_return_val_if_fail (actor != NULL, -1);
+	if (actor == NULL)
+		return -1;
 
 	actor->video = video;
 
@@ -605,20 +477,10 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 	VisVideo *fitting;
 
 	/* We don't check for video, because we don't always need a video */
-	/*
-	 * Really? take a look at visual_video_set_palette bellow
-	 */
-	visual_log_return_val_if_fail (actor != NULL, -1);
-	visual_log_return_val_if_fail (actor->video != NULL, -1);
-	visual_log_return_val_if_fail (audio != NULL, -1);
+	if (actor == NULL || audio == NULL)
+		return -1;
 
 	actplugin = get_actor_plugin (actor);
-
-	if (actplugin == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL,
-			"The given actor does not reference any actor plugin");
-		return -1;
-	}
 
 	/* Songinfo handling */
 	if (actor->songinfo != NULL) {
@@ -626,7 +488,7 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 			visual_songinfo_mark (actor->songinfo);
 		
 			if (actplugin->events != NULL)
-				visual_event_queue_add_newsong (&actor->plugin->eventqueue, actor->songinfo);
+				visual_event_queue_add_newsong (&actor->events, actor->songinfo);
 
 			actor->songcompare = visual_songinfo_new (VISUAL_SONGINFO_TYPE_NULL);
 		}
@@ -635,7 +497,7 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 			visual_songinfo_mark (actor->songinfo);
 
 			if (actplugin->events != NULL)
-				visual_event_queue_add_newsong (&actor->plugin->eventqueue, actor->songinfo);
+				visual_event_queue_add_newsong (&actor->events, actor->songinfo);
 		}
 		/** @todo should be freeing and copying everytime, should done more effecient */
 		visual_songinfo_free_strings (actor->songcompare);
@@ -650,7 +512,7 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 
 	visual_video_set_palette (video, visual_actor_get_palette (actor));
 	
-	visual_plugin_events_pump (actor->plugin);
+	visual_actor_events_pump (actor);
 
 	/* Yeah some transformation magic is going on here when needed */
 	if (transform != NULL && (transform->depth != video->depth)) {
@@ -666,7 +528,7 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 	} else {
 		if (fitting != NULL && (fitting->width != video->width || fitting->height != video->height)) {
 			actplugin->render (actplugin, fitting, audio);
-			visual_video_blit_overlay (video, fitting, 0, 0, FALSE);
+			visual_video_fit_in_video (video, fitting);
 		} else {
 			actplugin->render (actplugin, video, audio);
 		}
