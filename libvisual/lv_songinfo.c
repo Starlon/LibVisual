@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_songinfo.c,v 1.24 2006/01/22 13:23:37 synap Exp $
+ * $Id: lv_songinfo.c,v 1.25 2006-09-19 18:28:52 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -42,7 +42,7 @@ static int songinfo_dtor (VisObject *object)
 
 	songinfo->cover = NULL;
 
-	return VISUAL_OK;
+	return TRUE;
 }
 
 /**
@@ -278,6 +278,7 @@ int visual_songinfo_set_cover (VisSongInfo *songinfo, VisVideo *cover)
 	VisParamContainer *params;
 	VisParamEntry *xparam;
 	VisParamEntry *yparam;
+	VisString name;
 	int cawidth = 64;
 	int caheight = 64;
 
@@ -286,20 +287,24 @@ int visual_songinfo_set_cover (VisSongInfo *songinfo, VisVideo *cover)
 	if (songinfo->cover != NULL)
 		visual_object_unref (VISUAL_OBJECT (songinfo->cover));
 
+	visual_string_init (&name);
+
 	/* Get the desired cover art size */
 	params = visual_get_params ();
-	xparam = visual_param_container_get (params, "songinfo cover size x");
-	yparam = visual_param_container_get (params, "songinfo cover size y");
-	
+	xparam = visual_param_container_get (params, visual_string_set (&name, "songinfo cover size x"));
+	yparam = visual_param_container_get (params, visual_string_set (&name, "songinfo cover size y"));
+
 	if (xparam != NULL && yparam != NULL) {
 		cawidth = visual_param_entry_get_integer (xparam);
 		caheight = visual_param_entry_get_integer (yparam);
 	}
-	
+
 	/* The coverart image */
 	songinfo->cover = visual_video_scale_depth_new (cover, cawidth, caheight,
 			VISUAL_VIDEO_DEPTH_32BIT,
 			VISUAL_VIDEO_SCALE_BILINEAR);
+
+	visual_object_unref (VISUAL_OBJECT (&name));
 
 	return VISUAL_OK;
 }
@@ -434,12 +439,6 @@ int visual_songinfo_compare (VisSongInfo *s1, VisSongInfo *s2)
 			!(s1->song == NULL && s2->song == NULL)) {
 		diff++;
 	}
-
-    if(s1->elapsed != s2->elapsed)
-        diff++;
-
-    if(s1->length != s2->length)
-        diff++;
 
 	return (diff > 0 ? FALSE : TRUE);
 }

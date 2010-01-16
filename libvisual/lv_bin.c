@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_bin.c,v 1.29 2006/02/08 18:55:12 synap Exp $
+ * $Id: lv_bin.c,v 1.30 2006-09-19 18:28:51 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -83,7 +83,7 @@ static int bin_dtor (VisObject *object)
 	bin->actmorphvideo = NULL;
 	bin->privvid = NULL;
 
-	return VISUAL_OK;
+	return TRUE;
 }
 
 static void fix_depth_with_bin (VisBin *bin, VisVideo *video, int depth)
@@ -469,6 +469,10 @@ int visual_bin_switch_actor_by_name (VisBin *bin, char *actname)
 {
 	VisActor *actor;
 	VisVideo *video;
+    VisInput *input;
+    VisPluginData *input_plugin;
+    VisParamContainer *params;
+    VisParamEntry *entry;
 	int depthflag;
 	int depth;
 
@@ -589,6 +593,15 @@ int visual_bin_switch_actor_by_name (VisBin *bin, char *actname)
 	bin->actmorphvideo = video;
 	bin->actmorphmanaged = TRUE;
 
+    input = visual_bin_get_input(bin);
+
+    if(input != NULL &&
+        (input_plugin = visual_input_get_plugin(input)) &&
+        (params = visual_plugin_get_params(input_plugin)) &&
+        (entry = visual_param_container_get(params, "songinfo"))) {
+        visual_param_entry_set_object(entry, VISUAL_OBJECT(entry));
+    }
+
 	visual_log (VISUAL_LOG_INFO, _("switching... ******************************************"));
 	visual_bin_switch_actor (bin, actor);
 
@@ -599,10 +612,6 @@ int visual_bin_switch_actor_by_name (VisBin *bin, char *actname)
 int visual_bin_switch_actor (VisBin *bin, VisActor *actor)
 {
 	VisVideo *privvid;
-    VisInput *input;
-    VisPluginData *input_plugin;
-    VisParamContainer *params;
-    VisParamEntry *entry;
 
 	visual_log_return_val_if_fail (bin != NULL, -1);
 	visual_log_return_val_if_fail (actor != NULL, -1);
@@ -679,17 +688,6 @@ int visual_bin_switch_actor (VisBin *bin, VisActor *actor)
 			visual_mem_set (visual_video_get_pixels (bin->actvideo), 0, visual_video_get_size (bin->actvideo));
 		}
 	}
-
-    input = visual_bin_get_input(bin);
-
-    if(input != NULL && 
-        (input_plugin = visual_input_get_plugin(input)) &&
-        (params = visual_plugin_get_params(input_plugin)) &&
-        (entry = visual_param_container_get(params, "songinfo"))) {
-        visual_param_entry_set_object(entry, VISUAL_OBJECT(entry)); 
-    }
-
-    entry = visual_param_container_get(visual_bin_get_input(bin)->plugin->params, "actor");
 
 	visual_log (VISUAL_LOG_DEBUG, "Leaving, actor->video->depth: %d actmorph->video->depth: %d",
 			bin->actor->video->depth, bin->actmorph->video->depth);

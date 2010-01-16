@@ -19,6 +19,8 @@
 #endif
 
 #define LV_HAVE_GNUC_VARARGS	(1)
+#define LV_HAVE_STDINT_H
+#define LV_HAVE_INTTYPES_H
 
 #define VISUAL_BIG_ENDIAN	(0)
 #define VISUAL_LITTLE_ENDIAN	(1)

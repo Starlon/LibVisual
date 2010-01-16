@@ -60,21 +60,21 @@ lv_os_unknown=no
 
 case "$host_os" in
 	hpux9* | hpux10* | hpux11*)	lv_hpux=yes;;
-	aix*)		lv_aix=yes;;
-	beos*)		lv_beos=yes;;
-	*osf*)		lv_osf=yes;;
-	irix*)          lv_irix=yes;;
-	sunos*)         lv_sunos=yes;;
-	solaris*)       lv_solaris=yes;;
-	linux*)         lv_linux=yes;;
-	*sco*)          lv_sco=yes;;
-	freebsd*)	lv_freebsd=yes;;
-	netbsd*)	lv_netbsd=yes;;
-	openbsd*)	lv_openbsd=yes;;
-	*darwin*)	lv_darwin=yes;;
-	cygwin*)	lv_cygwin=yes;;
-  	mingw*)		lv_mingw=yes;;
-	*)		lv_os_unknown=yes;;
+	aix*)				lv_aix=yes;;
+	beos*)				lv_beos=yes;;
+	*osf*)				lv_osf=yes;;
+	irix*)         			lv_irix=yes;;
+	sunos*)				lv_sunos=yes;;
+	solaris*)   		    	lv_solaris=yes;;
+	linux*)         		lv_linux=yes;;
+	*sco*)          		lv_sco=yes;;
+	freebsd*|dragonfly*)		lv_freebsd=yes;;
+	netbsd*)			lv_netbsd=yes;;
+	openbsd*)			lv_openbsd=yes;;
+	*darwin*)			lv_darwin=yes;;
+	cygwin*)			lv_cygwin=yes;;
+  	mingw*)				lv_mingw=yes;;
+	*)				lv_os_unknown=yes;;
 esac
 
 AC_MSG_CHECKING([for Win32])
@@ -155,7 +155,7 @@ AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [GETTEXT package name])
 AC_DEFINE_UNQUOTED(LOCALEDIR, "${prefix}/share/locale", [String catalog location])
 AM_GNU_GETTEXT([external])
-AM_GNU_GETTEXT_VERSION([0.14.1])
+AM_GNU_GETTEXT_VERSION([0.17])
 
 dnl -------------------------------
 dnl Check for native thread support
@@ -256,13 +256,13 @@ if test "x$enable_threads" = xyes && test "x$have_threads" != xnone; then
             *)
               LV_THREAD_LIBS=error
 	      lv_save_LIBS="$LIBS"
-	      for thread_lib in "" pthread pthread32 pthreads thread dce; do
+	      for thread_lib in "" -lpthread -lpthread32 -lpthreads -lthread -ldce -pthread; do
 		if test x"$thread_lib" = x; then
 			add_thread_lib=""
 			IN=""
 else
-			add_thread_lib="-l$thread_lib"
-			IN=" in -l$thread_lib"
+			add_thread_lib="$thread_lib"
+			IN=" in $thread_lib"
 		fi
 		if test x"$have_threads" = xposix; then
 			defattr=0
@@ -326,12 +326,18 @@ if test "x$enable_threads" = xyes && test "x$have_threads" != xnone; then
 fi
 AC_SUBST(LV_THREAD_CFLAGS)
 
+# Check for headers defining fixed-width integer types
+AC_CHECK_HEADER([stdint.h], [lv_have_stdint_h="yes"])
+AC_CHECK_HEADER([inttypes.h], [lv_have_inttypes_h="yes"])
+
 # check for type sizes
-AC_CHECK_SIZEOF(short)
-AC_CHECK_SIZEOF(int)
-AC_CHECK_SIZEOF(long)
-AC_CHECK_SIZEOF(size_t)
-                                                                                                               
+AC_CHECK_SIZEOF([short])
+AC_CHECK_SIZEOF([int])
+AC_CHECK_SIZEOF([long])
+AC_CHECK_SIZEOF([long long])
+AC_CHECK_SIZEOF([__int64])
+AC_CHECK_SIZEOF([size_t])
+
 dnl Try to figure out whether visual_size should be long or int
 AC_MSG_CHECKING([for the appropriate definition for size_t])
                                                                                                                
@@ -494,7 +500,7 @@ dnl Output the LibVisual config file
 AC_CONFIG_COMMANDS([libvisual/lvconfig.h],
 [
 	outfile=libvisual/lvconfig.h-tmp
-	cat > $outfile <<\_______EOF
+	cat > $outfile <<_______EOF
 /* lvconfig.h
  *
  * This is a generated file.  Please modify 'configure.ac'
@@ -526,7 +532,32 @@ _______EOF
 
 #define LV_HAVE_GNUC_VARARGS	(1)
 _______EOF
-       fi
+	fi
+
+	if test x$lv_have_stdint_h = xyes ; then
+		cat >>$outfile <<_______EOF
+#define LV_HAVE_STDINT_H
+_______EOF
+        fi
+
+	if test x$lv_have_inttypes_h = xyes ; then
+		cat >>$outfile <<_______EOF
+#define LV_HAVE_INTTYPES_H
+_______EOF
+        fi
+
+        if test x$lv_have_long_long = xyes ; then
+                cat >>$outfile <<_______EOF
+#define LV_HAVE_LONG_LONG
+#define LV_LONG_LONG_SIZE       ($lv_long_long_size)
+_______EOF
+        fi
+
+        if test x$lv_have_ms_int64 = xyes ; then
+                cat >>$outfile <<_______EOF
+        fi
+#define LV_HAVE_MS_INT64
+________EOF
 
         if test x$bigendian = xyes ; then
                 cat >>$outfile <<_______EOF
@@ -772,6 +803,11 @@ echo >>$outfile
 ],[
    lv_have_iso_c_varargs=$lv_have_iso_c_varargs
    lv_have_gnuc_varargs=$lv_have_gnuc_varargs
+   lv_have_stdint_h=$lv_have_stdint_h
+   lv_have_inttypes_h=$lv_have_inttypes_h
+   lv_have_long_long=$ac_cv_type_long_long
+   lv_long_long_size=$ac_cv_sizeof_long_long
+   lv_have_ms_int64=$ac_cv_type___int64
    visual_size_type=$visual_size_type
    fastfprng=$fastfprng
    lv_win32=$lv_win32
