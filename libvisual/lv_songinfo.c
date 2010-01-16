@@ -86,7 +86,6 @@ int visual_songinfo_init (VisSongInfo *songinfo, VisSongInfoType type)
     songinfo->songname = NULL;
     songinfo->artist = NULL;
     songinfo->album = NULL;
-    songinfo->song = NULL;
     songinfo->cover = NULL;
 
 	return VISUAL_OK;
@@ -435,6 +434,12 @@ int visual_songinfo_compare (VisSongInfo *s1, VisSongInfo *s2)
 			!(s1->song == NULL && s2->song == NULL)) {
 		diff++;
 	}
+
+    if(s1->elapsed != s2->elapsed)
+        diff++;
+
+    if(s1->length != s2->length)
+        diff++;
 
 	return (diff > 0 ? FALSE : TRUE);
 }
