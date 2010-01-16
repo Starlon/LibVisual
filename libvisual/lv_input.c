@@ -268,6 +268,8 @@ int visual_input_run (VisInput *input)
 			return -VISUAL_ERROR_INPUT_PLUGIN_NULL;
 		}
 
+        visual_plugin_events_pump(input->plugin);
+
 		inplugin->upload (input->plugin, input->audio);
 	} else
 		input->callback (input, input->audio, visual_object_get_private (VISUAL_OBJECT (input)));
