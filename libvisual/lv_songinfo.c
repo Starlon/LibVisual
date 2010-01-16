@@ -83,6 +83,11 @@ int visual_songinfo_init (VisSongInfo *songinfo, VisSongInfoType type)
 
 	/* Set the VisSongInfo data */
 	songinfo->type = type;
+    songinfo->songname = NULL;
+    songinfo->artist = NULL;
+    songinfo->album = NULL;
+    songinfo->song = NULL;
+    songinfo->cover = NULL;
 
 	return VISUAL_OK;
 }
