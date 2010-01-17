@@ -15,7 +15,7 @@ library_include_HEADERS = lvconfig.h libvisual.h lv_actor.h \
 			  lv_buffer.h lv_config.h lv_hashmap.h \
 			  lv_hashlist.h lv_queue.h lv_cache.h lv_collection.h \
 			  lv_utils.h lv_os.h lv_math.h lv_gl.h \
-			  lv_defines.h
+			  lv_defines.h lv_string.h
 
 lib_LTLIBRARIES = libvisual-@LIBVISUAL_VERSION_SUFFIX@.la
 
@@ -42,5 +42,5 @@ libvisual_@LIBVISUAL_VERSION_SUFFIX@_la_SOURCES = lv_actor.c lv_input.c lv_event
 		       lv_thread.c lv_object.c lv_transform.c lv_rectangle.c lv_config.c \
 		       lv_ringbuffer.c lv_buffer.c lv_cache.c lv_hashmap.c lv_hashlist.c \
 		       lv_queue.c lv_collection.c lv_utils.c lv_os.c lv_math.c lv_gl.c \
-		       gettext.h
+		       gettext.h lv_string.c
 

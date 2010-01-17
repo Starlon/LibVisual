@@ -43,7 +43,7 @@ VISUAL_BEGIN_DECLS
 #define VISUAL_PARAM_LIST_ENTRY_INTEGER(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_INTEGER, 0, val, lim }
 #define VISUAL_PARAM_LIST_ENTRY_FLOAT(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_FLOAT, 0, val, lim }
 #define VISUAL_PARAM_LIST_ENTRY_DOUBLE(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_DOUBLE, 0, val, lim }
-#define VISUAL_PARAM_LIST_ENTRY_COLOR(name, r, g, b)		{ name, VISUAL_PARAM_ENTRY_TYPE_COLOR, 0, 0, {{}, r, g, b, 0}}
+#define VISUAL_PARAM_LIST_ENTRY_COLOR(name, r, g, b)		{ name, VISUAL_PARAM_ENTRY_TYPE_COLOR, 0, 0, {}, {r, g, b}}
 #define VISUAL_PARAM_LIST_END					{ 0, VISUAL_PARAM_ENTRY_TYPE_END }
 
 #define VISUAL_PARAM_LIMIT_NONE					{ VISUAL_PARAM_ENTRY_LIMIT_TYPE_NULL, 0, 0, 0, 0, 0, 0 }
@@ -170,9 +170,9 @@ struct _VisParamEntryProxy {
 	char			*string;
 	double			 value;
 
-	VisColor		 color;
-
 	VisParamEntryLimitProxy	 limit;
+
+	VisColor		 color;
 };
 
 /**
