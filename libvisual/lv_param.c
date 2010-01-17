@@ -719,29 +719,34 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 
 		case VISUAL_PARAM_ENTRY_TYPE_STRING:
 			visual_param_entry_set_string (param, proxy->string);
+            visual_param_entry_set_string_default (param, proxy->string);
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_INTEGER:
 			visual_param_entry_set_integer (param, proxy->value);
+            visual_param_entry_set_integer_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_FLOAT:
 			visual_param_entry_set_float (param, proxy->value);
+            visual_param_entry_set_float_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_DOUBLE:
 			visual_param_entry_set_double (param, proxy->value);
+            visual_param_entry_set_double_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_COLOR:
 			visual_param_entry_set_color_by_color (param, &proxy->color);
+            visual_param_entry_set_color_default (param, &proxy->color);
 
 			break;
 
@@ -779,26 +784,31 @@ int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src)
 
 		case VISUAL_PARAM_ENTRY_TYPE_STRING:
 			visual_param_entry_set_string (param, visual_param_entry_get_string (src));
+            visual_param_entry_set_string_default (param, visual_param_entry_get_string_default (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_INTEGER:
 			visual_param_entry_set_integer (param, visual_param_entry_get_integer (src));
+            visual_param_entry_set_integer_default (param, visual_param_entry_get_integer_default (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_FLOAT:
 			visual_param_entry_set_float (param, visual_param_entry_get_float (src));
+            visual_param_entry_set_float_default (param, visual_param_entry_get_float_default (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_DOUBLE:
 			visual_param_entry_set_double (param, visual_param_entry_get_double (src));
+            visual_param_entry_set_double_default (param, visual_param_entry_get_double_default (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_COLOR:
 			visual_param_entry_set_color_by_color (param, visual_param_entry_get_color (src));
+            visual_param_entry_set_color_default (param, visual_param_entry_get_color_default (src));
 
 			break;
 
@@ -884,6 +894,37 @@ int visual_param_entry_set_string (VisParamEntry *param, char *string)
 }
 
 /**
+ * Sets the VisParamEntry's default data.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param string The default string for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_string_default(VisParamEntry *param, char *string)
+{
+	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    if(string == NULL && param->string_default == NULL)
+        return VISUAL_OK;
+
+    if(string == NULL && param->string_default != NULL) {
+        visual_mem_free (param->string_default);
+        param->string = NULL;
+
+    } else if (param->string_default == NULL && string != NULL) {
+        param->string_default = strdup(string);
+        
+    } else if (strcmp (string, param->string_default) != 0) {
+        visual_mem_free(param->string_default);
+
+        param->string_default = strdup (string);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
  * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_INTEGER and assigns the integer given as argument to it.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
@@ -909,6 +950,23 @@ int visual_param_entry_set_integer (VisParamEntry *param, int integer)
 	}
 
 	return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry's default integer value.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param integer The default integer value for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_integer_default( VisParamEntry *param, int integer)
+{
+	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    param->numeric_default.integer = integer;
+
+    return VISUAL_OK;
 }
 
 /**
@@ -940,6 +998,23 @@ int visual_param_entry_set_float (VisParamEntry *param, float floating)
 }
 
 /**
+ * Sets the VisParamEntry's default float value.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param floating The default float value for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_float_default (VisParamEntry *param, float floating)
+{
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    param->numeric_default.floating = floating;
+
+    return VISUAL_OK;
+}
+
+/**
  * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_DOUBLE and assigns the double given as argument to it.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
@@ -965,6 +1040,23 @@ int visual_param_entry_set_double (VisParamEntry *param, double doubleflt)
 	}
 
 	return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry's default double value.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param doubleflt The default double value for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_double_default (VisParamEntry *param, double doubleflt)
+{
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    param->numeric_default.doubleflt = doubleflt;
+
+    return VISUAL_OK;
 }
 
 /**
@@ -1013,6 +1105,23 @@ int visual_param_entry_set_color_by_color (VisParamEntry *param, VisColor *color
 	}
 
 	return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry's default VisColor.
+ *
+ * @param param Pointer to the VisParamEntry to which the parameter is set.
+ * @param color Pointer to the VisColor from which the rgb values are copied.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_color_default (VisParamEntry *param, VisColor *color)
+{
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    visual_color_copy(&param->color_default, color);
+
+    return VISUAL_OK;
 }
 
 /**
@@ -1127,6 +1236,26 @@ char *visual_param_entry_get_string (VisParamEntry *param)
 }
 
 /**
+ * Get the default string parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry to which the default string parameter is requested.
+ *
+ * @return The default string parameter from the VisParamEntry or NULL.
+ */
+char *visual_param_entry_get_string_default (VisParamEntry *param)
+{
+    visual_log_return_val_if_fail (param != NULL, NULL);
+
+    if (param->type != VISUAL_PARAM_ENTRY_TYPE_STRING) {
+        visual_log (VISUAL_LOG_WARNING, _("Requesting default string from non string param"));
+
+        return NULL;
+    }
+
+    return param->string_default;
+}
+
+/**
  * Get the integer parameter from a VisParamEntry.
  *
  * @param param Pointer to the VisParamEntry from which the integer parameter is requested.
@@ -1141,6 +1270,23 @@ int visual_param_entry_get_integer (VisParamEntry *param)
 		visual_log (VISUAL_LOG_WARNING, _("Requesting integer from a non integer param"));
 
 	return param->numeric.integer;
+}
+
+/**
+ * Get the default integer parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the default integer parameter is requested.
+ *
+ * @return The integer parameter from the VisParamEntry.
+ */
+int visual_param_entry_get_integer_default (VisParamEntry *param)
+{
+    visual_log_return_val_if_fail (param != NULL, 0);
+
+    if(param->type != VISUAL_PARAM_ENTRY_TYPE_INTEGER)
+        visual_log (VISUAL_LOG_WARNING, _("Requesting default integer from a non integer param"));
+
+    return param->numeric_default.integer;
 }
 
 /**
@@ -1161,6 +1307,23 @@ float visual_param_entry_get_float (VisParamEntry *param)
 }
 
 /**
+ * Get the default float parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the default float parameter is requested.
+ *
+ * @return The default float parameter from the VisParamEntry.
+ */
+float visual_param_entry_get_float_default (VisParamEntry *param)
+{
+    visual_log_return_val_if_fail (param != NULL, 0);
+
+    if (param->type != VISUAL_PARAM_ENTRY_TYPE_FLOAT)
+        visual_log (VISUAL_LOG_WARNING, _("Requesting default float from a non float param"));
+
+    return param->numeric_default.floating;
+}
+
+/**
  * Get the double parameter from a VisParamEntry.
  *
  * @param param Pointer to the VisParamEntry from which the double parameter is requested.
@@ -1175,6 +1338,23 @@ double visual_param_entry_get_double (VisParamEntry *param)
 		visual_log (VISUAL_LOG_WARNING, _("Requesting double from a non double param"));
 
 	return param->numeric.doubleflt;
+}
+
+/**
+ * Get the default double parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the default double parameter is requested.
+ *
+ * @return The default double parameter from the VisParamEntry.
+ */
+double visual_param_entry_get_double_default (VisParamEntry *param)
+{
+    visual_log_return_val_if_fail (param != NULL, 0);
+
+    if (param->type != VISUAL_PARAM_ENTRY_TYPE_DOUBLE)
+        visual_log (VISUAL_LOG_WARNING, _("Requesting default double from a non double param"));
+
+    return param->numeric_default.doubleflt;
 }
 
 /**
@@ -1199,6 +1379,27 @@ VisColor *visual_param_entry_get_color (VisParamEntry *param)
 
 	return &param->color;
 }
+
+/**
+ * Get the default color parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the default color parameter is requested.
+ *
+ * @return Pointer to the default VisColor parameter from the VisParamEntry. 
+ */
+VisColor *visual_param_entry_get_color_default (VisParamEntry *param)
+{
+    visual_log_return_val_if_fail (param != NULL, NULL);
+
+    if (param->type != VISUAL_PARAM_ENTRY_TYPE_COLOR) {
+        visual_log (VISUAL_LOG_WARNING, _("Requesting default color from a non color param"));
+
+        return NULL;
+    }
+
+    return &param->color_default;
+}
+
 
 /**
  * Get the palette parameter from a VisParamEntry.

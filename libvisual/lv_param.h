@@ -191,6 +191,7 @@ struct _VisParamEntry {
 	VisParamEntryLimit	 limit;		/**< Parameter limits. */
 
 	char			*string;	/**< String data. */
+    char            *string_default;/**< Parameter default string. */
 
 	union {
 		int		 integer;		/**< Integer data. */
@@ -198,7 +199,14 @@ struct _VisParamEntry {
 		double		 doubleflt;		/**< Double floating point data. */
 	} numeric;
 
+    union {
+        int     integer;            /**< Default integer data. */
+        float       floating;       /**< Default floating point data. */
+        double      doubleflt;      /**< Default double floating point data. */
+    } numeric_default;
+
 	VisColor		 color;		/**< VisColor data. */
+    VisColor         color_default; /**< Default VisColor data. */
 	VisPalette		 pal;		/**< VisPalette data. */
 	VisObject		*objdata;	/**< VisObject data for a VisObject parameter. */
 
@@ -234,21 +242,31 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src);
 int visual_param_entry_set_name (VisParamEntry *param, VisString *name);
 int visual_param_entry_set_string (VisParamEntry *param, char *string);
+int visual_param_entry_set_string_default (VisParamEntry *param, char *string);
 int visual_param_entry_set_integer (VisParamEntry *param, int integer);
+int visual_param_entry_set_integer_default (VisParamEntry *param, int integer);
 int visual_param_entry_set_float (VisParamEntry *param, float floating);
+int visual_param_entry_set_float_default (VisParamEntry *param, float floating);
 int visual_param_entry_set_double (VisParamEntry *param, double doubleflt);
+int visual_param_entry_set_double_default (VisParamEntry *param, double doubleflt);
 int visual_param_entry_set_color (VisParamEntry *param, uint8_t r, uint8_t g, uint8_t b);
 int visual_param_entry_set_color_by_color (VisParamEntry *param, VisColor *color);
+int visual_param_entry_set_color_default (VisParamEntry *param, VisColor *color);
 int visual_param_entry_set_palette (VisParamEntry *param, VisPalette *pal);
 int visual_param_entry_set_object (VisParamEntry *param, VisObject *object);
 int visual_param_entry_set_annotation (VisParamEntry *param, char *ann);
 
 VisString *visual_param_entry_get_name (VisParamEntry *param);
 char *visual_param_entry_get_string (VisParamEntry *param);
+char *visual_param_entry_get_string_default (VisParamEntry *param);
 int visual_param_entry_get_integer (VisParamEntry *param);
+int visual_param_entry_get_integer_default (VisParamEntry *param);
 float visual_param_entry_get_float (VisParamEntry *param);
+float visual_param_entry_get_float_default (VisParamEntry *param);
 double visual_param_entry_get_double (VisParamEntry *param);
+double visual_param_entry_get_double_default (VisParamEntry *param);
 VisColor *visual_param_entry_get_color (VisParamEntry *param);
+VisColor *visual_param_entry_get_color_default (VisParamEntry *param);
 VisPalette *visual_param_entry_get_palette (VisParamEntry *param);
 VisObject *visual_param_entry_get_object (VisParamEntry *param);
 char *visual_param_entry_get_annotation(VisParamEntry *param);
