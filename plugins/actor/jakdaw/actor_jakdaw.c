@@ -32,6 +32,7 @@
 
 #include "feedback.h"
 #include "plotter.h"
+#include "actor_jakdaw.h"
 
 #include <libvisual/libvisual.h>
 
@@ -85,7 +86,7 @@ int act_jakdaw_init (VisPluginData *plugin)
 	static VisParamEntryProxy params[] = {
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("zoom mode",		FEEDBACK_ZOOMRIPPLE, VISUAL_PARAM_LIMIT_INTEGER (0, FEEDBACK_LAST)),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("plotter trigger",	PLOTTER_COLOUR_MUSICTRIG, VISUAL_PARAM_LIMIT_INTEGER (0, PLOTTER_COLOUR_LAST)),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("plotter type",	PLOTTER_SCOPE_LINES, VISUAL_PARAM_LIMIT_INTEGER (0, PLOTTER_LAST)),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("plotter type",	PLOTTER_SCOPE_LINES, VISUAL_PARAM_LIMIT_INTEGER (0, PLOTTER_SCOPE_LAST)),
 		VISUAL_PARAM_LIST_END
 	};
 
