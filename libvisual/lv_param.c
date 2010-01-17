@@ -472,6 +472,7 @@ VisParamEntry *visual_param_entry_new (VisString *name)
 
     param->string = NULL;
     param->annotation = NULL;
+    param->objdata = NULL;
 
 	return param;
 }
@@ -1174,7 +1175,7 @@ int visual_param_entry_set_color (VisParamEntry *param, uint8_t r, uint8_t g, ui
     ret = visual_param_entry_set_color_no_event (param, r, g, b);
 
     if (ret == VISUAL_PARAM_CHANGED) {
-        visual_param_changed (param);
+        visual_param_entry_changed (param);
     }
 
     return VISUAL_OK;
