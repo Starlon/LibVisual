@@ -150,6 +150,7 @@ typedef enum {
 	VISUAL_ERROR_PARAM_CALLBACK_NULL,		/**< The given param change callback is NULL. */
 	VISUAL_ERROR_PARAM_CALLBACK_TOO_MANY,		/**< Too many param change callbacks are registered. */
 	VISUAL_ERROR_PARAM_INVALID_TYPE,		/**< The VisParamEntry is of invalid type. */
+    VISUAL_PARAM_CHANGED,                   /**< The VisParamEntry changed */
 
 	/* Error entries for the VisPlugin system */
 	VISUAL_ERROR_PLUGIN_NULL,			/**< The VisPluginData is NULL. */

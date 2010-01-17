@@ -855,7 +855,7 @@ int visual_param_entry_set_name (VisParamEntry *param, VisString *name)
 }
 
 /**
- * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_STRING and assigns the string given as argument to it.
+ * Calls visual_param_entry_set_string_no_event and flags the entry as changed if needed.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param string The string for this parameter.
@@ -864,37 +864,58 @@ int visual_param_entry_set_name (VisParamEntry *param, VisString *name)
  */
 int visual_param_entry_set_string (VisParamEntry *param, char *string)
 {
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    int ret = visual_param_entry_set_string_no_event(param, string);
+
+    if(ret == VISUAL_PARAM_CHANGED) {
+        visual_param_entry_changed (param);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_STRING and assigns the string given as argument to it.
+ * This does not flag the VisParamEntry as changed.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param string The string for this parameter.
+ *
+ * @return VISUAL_OK if nothing changed, VISUAL_PARAM_CHANGED if the entry changed,
+ * or -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_string_no_event (VisParamEntry *param, char *string)
+{
+    int ret = VISUAL_PARAM_CHANGED;
+
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
 	param->type = VISUAL_PARAM_ENTRY_TYPE_STRING;
 
 	if (string == NULL && param->string == NULL)
-		return VISUAL_OK;
+		return ret;
 
 	if (string == NULL && param->string != NULL) {
 		visual_mem_free (param->string);
 		param->string = NULL;
 
-		visual_param_entry_changed (param);
-
 	} else if (param->string == NULL && string != NULL) {
 		param->string = strdup (string);
-
-		visual_param_entry_changed (param);
 
 	} else if (strcmp (string, param->string) != 0) {
 		visual_mem_free (param->string);
 
 		param->string = strdup (string);
+	} else {
+        ret = VISUAL_OK;
+    }
 
-		visual_param_entry_changed (param);
-	}
-
-	return VISUAL_OK;
+	return ret;
 }
 
 /**
- * Sets the VisParamEntry's default data.
+ * Sets the VisParamEntry's default string data.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param string The default string for this parameter.
@@ -925,14 +946,39 @@ int visual_param_entry_set_string_default(VisParamEntry *param, char *string)
 }
 
 /**
- * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_INTEGER and assigns the integer given as argument to it.
+ * This calls visual_param_entry_set_integer_no_event and flags the entry changed if needed.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param integer The integer value for this parameter.
  *
- * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_NULL on failure.
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
  */
 int visual_param_entry_set_integer (VisParamEntry *param, int integer)
+{
+    int ret;
+
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    ret = visual_param_entry_set_integer_no_event(param, integer);
+
+    if( ret == VISUAL_PARAM_CHANGED ) {
+        visual_param_entry_changed (param);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_INTEGER and assigns the integer given as argument to it.
+ * This does not flag the entry changed.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param integer The integer value for this parameter.
+ *
+ * @return VISUAL_OK if nothing changed, VISUAL_PARAM_CHANGED if the param changed,
+ * or -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_integer_no_event (VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -946,7 +992,7 @@ int visual_param_entry_set_integer (VisParamEntry *param, int integer)
 	if (param->numeric.integer != integer) {
 		param->numeric.integer = integer;
 
-		visual_param_entry_changed (param);
+        return VISUAL_PARAM_CHANGED;
 	}
 
 	return VISUAL_OK;
@@ -970,14 +1016,38 @@ int visual_param_entry_set_integer_default( VisParamEntry *param, int integer)
 }
 
 /**
+ * This calls visual_param_entry_set_float_no_event and flags the entry changed if needed.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param floating The float value for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_float (VisParamEntry *param, float floating)
+{
+    int ret;
+
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+    
+    ret = visual_param_entry_set_float_no_event(param, floating);
+
+    if (ret == VISUAL_PARAM_CHANGED) {
+        visual_param_entry_changed (param);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
  * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_FLOAT and assigns the float given as argument to it.
+ * This does not flag the entry as changed.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param floating The float value for this parameter.
  *
  * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_NULL on failure.
  */
-int visual_param_entry_set_float (VisParamEntry *param, float floating)
+int visual_param_entry_set_float_no_event (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -992,6 +1062,7 @@ int visual_param_entry_set_float (VisParamEntry *param, float floating)
 		param->numeric.floating = floating;
 
 		visual_param_entry_changed (param);
+        return VISUAL_PARAM_CHANGED;
 	}
 
 	return VISUAL_OK;
@@ -1015,14 +1086,39 @@ int visual_param_entry_set_float_default (VisParamEntry *param, float floating)
 }
 
 /**
+ * This calls visual_param_entry_set_double_no_event and flags the param changed if needed.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param floating The double value for this parameter.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_double (VisParamEntry *param, double doubleflt)
+{
+    int ret;
+
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    ret = visual_param_entry_set_double_no_event (param, doubleflt);
+
+    if(ret == VISUAL_PARAM_CHANGED) {
+        visual_param_entry_changed (param);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
  * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_DOUBLE and assigns the double given as argument to it.
+ * This does not flag the param changed.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param doubleflt The double value for this parameter.
  *
- * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_NULL on failure.
+ * @return VISUAL_OK on succes, VISUAL_PARAM_CHANGED if the entry changed,
+ * or -VISUAL_ERROR_PARAM_NULL on failure.
  */
-int visual_param_entry_set_double (VisParamEntry *param, double doubleflt)
+int visual_param_entry_set_double_no_event (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1036,7 +1132,7 @@ int visual_param_entry_set_double (VisParamEntry *param, double doubleflt)
 	if (param->numeric.doubleflt != doubleflt) {
 		param->numeric.doubleflt = doubleflt;
 
-		visual_param_entry_changed (param);
+        return VISUAL_PARAM_CHANGED;
 	}
 
 	return VISUAL_OK;
@@ -1059,17 +1155,44 @@ int visual_param_entry_set_double_default (VisParamEntry *param, double doublefl
     return VISUAL_OK;
 }
 
+
 /**
- * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_COLOR and assigns the rgb values given as arguments to it.
+ * This calls visual_param_entry_set_color_no_event and flags the param changed if needed.
  *
  * @param param Pointer to the VisParamEntry to which a parameter is set.
  * @param r The red value for this color parameter.
  * @param g The green value for this color parameter.
  * @param b The blue value for this color parameter.
  *
- * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_NULL on failure.
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL on failure.
  */
 int visual_param_entry_set_color (VisParamEntry *param, uint8_t r, uint8_t g, uint8_t b)
+{
+    int ret;
+    visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    ret = visual_param_entry_set_color_no_event (param, r, g, b);
+
+    if (ret == VISUAL_PARAM_CHANGED) {
+        visual_param_changed (param);
+    }
+
+    return VISUAL_OK;
+}
+
+/**
+ * Sets the VisParamEntry to VISUAL_PARAM_ENTRY_TYPE_COLOR and assigns the rgb values.
+ * This does not flag the entry as changed.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param r The red value for this color parameter.
+ * @param g The green value for this color parameter.
+ * @param b The blue value for this color parameter.
+ *
+ * @return VISUAL_OK on succes, VISUAL_PARAM_CHANGED if the entry changed,
+ * or -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_color_no_event (VisParamEntry *param, uint8_t r, uint8_t g, uint8_t b)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1077,8 +1200,8 @@ int visual_param_entry_set_color (VisParamEntry *param, uint8_t r, uint8_t g, ui
 
 	if (param->color.r != r || param->color.g != g || param->color.b != b) {
 		visual_color_set (&param->color, r, g, b);
-
-		visual_param_entry_changed (param);
+        
+        return VISUAL_PARAM_CHANGED;
 	}
 
 	return VISUAL_OK;
