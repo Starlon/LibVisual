@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Libvisual Library 0.3.0\n"
 "Report-Msgid-Bugs-To: http://libvisual.sf.net\n"
-"POT-Creation-Date: 2010-01-16 08:18-0600\n"
+"POT-Creation-Date: 2010-01-16 19:06-0600\n"
 "PO-Revision-Date: 2005-03-20 17:09-0300\n"
 "Last-Translator:  <dprotti@users.sourceforge.net>\n"
 "Language-Team: Spanish\n"
@@ -104,67 +104,67 @@ msgstr ""
 msgid "rundepth: %d transpitch %d\n"
 msgstr ""
 
-#: libvisual/lv_bin.c:500
+#: libvisual/lv_bin.c:504
 msgid "Switching to Gl mode"
 msgstr "Cambiando a modo GL"
 
-#: libvisual/lv_bin.c:511
+#: libvisual/lv_bin.c:515
 msgid "Switching away from Gl mode -- or non Gl switch"
 msgstr "Cambiando desde modo GL -- o haciendo un cambio no GL"
 
-#: libvisual/lv_bin.c:524
+#: libvisual/lv_bin.c:528
 #, c-format
 msgid "video depth (from fixate): %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:540
+#: libvisual/lv_bin.c:544
 #, c-format
 msgid "old depth is higher, video depth %d, depth %d, bin depth %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:552
+#: libvisual/lv_bin.c:556
 #, c-format
 msgid "new depth is higher, or equal: video depth %d, depth %d bin depth %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:571
+#: libvisual/lv_bin.c:575
 #, c-format
 msgid "Switching from Gl TO framebuffer for real, framebuffer depth: %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:574
+#: libvisual/lv_bin.c:578
 #, c-format
 msgid "Target depth selected: %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:577
+#: libvisual/lv_bin.c:581
 #, c-format
 msgid "Switch to new pitch: %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:586
+#: libvisual/lv_bin.c:590
 #, c-format
 msgid "video pitch of that what connects to the new actor %d"
 msgstr ""
 
-#: libvisual/lv_bin.c:592
+#: libvisual/lv_bin.c:605
 msgid "switching... ******************************************"
 msgstr "cambiando... ******************************************"
 
-#: libvisual/lv_bin.c:595
+#: libvisual/lv_bin.c:608
 msgid "end switch actor by name function ******************"
 msgstr "fin de cambio de actor por nombre ******************"
 
-#: libvisual/lv_bin.c:618
+#: libvisual/lv_bin.c:631
 #, c-format
 msgid "depth of the main actor: %d"
 msgstr "profundidad para el actor principal: %d"
 
-#: libvisual/lv_bin.c:739
+#: libvisual/lv_bin.c:752
 msgid "negotiate without event"
 msgstr "negociando sin evento"
 
-#: libvisual/lv_bin.c:741
+#: libvisual/lv_bin.c:754
 msgid "end negotiate without event"
 msgstr "fin de negociación sin evento"
 

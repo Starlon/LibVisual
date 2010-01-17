@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # libtool - Provide generalized library-building support services.
-# Generated automatically by config.status (libvisual) 0.4.0
+# Generated automatically by config.status (libvisual) 0.6.0
 # Libtool was configured on host localhost.localdomain:
 # NOTE: Changes made to this file will be lost: look at ltmain.sh.
 #
@@ -65,12 +65,12 @@ fast_install=yes
 
 # The host system.
 host_alias=
-host=i686-pc-linux-gnu
+host=i686-redhat-linux-gnu
 host_os=linux-gnu
 
 # The build system.
 build_alias=
-build=i686-pc-linux-gnu
+build=i686-redhat-linux-gnu
 build_os=linux-gnu
 
 # A sed program that does not truncate output.
