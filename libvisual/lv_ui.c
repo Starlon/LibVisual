@@ -1284,8 +1284,8 @@ VisUIWidget *visual_ui_checkbox_new (VisString *name, int boolcheck)
 {
 	VisUICheckbox *checkbox;
 	static VisParamEntryProxy truefalse[] = {
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("false", FALSE, VISUAL_PARAM_LIMIT_NONE),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("true",  TRUE,  VISUAL_PARAM_LIMIT_NONE),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("false", FALSE, VISUAL_PARAM_LIMIT_NONE, ""),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("true",  TRUE,  VISUAL_PARAM_LIMIT_NONE, ""),
 		VISUAL_PARAM_LIST_END
 	};
 

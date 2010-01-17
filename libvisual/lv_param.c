@@ -63,6 +63,9 @@ static int param_entry_dtor (VisObject *object)
 	if (param->objdata != NULL)
 		visual_object_unref (param->objdata);
 
+    if (param->annotation != NULL)
+        visual_mem_free(param->annotation);
+
 	visual_palette_free_colors (&param->pal);
 
 	visual_collection_destroy (VISUAL_COLLECTION (&param->callbacks));
@@ -70,6 +73,7 @@ static int param_entry_dtor (VisObject *object)
 	param->string = NULL;
 	param->name = NULL;
 	param->objdata = NULL;
+    param->annotation = NULL;
 
 	return TRUE;
 }
@@ -466,6 +470,9 @@ VisParamEntry *visual_param_entry_new (VisString *name)
 
 	visual_string_unref_parameter (name);
 
+    param->string = NULL;
+    param->annotation = NULL;
+
 	return param;
 }
 
@@ -746,6 +753,8 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 			break;
 	}
 
+    visual_param_entry_set_annotation (param, proxy->annotation);
+
 	return VISUAL_OK;
 }
 
@@ -810,6 +819,8 @@ int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src)
 
 			break;
 	}
+
+    visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 	return VISUAL_OK;
 }
@@ -1062,6 +1073,26 @@ int visual_param_entry_set_object (VisParamEntry *param, VisObject *object)
 }
 
 /**
+ * Set the annotation for the VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry.
+ * @param ann The annotation to be set.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_set_annotation(VisParamEntry *param, char *ann)
+{
+    visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    if(param->annotation != NULL)
+        visual_mem_free(param->annotation);
+
+    param->annotation = strdup(ann);
+
+    return VISUAL_OK;
+}
+
+/**
  * Get the name of the VisParamEntry.
  *
  * @param param Pointer to the VisParamEntry from which the name is requested.
@@ -1208,6 +1239,20 @@ VisObject *visual_param_entry_get_object (VisParamEntry *param)
 	}
 
 	return param->objdata;
+}
+
+/**
+ * Get the annotation parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the annotation parameter is requested.
+ *
+ * @return Pointer to the annotation parameter from the VisParamEntry.
+ */
+char *visual_param_entry_get_annotation(VisParamEntry *param)
+{
+    visual_log_return_val_if_fail(param != NULL, NULL);
+
+    return param->annotation;
 }
 
 int visual_param_entry_limit_set_from_limit_proxy (VisParamEntry *param, VisParamEntryLimitProxy *limit)

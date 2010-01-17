@@ -39,11 +39,11 @@ VISUAL_BEGIN_DECLS
 
 /* Use 0 for pointers instead of NULL because of C++ programs shocking on ((void *) 0) */
 #define VISUAL_PARAM_LIST_ENTRY(name)				{ name, VISUAL_PARAM_ENTRY_TYPE_NULL }
-#define VISUAL_PARAM_LIST_ENTRY_STRING(name, string)		{ name, VISUAL_PARAM_ENTRY_TYPE_STRING, string, 0 }
-#define VISUAL_PARAM_LIST_ENTRY_INTEGER(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_INTEGER, 0, val, lim }
-#define VISUAL_PARAM_LIST_ENTRY_FLOAT(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_FLOAT, 0, val, lim }
-#define VISUAL_PARAM_LIST_ENTRY_DOUBLE(name, val, lim)		{ name, VISUAL_PARAM_ENTRY_TYPE_DOUBLE, 0, val, lim }
-#define VISUAL_PARAM_LIST_ENTRY_COLOR(name, r, g, b)		{ name, VISUAL_PARAM_ENTRY_TYPE_COLOR, 0, 0, {}, {r, g, b}}
+#define VISUAL_PARAM_LIST_ENTRY_STRING(name, string, ann)		{ name, VISUAL_PARAM_ENTRY_TYPE_STRING, string, 0, {}, {}, ann }
+#define VISUAL_PARAM_LIST_ENTRY_INTEGER(name, val, lim, ann)		{ name, VISUAL_PARAM_ENTRY_TYPE_INTEGER, 0, val, lim, {}, ann }
+#define VISUAL_PARAM_LIST_ENTRY_FLOAT(name, val, lim, ann)		{ name, VISUAL_PARAM_ENTRY_TYPE_FLOAT, 0, val, lim, {}, ann }
+#define VISUAL_PARAM_LIST_ENTRY_DOUBLE(name, val, lim, ann)		{ name, VISUAL_PARAM_ENTRY_TYPE_DOUBLE, 0, val, lim, {}, ann }
+#define VISUAL_PARAM_LIST_ENTRY_COLOR(name, r, g, b, ann)		{ name, VISUAL_PARAM_ENTRY_TYPE_COLOR, 0, 0, {}, {r, g, b}, ann}
 #define VISUAL_PARAM_LIST_END					{ 0, VISUAL_PARAM_ENTRY_TYPE_END }
 
 #define VISUAL_PARAM_LIMIT_NONE					{ VISUAL_PARAM_ENTRY_LIMIT_TYPE_NULL, 0, 0, 0, 0, 0, 0 }
@@ -173,6 +173,8 @@ struct _VisParamEntryProxy {
 	VisParamEntryLimitProxy	 limit;
 
 	VisColor		 color;
+
+    char            *annotation;
 };
 
 /**
@@ -199,6 +201,8 @@ struct _VisParamEntry {
 	VisColor		 color;		/**< VisColor data. */
 	VisPalette		 pal;		/**< VisPalette data. */
 	VisObject		*objdata;	/**< VisObject data for a VisObject parameter. */
+
+    char            *annotation;    /**< Annotation data. */
 
 	VisList			 callbacks;	/**< The change notify callbacks. */
 };
@@ -237,6 +241,7 @@ int visual_param_entry_set_color (VisParamEntry *param, uint8_t r, uint8_t g, ui
 int visual_param_entry_set_color_by_color (VisParamEntry *param, VisColor *color);
 int visual_param_entry_set_palette (VisParamEntry *param, VisPalette *pal);
 int visual_param_entry_set_object (VisParamEntry *param, VisObject *object);
+int visual_param_entry_set_annotation (VisParamEntry *param, char *ann);
 
 VisString *visual_param_entry_get_name (VisParamEntry *param);
 char *visual_param_entry_get_string (VisParamEntry *param);
@@ -246,6 +251,7 @@ double visual_param_entry_get_double (VisParamEntry *param);
 VisColor *visual_param_entry_get_color (VisParamEntry *param);
 VisPalette *visual_param_entry_get_palette (VisParamEntry *param);
 VisObject *visual_param_entry_get_object (VisParamEntry *param);
+char *visual_param_entry_get_annotation(VisParamEntry *param);
 
 int visual_param_entry_limit_set_from_limit_proxy (VisParamEntry *param, VisParamEntryLimitProxy *limit);
 int visual_param_entry_limit_set_from_limit (VisParamEntry *param, VisParamEntryLimit *limit);
