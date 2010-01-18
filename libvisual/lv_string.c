@@ -64,7 +64,7 @@ struct _StringIteratorStringToken {
 };
 
 /* Internal variables */
-static VisMemPool __lv_string_mempool;
+VisMemPool __lv_string_mempool;
 static int __lv_string_initialized = FALSE;
 
 
@@ -706,6 +706,7 @@ VisString *visual_string_new_parameter_string (const char *s)
 	int len;
 
 	if (s != NULL) {
+        VisMemPoolTLS *mpooltls = VISUAL_MEM_POOL_TLS (&__lv_string_mempool);
 		str = visual_mem_pool_alloc (&__lv_string_mempool);
 		visual_string_init_force_copy (str, TRUE);
 		visual_object_ref (VISUAL_OBJECT (str));

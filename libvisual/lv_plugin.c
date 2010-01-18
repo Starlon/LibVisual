@@ -545,6 +545,7 @@ static int plugin_add_dir_to_map (VisHashmap *map, const char *dir)
 	size_t len;
 	int cnt = 0;
 
+
 #if defined(VISUAL_OS_WIN32)
 	BOOL fFinished;
 	HANDLE hList;

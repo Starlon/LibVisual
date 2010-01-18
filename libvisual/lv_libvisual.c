@@ -39,6 +39,7 @@
 #include "lv_log.h"
 #include "lv_param.h"
 #include "lv_thread.h"
+#include "lv_mem_pool.h"
 #include "config.h"
 
 
@@ -58,7 +59,6 @@ int __lv_plugpath_cnt = 0;
 /** Char ** list of all the plugin paths. */
 char **__lv_plugpaths = NULL;
 
-
 static int init_params (VisParamContainer *paramcontainer);
 static VisUIWidget *make_userinterface (void);
 static int free_plugpaths (void);
@@ -71,6 +71,7 @@ static int init_params (VisParamContainer *paramcontainer)
 
 	/* Initialize all the global parameters here */
 
+    return 0;
 	/* Song information parameters */
 	/* Show songinfo */
 	param = visual_param_entry_new (VIS_BSTR ("songinfo show"));
