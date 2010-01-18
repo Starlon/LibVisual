@@ -253,18 +253,18 @@ fi
 dnl Xmms2
 AC_ARG_ENABLE([xmms2],
   AS_HELP_STRING([--disable-xmms2],
-    [Do not build xmms2 input plugin @<:@default=enabled:>@]),
+    [Do not build xmms2 input plugin @<:@default=enabled@:>@]),
   [ENABLE_XMMS2=$enableval],
   [ENABLE_XMMS2=yes])
 
 if test "$ENABLE_XMMS2" = "yes"; then
-
-  AC_CHECK_HEADERS([xmms2/xmmsclient/xmmsclient.h],
-    [AC_CHECK_LIB([xmms2], [xmmsc_connect], [HAVE_XMMS2=yes 
-                                             XMMS2_LIBS=`$PKG_CONFIG --libs xmms2-client` 
-                                             XMMS2_HEADERS=`$PKG_CONFIG --cflags xmms2-client`], [], [])], [])
+  PKG_CHECK_MODULES(XMMS2, xmms2-client >= 0.6, [HAVE_XMMS2=yes], [HAVE_XMMS2=no])
   if test "$HAVE_XMMS2" = "yes"; then
+    AC_SUBST(XMMS2_CFLAGS)
+    AC_SUBST(XMMS2_LIBS)
     build_input_plugins="$build_input_plugins xmms2"
+  else
+    AC_MSG_WARN([*** xmms2 not found. Plugin will not be built.])
   fi
 fi
 
@@ -509,6 +509,17 @@ AC_ARG_ENABLE([goom2k4],
 
 if test "$ENABLE_GOOM2K4" = "yes"; then
   build_actor_plugins="$build_actor_plugins goom2k4"
+fi
+
+dnl blursk
+AC_ARG_ENABLE([blursk],
+  AS_HELP_STRING([--disable-blursk],
+  [Do not build blursk plugin @<:@default=enabled@:>@]),
+  [ENABLE_BLURSK=$enableval],
+  [ENABLE_BLURSK=yes])
+
+if test "$ENABLE_BLURSK" = "yes"; then
+  build_actor_plugins="$build_actor_plugins blursk"
 fi
 
 dnl Alphabend

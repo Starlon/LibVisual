@@ -31,6 +31,9 @@ int inp_xmms2_cleanup( VisPluginData *plugin );
 int inp_xmms2_upload( VisPluginData *plugin, VisAudio *audio );
 int inp_xmms2_events(VisPluginData *plugin, VisEventQueue *events);
 
+int result_get_string(xmmsc_result_t *res, const char *key, const char **buf);
+int result_get_int(xmmsc_result_t *res, const char *key, int *num);
+
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
 const VisPluginInfo *get_plugin_info( int *count ) {
@@ -65,7 +68,8 @@ int inp_xmms2_init( VisPluginData *plugin ) {
     const char *err_buf;
     VisParamContainer *paramcontainer = visual_plugin_get_params(plugin);
 
-    VisParamEntry *param = visual_param_entry_new("songinfo");
+    VisString *name = VIS_BSTR("songinfo");
+    VisParamEntry *param = visual_param_entry_new(name);
     param->type = VISUAL_PARAM_ENTRY_TYPE_OBJECT;
 
     visual_param_container_add(paramcontainer, param);
@@ -243,8 +247,6 @@ int inp_xmms2_upload( VisPluginData *plugin, VisAudio *audio )
 
     if(songinfo != NULL)
     {
-        printf("songinfo %p\n", songinfo);
-    
         /* Get ID of the currently playing song */
         res = xmmsc_playback_current_id(priv->connection);
     
