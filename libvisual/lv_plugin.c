@@ -1289,12 +1289,10 @@ int visual_plugin_environ_add (VisPluginData *plugin, VisPluginEnviron *enve)
  */
 int visual_plugin_environ_remove (VisPluginData *plugin, const char *type)
 {
-	VisPluginEnviron *enve;
-
 	visual_log_return_val_if_fail (plugin != NULL, -VISUAL_ERROR_PLUGIN_NULL);
 	visual_log_return_val_if_fail (type != NULL, -VISUAL_ERROR_NULL);
 
-	visual_hashmap_remove_string (&plugin->environment, enve->type, TRUE);
+	visual_hashmap_remove_string (&plugin->environment, type, TRUE);
 
 	return VISUAL_OK;
 }

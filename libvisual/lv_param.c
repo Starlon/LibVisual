@@ -290,6 +290,7 @@ int visual_param_container_add_many_proxy (VisParamContainer *paramcontainer, Vi
 	while (proxies[i].type != VISUAL_PARAM_ENTRY_TYPE_END) {
 		visual_string_init (&name);
 		visual_string_set (&name, proxies[i].name);
+        printf("add_many_proxy %s\n", proxies[i].name);
 		pnew = visual_param_entry_new (&name);
 
 		visual_object_unref (VISUAL_OBJECT (&name));
@@ -469,6 +470,8 @@ VisParamEntry *visual_param_entry_new (VisString *name)
 	visual_collection_set_destroyer (VISUAL_COLLECTION (&param->callbacks), visual_object_collection_destroyer);
 
 	visual_string_unref_parameter (name);
+
+    param->type = VISUAL_PARAM_ENTRY_TYPE_NULL;
 
     param->string = NULL;
     param->annotation = NULL;
@@ -721,6 +724,7 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 		case VISUAL_PARAM_ENTRY_TYPE_STRING:
 			visual_param_entry_set_string (param, proxy->string);
             visual_param_entry_set_string_default (param, proxy->string);
+            visual_param_entry_set_annotation (param, proxy->annotation);
 
 			break;
 
@@ -728,6 +732,7 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 			visual_param_entry_set_integer (param, proxy->value);
             visual_param_entry_set_integer_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
+            visual_param_entry_set_annotation (param, proxy->annotation);
 
 			break;
 
@@ -735,6 +740,7 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 			visual_param_entry_set_float (param, proxy->value);
             visual_param_entry_set_float_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
+            visual_param_entry_set_annotation (param, proxy->annotation);
 
 			break;
 
@@ -742,12 +748,14 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 			visual_param_entry_set_double (param, proxy->value);
             visual_param_entry_set_double_default (param, proxy->value);
 			visual_param_entry_limit_set_from_limit_proxy (param, &proxy->limit);
+            visual_param_entry_set_annotation (param, proxy->annotation);
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_COLOR:
 			visual_param_entry_set_color_by_color (param, &proxy->color);
             visual_param_entry_set_color_default (param, &proxy->color);
+            visual_param_entry_set_annotation (param, proxy->annotation);
 
 			break;
 
@@ -759,7 +767,6 @@ int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntry
 			break;
 	}
 
-    visual_param_entry_set_annotation (param, proxy->annotation);
 
 	return VISUAL_OK;
 }
@@ -786,30 +793,35 @@ int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src)
 		case VISUAL_PARAM_ENTRY_TYPE_STRING:
 			visual_param_entry_set_string (param, visual_param_entry_get_string (src));
             visual_param_entry_set_string_default (param, visual_param_entry_get_string_default (src));
+            visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_INTEGER:
 			visual_param_entry_set_integer (param, visual_param_entry_get_integer (src));
             visual_param_entry_set_integer_default (param, visual_param_entry_get_integer_default (src));
+            visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_FLOAT:
 			visual_param_entry_set_float (param, visual_param_entry_get_float (src));
             visual_param_entry_set_float_default (param, visual_param_entry_get_float_default (src));
+            visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_DOUBLE:
 			visual_param_entry_set_double (param, visual_param_entry_get_double (src));
             visual_param_entry_set_double_default (param, visual_param_entry_get_double_default (src));
+            visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 			break;
 
 		case VISUAL_PARAM_ENTRY_TYPE_COLOR:
 			visual_param_entry_set_color_by_color (param, visual_param_entry_get_color (src));
             visual_param_entry_set_color_default (param, visual_param_entry_get_color_default (src));
+            visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 			break;
 
@@ -831,7 +843,6 @@ int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src)
 			break;
 	}
 
-    visual_param_entry_set_annotation(param, visual_param_entry_get_annotation (src));
 
 	return VISUAL_OK;
 }
@@ -866,6 +877,8 @@ int visual_param_entry_set_name (VisParamEntry *param, VisString *name)
 int visual_param_entry_set_string (VisParamEntry *param, char *string)
 {
     visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    printf("param_entry_set_string string %s\n", string);
 
     int ret = visual_param_entry_set_string_no_event(param, string);
 
@@ -932,7 +945,7 @@ int visual_param_entry_set_string_default(VisParamEntry *param, char *string)
 
     if(string == NULL && param->string_default != NULL) {
         visual_mem_free (param->string_default);
-        param->string = NULL;
+        param->string_default = NULL;
 
     } else if (param->string_default == NULL && string != NULL) {
         param->string_default = strdup(string);
@@ -1316,6 +1329,7 @@ int visual_param_entry_set_object (VisParamEntry *param, VisObject *object)
 int visual_param_entry_set_annotation(VisParamEntry *param, char *ann)
 {
     visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+    visual_log_return_val_if_fail(ann != NULL, -VISUAL_ERROR_GENERAL);
 
     if(param->annotation != NULL)
         visual_mem_free(param->annotation);

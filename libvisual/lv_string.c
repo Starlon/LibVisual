@@ -982,10 +982,12 @@ int visual_string_substring_end (VisString *dest, VisString *src, int end)
 
 VisString *visual_string_set (VisString *str, const char *s)
 {
+	visual_log_return_val_if_fail (str != NULL, NULL);
+    visual_log_return_val_if_fail (s != NULL, NULL);
+
 	VisString wrap;
 	int len = strlen (s);
 
-	visual_log_return_val_if_fail (str != NULL, str);
 
 	if (str->buffer == NULL) {
 		str->buffer = visual_buffer_new_allocate (len + 1, visual_buffer_destroyer_free);

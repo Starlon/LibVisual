@@ -251,7 +251,7 @@ static uint32_t get_hash (VisHashmap *hashmap, void *key, VisHashmapKeyType keyt
 {
 	if (keytype == VISUAL_HASHMAP_KEY_TYPE_INTEGER)
 		return integer_hash (*((uint32_t *) key)) % hashmap->tablesize;
-	else if (keytype = VISUAL_HASHMAP_KEY_TYPE_STRING)
+	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING)
 		return visual_string_get_hashcode_cstring ((char *) key) % hashmap->tablesize;
 
 	return 0;
@@ -335,6 +335,7 @@ int visual_hashmap_put (VisHashmap *hashmap, void *key, VisHashmapKeyType keytyp
 	int hash;
 
 	visual_log_return_val_if_fail (hashmap != NULL, -VISUAL_ERROR_HASHMAP_NULL);
+    visual_log_return_val_if_fail (key != NULL, -VISUAL_ERROR_GENERAL);
 
 	/* Create initial hashtable */
 	if (hashmap->table == NULL)
