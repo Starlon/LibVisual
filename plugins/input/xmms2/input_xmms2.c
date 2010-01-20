@@ -74,7 +74,7 @@ int inp_xmms2_init( VisPluginData *plugin ) {
 
     visual_param_container_add(paramcontainer, param);
     
-    priv = visual_mem_malloc0(sizeof(priv));
+    priv = visual_mem_malloc0(sizeof(xmms2_priv_t));
 
     visual_object_set_private(VISUAL_OBJECT(plugin), priv);
 
