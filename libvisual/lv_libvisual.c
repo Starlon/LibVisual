@@ -71,7 +71,6 @@ static int init_params (VisParamContainer *paramcontainer)
 
 	/* Initialize all the global parameters here */
 
-    return 0;
 	/* Song information parameters */
 	/* Show songinfo */
 	param = visual_param_entry_new (VIS_BSTR ("songinfo show"));
