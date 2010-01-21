@@ -851,9 +851,8 @@ esac
 
 ])
 				    
-AC_CONFIG_FILES([ po/Makefile.in
+AC_CONFIG_FILES([
 m4/Makefile
-po/Makefile.in
 Makefile
 libvisual.pc
 libvisual/Makefile
