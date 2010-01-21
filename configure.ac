@@ -851,7 +851,7 @@ esac
 
 ])
 				    
-AC_CONFIG_FILES([
+AC_CONFIG_FILES([ po/Makefile.in
 m4/Makefile
 po/Makefile.in
 Makefile
