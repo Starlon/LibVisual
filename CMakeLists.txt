@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 2.6)
 project(libvisual)
 
 set(LIBRARY_NAME "libvisual")
+set(LIBRARY_BUGREPORT "synap@nerds-incorporated.org")
 set(GENERIC_MAJOR_VERSION 0)
 set(GENERIC_MINOR_VERSION 4)
 set(GENERIC_MICRO_VERSION 99)
@@ -11,12 +12,13 @@ set(LIBRARY_VERSION "${GENERIC_MAJOR_VERSION}.${GENERIC_MINOR_VERSION}.${GENERIC
 set(LIBRARY_SOVERSION "0")
 string(REGEX REPLACE "\\$[a-zA-Z]+: ([0-9]+) \\$" "\\1" GENERIC_SVN_VERSION "$Revision: 0 $")
 
-# BUILD OPTIONS
-option(UNIT_TESTING "Build with unit tests" ON)
-
 # TODO: add to README/wiki or something
 # commandline options that might be of interest:
 # -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS="-Wall -g -O0" -DCMAKE_VERBOSE_MAKEFILE=True
+
+# BUILD OPTIONS
+option(UNIT_TESTING "Build with unit tests" ON)
+option(ENABLE_NLS "Translation of program messages to the user's native language" ON)
 
 # DEPENDENCIES
 include(FindThreads)
@@ -31,7 +33,16 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/
 )
 
-include(FindGettext)            # defines var GETTEXT_FOUND
+if(ENABLE_NLS)
+  include(FindGettext)            # defines var GETTEXT_FOUND
+
+  if(NOT GETTEXT_FOUND)
+    message (FATAL_ERROR "Couldn't find gettext.")
+  endif(NOT GETTEXT_FOUND)
+
+  message (STATUS "Found gettext for NLS: ${GETTEXT_FOUND}")
+  set(HAVE_GETTEXT "1")
+endif(ENABLE_NLS)
 
 # from old libvisual-buildsystems
 # TODO: review
@@ -43,6 +54,11 @@ set(LIBVISUAL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/libvisual")
 set(LIBVISUAL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
 set(LIBVISUAL_PLUGINS_BASE_DIR "${LIBVISUAL_LIB_DIR}/libvisual-${LIBVISUAL_VERSION_SUFFIX}")
 
+# Internationalization
+set(GETTEXT_PACKAGE "libvisual-${LIBVISUAL_VERSION_SUFFIX}")
+set(LOCALEDIR "${CMAKE_INSTALL_PREFIX}/share/locale") # String catalog location
+# TODO: GETTEXT_CREATE_TRANSLATIONS ( outputFile [ALL] file1 ... fileN )
+
 ADD_DEFINITIONS(-DLINUX)
 
 # TODO write a macro for this kind of stuff, which also adds these defines to config.h
@@ -51,12 +67,23 @@ check_include_files(fcntl.h HAVE_FCNTL_H)
 check_include_files(stdlib.h HAVE_STDLIB_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(sys/time.h HAVE_SYS_TIME_H)
-check_include_files(unistd.h HAVE_UNISTDE_H)
+check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(stdint.h HAVE_STDINT_H)
 check_include_files(inttypes.h HAVE_INTTYPES_H)
-check_include_files(shed.h HAVE_SHED_H)
-check_include_files(sys/shed.h HAVE_SYS_SHED_H)
+check_include_files(sched.h HAVE_SCHED_H)
+check_include_files(sys/sched.h HAVE_SYS_SCHED_H)
+check_include_files(sys/socket.h HAVE_SYS_SOCKET_H)
+check_include_files(sys/stat.h HAVE_SYS_STAT_H)
+check_include_files(sys/time.h HAVE_SYS_TIME_H)
 check_include_files(stddef.h HAVE_STDDEF_H)
+check_include_files(dirent.h HAVE_DIRENT_H)
+check_include_files(strings.h HAVE_STRINGS_H)
+check_include_files(string.h HAVE_STRING_H)
+check_include_files(sys/dir.h HAVE_SYS_DIR_H)
+check_include_files(sys/ndir.h HAVE_SYS_NDIR_H)
+
+set(LV_HAVE_STDINT_H ${HAVE_STDINT_H})
+set(LV_HAVE_INTTYPES_H ${HAVE_INTTYPES_H})
 
 include(CheckFunctionExists)
 check_function_exists(select HAVE_SELECT)
@@ -76,6 +103,11 @@ check_function_exists(strdup HAVE_STRDUP)
 check_function_exists(strndup HAVE_STRNDUP)
 check_function_exists(sysconf HAVE_SYSCONF)
 
+check_function_exists(dcgettext HAVE_DCGETTEXT)
+
+# MacOS X
+check_function_exists(CFLocaleCopyCurrent HAVE_CFLOCALECOPYCURRENT)
+check_function_exists(CFPreferencesCopyAppValue HAVE_CFPREFERENCESCOPYAPPVALUE)
 
 # TODO: define VISUAL_OS_WIN32
 
@@ -91,20 +123,13 @@ check_function_exists(sysconf HAVE_SYSCONF)
 # AC_CHECK_LIB([m], [sqrt], [LIBS="-lm $LIBS"],
 # 	     AC_MSG_ERROR([*** You need the Standard C Math Library to build Libvisual.]))
 
-# # Internationalization
-# GETTEXT_PACKAGE="libvisual-${LIBVISUAL_VERSION_SUFFIX}"
-# AC_SUBST(GETTEXT_PACKAGE)
-# AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [GETTEXT package name])
-# AC_DEFINE_UNQUOTED(LOCALEDIR, "${prefix}/share/locale", [String catalog location])
-# AM_GNU_GETTEXT([external])
-# AM_GNU_GETTEXT_VERSION([0.17])
-
-# AC_CHECK_SIZEOF([short])
-# AC_CHECK_SIZEOF([int])
-# AC_CHECK_SIZEOF([long])
-# AC_CHECK_SIZEOF([long long])
-# AC_CHECK_SIZEOF([__int64])
-# AC_CHECK_SIZEOF([size_t])
+INCLUDE(CheckTypeSize)
+CHECK_TYPE_SIZE(short SIZEOF_SHORT)
+CHECK_TYPE_SIZE(int   SIZEOF_INT)
+CHECK_TYPE_SIZE(long  SIZEOF_LONG)
+CHECK_TYPE_SIZE("long long"  SIZEOF_LONG_LONG)
+CHECK_TYPE_SIZE(__int64  SIZEOF_INT_64)
+CHECK_TYPE_SIZE(size_t  SIZEOF_SIZE_T)
 
 # dnl Try to figure out whether visual_size should be long or int
 # AC_MSG_CHECKING([for the appropriate definition for size_t])
@@ -144,9 +169,6 @@ set(VISUAL_LIBS "${LIBS} -lvisual-${LIBVISUAL_VERSION_SUFFIX}")
 # AC_SUBST(VISUAL_LIBS)
 
 
-# BUILDING SUBDIRECTORIES
-add_subdirectory(libvisual)
-
 # INSTALLING (static files)
 # copy input-file over to build-dir, (limited to replacing @varname@ placeholders via @ONLY)
 
@@ -169,6 +191,8 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libvisual/lvconfig.h.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/libvisual/lvconfig.h
   IMMEDIATE @ONLY)
 
+# BUILDING SUBDIRECTORIES
+add_subdirectory(libvisual)
 
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libvisual.pc" DESTINATION lib/pkgconfig)
@@ -230,12 +254,4 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_cpack.cmake")
 #   AC_MSG_RESULT([no])
 #   fastfprng=no
 # fi
-
-
-# TODO replace this in libvisual.pc.in
-
-
-# # Check for headers defining fixed-width integer types
-# AC_CHECK_HEADER([stdint.h], [lv_have_stdint_h="yes"])
-# AC_CHECK_HEADER([inttypes.h], [lv_have_inttypes_h="yes"])
 

@@ -51,4 +51,6 @@
 
 #define VISUAL_SIZE_T_FORMAT "lu"
 
-#cmakedefine LV_HAVE_STDINT_H @HAVE_STDINT_H@
+#cmakedefine LV_HAVE_STDINT_H @LV_HAVE_STDINT_H@
+#cmakedefine LV_HAVE_INTTYPES_H @LV_HAVE_INTTYPES_H@
+

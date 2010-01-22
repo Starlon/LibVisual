@@ -1,46 +1,33 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define to 1 if translation of program messages to the user's native
-   language is requested. */
-#undef ENABLE_NLS
 
-/* GETTEXT package name */
-#undef GETTEXT_PACKAGE
+#cmakedefine HAVE_GETTEXT @HAVE_GETTEXT@
+#cmakedefine HAVE_DCGETTEXT @HAVE_DCGETTEXT@
 
-/* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
-   CoreFoundation framework. */
-#undef HAVE_CFLOCALECOPYCURRENT
+#cmakedefine HAVE_CFLOCALECOPYCURRENT @HAVE_CFLOCALECOPYCURRENT@
+#cmakedefine HAVE_CFPREFERENCESCOPYAPPVALUE @HAVE_CFPREFERENCESCOPYAPPVALUE@
 
-/* Define to 1 if you have the MacOS X function CFPreferencesCopyAppValue in
-   the CoreFoundation framework. */
-#undef HAVE_CFPREFERENCESCOPYAPPVALUE
+#cmakedefine HAVE_DIRENT @HAVE_DIRENT@
 
-/* Define if the GNU dcgettext() function is already present or preinstalled.
-   */
-#undef HAVE_DCGETTEXT
-
-/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
-   */
-#undef HAVE_DIRENT_H
-
-#cmakedefine HAVE_GETTEXT @GETTEXT_FOUND@
-
-
-/* Define to 1 if you have the `gettimeofday' function. */
-#undef HAVE_GETTIMEOFDAY
-
-/* Define if you have the iconv() function. */
+#cmakedefine ENABLE_NLS @ENABLE_NLS@
 
 #cmakedefine HAVE_FCNTL_H @HAVE_FCNTL_H@
 #cmakedefine HAVE_STDLIB_H @HAVE_STDLIB_H@
 #cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
 #cmakedefine HAVE_SYS_TIME_H @HAVE_SYS_TIME_H@
-#cmakedefine HAVE_UNISTDE_H @HAVE_UNISTDE_H@
+#cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@
 #cmakedefine HAVE_STDINT_H @HAVE_STDINT_H@
 #cmakedefine HAVE_INTTYPES_H @HAVE_INTTYPES_H@
-#cmakedefine HAVE_SHED_H @HAVE_SHED_H@
-#cmakedefine HAVE_SYS_SHED_H @HAVE_SYS_SHED_H@
+#cmakedefine HAVE_SCHED_H @HAVE_SCHED_H@
+#cmakedefine HAVE_SYS_SCHED_H @HAVE_SYS_SCHED_H@
+#cmakedefine HAVE_SYS_SOCKET_H @HAVE_SYS_SOCKET_H@
+#cmakedefine HAVE_SYS_STAT_H @HAVE_SYS_STAT_H@
+#cmakedefine HAVE_SYS_TIME_H @HAVE_SYS_TIME_H@
 #cmakedefine HAVE_STDDEF_H @HAVE_STDDEF_H@
+#cmakedefine HAVE_STRINGS_H @HAVE_STRINGS_H@
+#cmakedefine HAVE_STRING_H @HAVE_STRING_H@
+#cmakedefine HAVE_SYS_DIR_H @HAVE_SYS_DIR_H@
+#cmakedefine HAVE_SYS_NDIR_H @HAVE_SYS_NDIR_H@
 
 #cmakedefine HAVE_ICONV @HAVE_ICONV@
 
@@ -56,115 +43,73 @@
 #cmakedefine HAVE_SYSCONF @HAVE_SYSCONF@
 
 
-/* Define to 1 if you have the <strings.h> header file. */
-#undef HAVE_STRINGS_H
-
-/* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
-
-/* Define to 1 if you have the `strndup' function. */
-#undef HAVE_STRNDUP
-
-/* Define to 1 if you have the `sysconf' function. */
-#undef HAVE_SYSCONF
-
-/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
-   */
-#undef HAVE_SYS_DIR_H
-
-/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
-   */
-#undef HAVE_SYS_NDIR_H
-
-/* Define to 1 if you have the <sys/sched.h> header file. */
-#undef HAVE_SYS_SCHED_H
-
-/* Define to 1 if you have the <sys/select.h> header file. */
-#undef HAVE_SYS_SELECT_H
-
-/* Define to 1 if you have the <sys/socket.h> header file. */
-#undef HAVE_SYS_SOCKET_H
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#undef HAVE_SYS_STAT_H
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#undef HAVE_SYS_TIME_H
-
-/* Define to 1 if you have the <sys/types.h> header file. */
-#undef HAVE_SYS_TYPES_H
-
-/* Define to 1 if you have the <unistd.h> header file. */
-#undef HAVE_UNISTD_H
-
-/* String catalog location */
-#undef LOCALEDIR
-
 /* glib-2.0 thread implementation available */
-#undef LV_HAVE_GTHREAD2
+#cmakedefine LV_HAVE_GTHREAD2 @LV_HAVE_GTHREAD2@
 
 /* Name of package */
-#undef PACKAGE
-
+//#cmakedefine PACKAGE @LIBRARY_NAME@
 /* Define to the address where bug reports for this package should be sent. */
-#undef PACKAGE_BUGREPORT
-
+//#cmakedefine PACKAGE_BUGREPORT @LIBRARY_BUGREPORT@
 /* Define to the full name of this package. */
-#undef PACKAGE_NAME
-
+//#cmakedefine PACKAGE_NAME @LIBRARY_NAME@
 /* Define to the full name and version of this package. */
-#undef PACKAGE_STRING
-
+//#undef PACKAGE_STRING
 /* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
-
+//#undef PACKAGE_TARNAME
 /* Define to the version of this package. */
-#undef PACKAGE_VERSION
+//#undef PACKAGE_VERSION
 
 /* Define to the type of arg 1 for `select'. */
-#undef SELECT_TYPE_ARG1
+#cmakedefine SELECT_TYPE_ARG1 @SELECT_TYPE_ARG1@
 
 /* Define to the type of args 2, 3 and 4 for `select'. */
-#undef SELECT_TYPE_ARG234
+#cmakedefine SELECT_TYPE_ARG23 @SELECT_TYPE_ARG23@
 
 /* Define to the type of arg 5 for `select'. */
-#undef SELECT_TYPE_ARG5
+#cmakedefine SELECT_TYPE_ARG5 @SELECT_TYPE_ARG5@
 
 /* The size of a `int', as computed by sizeof. */
-#undef SIZEOF_INT
+#cmakedefine SIZEOF_INT @SIZEOF_INT@
 
 /* The size of a `long', as computed by sizeof. */
-#undef SIZEOF_LONG
+#cmakedefine SIZEOF_LONG @SIZEOF_LONG@
 
 /* The size of a `short', as computed by sizeof. */
-#undef SIZEOF_SHORT
+#cmakedefine SIZEOF_SHORT @SIZEOF_SHORT@
 
 /* The size of a `size_t', as computed by sizeof. */
-#undef SIZEOF_SIZE_T
+#cmakedefine SIZEOF_SIZE_T @SIZEOF_SIZE_T@
 
 /* Define to 1 if you have the ANSI C header files. */
+// TODO
 #undef STDC_HEADERS
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+// TODO
 #undef TIME_WITH_SYS_TIME
 
 /* Version number of package */
 #define VERSION "@LIBRARY_VERSION@"
 
 /* Define to empty if `const' does not conform to ANSI C. */
+// TODO
 #undef const
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
+// TODO
 #ifndef __cplusplus
 #undef inline
 #endif
 
 /* Define to rpl_malloc if the replacement function should be used. */
-#undef malloc
+// TODO
+// #undef malloc
 
 /* Define to rpl_realloc if the replacement function should be used. */
-#undef realloc
+// TODO
+// #undef realloc
 
 /* Define to `unsigned' if <sys/types.h> does not define. */
-#undef size_t
+// TODO
+// #undef size_t

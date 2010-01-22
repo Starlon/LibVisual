@@ -61,7 +61,7 @@ set(libvisual_SRCS
   lv_queue.c lv_collection.c lv_utils.c lv_os.c lv_math.c lv_gl.c
   gettext.h lv_string.c)
 
-set(lib_TARGET ${LIBRARY_NAME}-${libvisual_version})
+set(lib_TARGET ${LIBRARY_NAME}-${LIBVISUAL_VERSION_SUFFIX})
 
 add_library(${lib_TARGET} SHARED ${libvisual_SRCS} )
 
@@ -80,6 +80,6 @@ target_link_libraries(${lib_TARGET} m)
 # INSTALL
 
 install(TARGETS ${lib_TARGET} DESTINATION lib)
-install(FILES ${libvisual_HEADERS} DESTINATION include/libvisual-${libvisual_version})
+install(FILES ${libvisual_HEADERS} DESTINATION include/libvisual-${LIBVISUAL_VERSION_SUFFIX})
 
 
