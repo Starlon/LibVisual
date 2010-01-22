@@ -30,6 +30,8 @@ endif(NOT Threads_FOUND)
 include(FindPkgConfig)
 
 pkg_search_module(LIBVISUAL REQUIRED  libvisual==${LV_PLUGINS_VERSION})
+
+# TODO: move plugin-specific checks into plugin's CMakeLists.txt
 # TODO: check REQUIRED
 pkg_search_module(ESOUND # REQUIRED
   esound>=0.2.28)
@@ -187,6 +189,7 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in
   IMMEDIATE @ONLY)
 
 # BUILDING SUBDIRECTORIES
+# TODO: Add subdirectories of plugins that may be built
 # add_subdirectory(plugins)
 
 add_custom_target(uninstall
@@ -741,73 +744,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_cpack.cmake")
 # AC_SUBST([morph_plugindir], [$LIBVISUAL_PLUGINS_BASE_DIR/morph])
 
 # AC_SUBST(LIBVISUAL_PLUGINS_DATA_DIR, [$datadir/libvisual-plugins-lv_plugins_version_suffix])
-
-# dnl Plugins to build
-# AC_SUBST([build_actor_plugins])
-# AC_SUBST([build_input_plugins])
-# AC_SUBST([build_morph_plugins])
-
-# AC_CONFIG_FILES([
-# 	Makefile
-# 	po/Makevars
-# 	po/Makefile.in
-# 	plugins/Makefile
-# 	plugins/actor/Makefile
-# 	plugins/actor/bumpscope/Makefile
-# 	plugins/actor/corona/Makefile
-# 	plugins/actor/dancingparticles/Makefile
-# 	plugins/actor/finespectrum/Makefile
-# 	plugins/actor/gdkpixbuf/Makefile
-# 	plugins/actor/goom2k4/Makefile
-# 	plugins/actor/gstreamer/Makefile
-# 	plugins/actor/infinite/Makefile
-# 	plugins/actor/jakdaw/Makefile
-# 	plugins/actor/JESS/Makefile
-# 	plugins/actor/lv_analyzer/Makefile
-# 	plugins/actor/lv_gltest/Makefile
-# 	plugins/actor/lv_scope/Makefile
-# 	plugins/actor/madspin/Makefile
-# 	plugins/actor/nastyfft/Makefile
-# 	plugins/actor/nebulus/Makefile
-# 	plugins/actor/oinksie/Makefile
-# 	plugins/actor/plazma/Makefile
-# 	plugins/actor/pseudotoad_flower/Makefile
-# 	plugins/actor/G-Force/Makefile
-# 	plugins/actor/G-Force/docs/Makefile
-# 	plugins/actor/G-Force/Common/Makefile
-# 	plugins/actor/G-Force/Common/GeneralTools/Makefile
-# 	plugins/actor/G-Force/Common/GeneralTools/Headers/Makefile
-# 	plugins/actor/G-Force/Common/io/Makefile
-# 	plugins/actor/G-Force/Common/io/Headers/Makefile
-# 	plugins/actor/G-Force/Common/math/Makefile
-# 	plugins/actor/G-Force/Common/math/Headers/Makefile
-# 	plugins/actor/G-Force/Common/UI/Makefile
-# 	plugins/actor/G-Force/Common/UI/Headers/Makefile
-# 	plugins/actor/G-Force/GForceCommon/Makefile
-# 	plugins/actor/G-Force/GForceCommon/Headers/Makefile
-# 	plugins/actor/G-Force/unix/Makefile
-# 	plugins/actor/G-Force/unix/Headers/Makefile
-# 	plugins/actor/G-Force/unix/libmfl/Makefile
-# 	plugins/actor/G-Force/unix/libvisual/Makefile
-# 	plugins/actor/G-Force/GForceColorMaps/Makefile
-# 	plugins/actor/G-Force/GForceDeltaFields/Makefile
-# 	plugins/actor/G-Force/GForceParticles/Makefile
-# 	plugins/actor/G-Force/GForceWaveShapes/Makefile
-# 	plugins/actor/G-Force/NotWorkingWaveShapes/Makefile
-#     plugins/actor/blursk/Makefile
-# 	plugins/input/Makefile
-# 	plugins/input/esd/Makefile
-# 	plugins/input/alsa/Makefile
-# 	plugins/input/mplayer/Makefile
-# 	plugins/input/jack/Makefile
-# 	plugins/input/debug/Makefile
-#     plugins/input/xmms2/Makefile
-# 	plugins/morph/Makefile
-# 	plugins/morph/alphablend/Makefile
-# 	plugins/morph/tentacle/Makefile
-# 	plugins/morph/flash/Makefile
-# 	plugins/morph/slide/Makefile
-# ])
 
 
 # AC_OUTPUT
