@@ -109,19 +109,9 @@ check_function_exists(dcgettext HAVE_DCGETTEXT)
 check_function_exists(CFLocaleCopyCurrent HAVE_CFLOCALECOPYCURRENT)
 check_function_exists(CFPreferencesCopyAppValue HAVE_CFPREFERENCESCOPYAPPVALUE)
 
-# TODO: define VISUAL_OS_WIN32
-
-
-# INCLUDE(CheckSymbolExists)
-# CHECK_SYMBOL_EXISTS(malloc header HAVE_MALLOC)
-# ...
-
-# TODO: add/fix ENABLE_NLS in config file
-
-# AC_CHECK_LIB([dl], [dlsym], [LIBS="-ldl $LIBS"],
-# 	     AC_MSG_WARN([*** You need dlsym() to make use of Libvisual.]))
-# AC_CHECK_LIB([m], [sqrt], [LIBS="-lm $LIBS"],
-# 	     AC_MSG_ERROR([*** You need the Standard C Math Library to build Libvisual.]))
+if(WIN32)
+  set(VISUAL_OS_WIN32 "1")
+endif(WIN32)
 
 INCLUDE(CheckTypeSize)
 CHECK_TYPE_SIZE(short SIZEOF_SHORT)

@@ -1,9 +1,15 @@
 # DEPENDENCIES
 # include(FindPkgConfig)
 # pkg_search_module(XML REQUIRED  libxml-2.0>=2.4 libxml2>=2.4 libxml>=2.4)
-# include_directories(
-#     ${XML_INCLUDE_DIRS}
-# )
+
+include("${CMAKE_SOURCE_DIR}/cmake/FindLibDL.cmake")
+if(NOT LIBDL_FOUND)
+
+endif(NOT LIBDL_FOUND)
+
+include_directories(
+    ${LIBDL_INCLUDE_DIR}
+)
 
 
 set(libvisual_HEADERS
@@ -65,11 +71,15 @@ PROPERTIES
     VERSION ${LIBRARY_VERSION}
 )
 
-target_link_libraries(${lib_TARGET} ${CMAKE_THREAD_LIBS_INIT} )
+target_link_libraries(${lib_TARGET}
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${LIBDL_LIBRARIES})
 
-# TODO: review
-# todo: to be more portable, condition on including math lib
-target_link_libraries(${lib_TARGET} m)
+# windows links to libm automatically
+if(UNIX)
+  target_link_libraries(${lib_TARGET} m)
+endif(UNIX)
+
 
 # INSTALL
 
