@@ -1,13 +1,10 @@
 # DEPENDENCIES
-include(FindPkgConfig)
+# include(FindPkgConfig)
 # pkg_search_module(XML REQUIRED  libxml-2.0>=2.4 libxml2>=2.4 libxml>=2.4)
-
 # include_directories(
 #     ${XML_INCLUDE_DIRS}
 # )
 
-# set(library_includedir
-#   $(LIBVISUAL_INCLUDE_DIR)/libvisual)
 
 set(libvisual_HEADERS
   lvconfig.h libvisual.h lv_actor.h
@@ -28,9 +25,6 @@ set(libvisual_HEADERS
 
 set(lib_LTLIBRARIES
   libvisual-@LIBVISUAL_VERSION_SUFFIX@.la)
-
-set(PLUGPATH
-  $(libdir)/libvisual)
 
 # TODO: check + link to libintl
 # LIBS += -L. -L$(libdir) $(LV_THREAD_LIBS) @LTLIBINTL@
