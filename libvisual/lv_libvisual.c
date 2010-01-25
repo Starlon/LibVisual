@@ -73,12 +73,12 @@ static int init_params (VisParamContainer *paramcontainer)
 
 	/* Song information parameters */
 	/* Show songinfo */
-	param = visual_param_entry_new (VIS_BSTR ("songinfo show"));
+	param = visual_param_entry_new ("songinfo show");
 	visual_param_entry_set_integer (param, 1);
 	visual_param_container_add (paramcontainer, param);
 
 	/* Songinfo timeout, in seconds */
-	param = visual_param_entry_new (VIS_BSTR ("songinfo timeout"));
+	param = visual_param_entry_new ("songinfo timeout");
 	visual_param_entry_set_integer (param, 5);
 	visual_param_container_add (paramcontainer, param);
 
@@ -86,16 +86,16 @@ static int init_params (VisParamContainer *paramcontainer)
 	 * Show songinfo in plugins, plugins that optionally show song
 	 * info should query this parameter
 	 */
-	param = visual_param_entry_new (VIS_BSTR ("songinfo in plugin"));
+	param = visual_param_entry_new ("songinfo in plugin");
 	visual_param_entry_set_integer (param, 1);
 	visual_param_container_add (paramcontainer, param);
 
 	/* Cover art dimension */
-	param = visual_param_entry_new (VIS_BSTR ("songinfo cover size x"));
+	param = visual_param_entry_new ("songinfo cover size x");
 	visual_param_entry_set_integer (param, 128);
 	visual_param_container_add (paramcontainer, param);
 
-	param = visual_param_entry_new (VIS_BSTR ("songinfo cover size y"));
+	param = visual_param_entry_new ("songinfo cover size y");
 	visual_param_entry_set_integer (param, 128);
 	visual_param_container_add (paramcontainer, param);
 
@@ -321,9 +321,6 @@ int visual_init (int *argc, char ***argv)
 	/* Initialize Thread system */
 	visual_thread_initialize ();
 
-	/* Initialize VisString systen */
-	visual_string_initialize ();
-
 	/* Initialize FFT system */
 	visual_fourier_initialize ();
 
@@ -436,9 +433,6 @@ int visual_quit ()
 
 	if (visual_fourier_is_initialized () == TRUE)
 		visual_fourier_deinitialize ();
-
-	if (visual_string_is_initialized () == TRUE)
-		visual_string_deinitialize ();
 
         if (__lv_progname != NULL) {
                 visual_mem_free (__lv_progname);

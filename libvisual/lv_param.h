@@ -29,7 +29,6 @@
 #include <libvisual/lv_palette.h>
 #include <libvisual/lv_list.h>
 #include <libvisual/lv_hashmap.h>
-#include <libvisual/lv_string.h>
 
 VISUAL_BEGIN_DECLS
 
@@ -185,7 +184,7 @@ struct _VisParamEntryProxy {
 struct _VisParamEntry {
 	VisObject		 object;	/**< The VisObject data. */
 	VisParamContainer	*parent;	/**< Parameter container in which the param entry is encapsulated. */
-	VisString		*name;		/**< Parameter name. */
+	char *name;		/**< Parameter name. */
 	VisParamEntryType	 type;		/**< Parameter type. */
 
 	VisParamEntryLimit	 limit;		/**< Parameter limits. */
@@ -224,23 +223,23 @@ VisEventQueue *visual_param_container_get_eventqueue (VisParamContainer *paramco
 int visual_param_container_add (VisParamContainer *paramcontainer, VisParamEntry *param);
 int visual_param_container_add_many (VisParamContainer *paramcontainer, VisParamEntry *params);
 int visual_param_container_add_many_proxy (VisParamContainer *paramcontainer, VisParamEntryProxy *proxies);
-int visual_param_container_remove (VisParamContainer *paramcontainer, VisString *name);
+int visual_param_container_remove (VisParamContainer *paramcontainer, char *name);
 int visual_param_container_copy (VisParamContainer *destcont, VisParamContainer *srccont);
 int visual_param_container_copy_match (VisParamContainer *destcont, VisParamContainer *srccont);
-VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, VisString *name);
+VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, char *name);
 
-VisParamEntry *visual_param_entry_new (VisString *name);
+VisParamEntry *visual_param_entry_new (const char *name);
 int visual_param_entry_add_callback (VisParamEntry *param, VisParamChangedCallbackFunc callback, void *priv);
 int visual_param_entry_remove_callback (VisParamEntry *param, int id);
 int visual_param_entry_notify_callbacks (VisParamEntry *param);
-int visual_param_entry_is (VisParamEntry *param, VisString *name);
+int visual_param_entry_is (VisParamEntry *param, char *name);
 int visual_param_entry_compare (VisParamEntry *src1, VisParamEntry *src2);
 int visual_param_entry_changed (VisParamEntry *param);
 VisParamEntryType visual_param_entry_get_type (VisParamEntry *param);
 
 int visual_param_entry_set_from_proxy_param (VisParamEntry *param, VisParamEntryProxy *proxy);
 int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src);
-int visual_param_entry_set_name (VisParamEntry *param, VisString *name);
+int visual_param_entry_set_name (VisParamEntry *param, char *name);
 int visual_param_entry_set_string (VisParamEntry *param, char *string);
 int visual_param_entry_set_string_no_event (VisParamEntry *param, char *string);
 int visual_param_entry_set_string_default (VisParamEntry *param, char *string);
@@ -261,7 +260,7 @@ int visual_param_entry_set_palette (VisParamEntry *param, VisPalette *pal);
 int visual_param_entry_set_object (VisParamEntry *param, VisObject *object);
 int visual_param_entry_set_annotation (VisParamEntry *param, char *ann);
 
-VisString *visual_param_entry_get_name (VisParamEntry *param);
+char *visual_param_entry_get_name (VisParamEntry *param);
 char *visual_param_entry_get_string (VisParamEntry *param);
 char *visual_param_entry_get_string_default (VisParamEntry *param);
 int visual_param_entry_get_integer (VisParamEntry *param);

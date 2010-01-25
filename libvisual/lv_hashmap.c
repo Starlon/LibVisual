@@ -27,7 +27,6 @@
 #include <string.h>
 
 #include "lv_common.h"
-#include "lv_string.h"
 #include "lv_hashmap.h"
 
 #define HASHMAP_ITERATORCONTEXT(obj)                           (VISUAL_CHECK_CAST ((obj), HashmapIteratorContext))
@@ -250,9 +249,17 @@ static uint32_t integer_hash (uint32_t key)
 static uint32_t get_hash (VisHashmap *hashmap, void *key, VisHashmapKeyType keytype)
 {
 	if (keytype == VISUAL_HASHMAP_KEY_TYPE_INTEGER)
+    {
 		return integer_hash (*((uint32_t *) key)) % hashmap->tablesize;
-	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING)
-		return visual_string_get_hashcode_cstring ((char *) key) % hashmap->tablesize;
+    }
+	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING) 
+    {
+        char *s = (char *)key;
+        uint32_t hash = 0;
+        for (; *s != '\0'; *s++)
+            hash = (hash << 5) - hash  + *s;
+		return hash % hashmap->tablesize;
+    }
 
 	return 0;
 }

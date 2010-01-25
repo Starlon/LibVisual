@@ -246,7 +246,7 @@ int visual_param_container_add (VisParamContainer *paramcontainer, VisParamEntry
 	 * it's event loop */
 	visual_param_entry_changed (param);
 
-	return visual_hashmap_put_string (&paramcontainer->entries, visual_string_get_cstring (param->name), param);
+	return visual_hashmap_put_string (&paramcontainer->entries, param->name, param);
 }
 
 /**
@@ -281,19 +281,13 @@ int visual_param_container_add_many (VisParamContainer *paramcontainer, VisParam
 int visual_param_container_add_many_proxy (VisParamContainer *paramcontainer, VisParamEntryProxy *proxies)
 {
 	VisParamEntry *pnew;
-	VisString name;
 	int i = 0;
 
 	visual_log_return_val_if_fail (paramcontainer != NULL, -VISUAL_ERROR_PARAM_CONTAINER_NULL);
 	visual_log_return_val_if_fail (proxies != NULL, -VISUAL_ERROR_PARAM_PROXY_NULL);
 
 	while (proxies[i].type != VISUAL_PARAM_ENTRY_TYPE_END) {
-		visual_string_init (&name);
-		visual_string_set (&name, proxies[i].name);
-        printf("add_many_proxy %s\n", proxies[i].name);
-		pnew = visual_param_entry_new (&name);
-
-		visual_object_unref (VISUAL_OBJECT (&name));
+		pnew = visual_param_entry_new (proxies[i].name);
 
 		visual_param_entry_set_from_proxy_param (pnew, &proxies[i]);
 
@@ -315,7 +309,7 @@ int visual_param_container_add_many_proxy (VisParamContainer *paramcontainer, Vi
  * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_CONTAINER_NULL, -VISUAL_ERROR_NULL
  *	or -VISUAL_ERROR_PARAM_NOT_FOUND on failure.
  */
-int visual_param_container_remove (VisParamContainer *paramcontainer, VisString *name)
+int visual_param_container_remove (VisParamContainer *paramcontainer, char *name)
 {
 	VisParamEntry *param;
 	int ret = VISUAL_OK;
@@ -323,17 +317,13 @@ int visual_param_container_remove (VisParamContainer *paramcontainer, VisString 
 //	visual_log_return_val_if_fail (paramcontainer != NULL, -VISUAL_ERROR_PARAM_CONTAINER_NULL);
 	/* FIXME, make a better framework for this */
 	if (paramcontainer == NULL) {
-		visual_string_unref_parameter (name);
-
 		return -VISUAL_ERROR_PARAM_CONTAINER_NULL;
 	}
 
 	visual_log_return_val_if_fail (name != NULL, -VISUAL_ERROR_NULL);
 
-	if (visual_hashmap_remove_string (&paramcontainer->entries, visual_string_get_cstring (name), TRUE) != VISUAL_OK)
+	if (visual_hashmap_remove_string (&paramcontainer->entries, name, TRUE) != VISUAL_OK)
 		ret = -VISUAL_ERROR_PARAM_NOT_FOUND;
-
-	visual_string_unref_parameter (name);
 
 	return ret;
 }
@@ -411,7 +401,7 @@ int visual_param_container_copy_match (VisParamContainer *destcont, VisParamCont
 
 		/* Already exists, overwrite */
 		if (srcparam != NULL) {
-			printf ("[=======================] COPING PARAMS: %p %p :: %s\n", destparam, srcparam, visual_string_get_cstring (srcparam->name));
+			printf ("[=======================] COPING PARAMS: %p %p :: %s\n", destparam, srcparam, srcparam->name);
 			visual_param_entry_set_from_param (destparam, srcparam);
 		}
 	}
@@ -429,18 +419,16 @@ int visual_param_container_copy_match (VisParamContainer *destcont, VisParamCont
  *
  * @return Pointer to the VisParamEntry, or NULL.
  */
-VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, VisString *name)
+VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, char *name)
 {
 	VisParamEntry *param;
 
 	visual_log_return_val_if_fail (paramcontainer != NULL, NULL);
 	visual_log_return_val_if_fail (name != NULL, NULL);
 
-	param = visual_hashmap_get_string (&paramcontainer->entries, visual_string_get_cstring (name));
+	param = visual_hashmap_get_string (&paramcontainer->entries, name);
 
-	printf ("ALABAMBA ::: %s %p\n", visual_string_get_cstring (name), param);
-
-	visual_string_unref_parameter (name);
+	printf ("ALABAMBA ::: %s %p\n", name, param);
 
 	return param;
 }
@@ -453,7 +441,7 @@ VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, Vi
  *
  * @return A newly allocated VisParamEntry structure.
  */
-VisParamEntry *visual_param_entry_new (VisString *name)
+VisParamEntry *visual_param_entry_new (const char *name)
 {
 	VisParamEntry *param;
 
@@ -462,14 +450,9 @@ VisParamEntry *visual_param_entry_new (VisString *name)
 	/* Do the VisObject initialization */
 	visual_object_initialize (VISUAL_OBJECT (param), TRUE, param_entry_dtor);
 
-	param->name = visual_string_new ();
-
-	visual_string_ref_parameter (name);
 	visual_param_entry_set_name (param, name);
 
 	visual_collection_set_destroyer (VISUAL_COLLECTION (&param->callbacks), visual_object_collection_destroyer);
-
-	visual_string_unref_parameter (name);
 
     param->type = VISUAL_PARAM_ENTRY_TYPE_NULL;
 
@@ -576,22 +559,18 @@ int visual_param_entry_notify_callbacks (VisParamEntry *param)
  *
  * @return TRUE if the VisParamEntry is the one we requested, or FALSE if not.
  */
-int visual_param_entry_is (VisParamEntry *param, VisString *name)
+int visual_param_entry_is (VisParamEntry *param, char *name)
 {
 	int ret = FALSE;
 
 	/* FIXME make a better solution */
 //	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 	if (param == NULL) {
-		visual_string_unref_parameter (name);
-
 		return -VISUAL_ERROR_PARAM_NULL;
 	}
 
-	if (visual_string_compare (param->name, name) == 0)
+	if (strcmp (param->name, name) == 0)
 		ret = TRUE;
-
-	visual_string_unref_parameter (name);
 
 	return ret;
 }
@@ -855,13 +834,14 @@ int visual_param_entry_set_from_param (VisParamEntry *param, VisParamEntry *src)
  *
  * @return VISUAL_OK on succes, -VISUAL_ERROR_PARAM_NULL on failure.
  */
-int visual_param_entry_set_name (VisParamEntry *param, VisString *name)
+int visual_param_entry_set_name (VisParamEntry *param, char *name)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
-	visual_string_copy (param->name, name);
+    if(param->name)
+        visual_mem_free(param->name);
 
-	visual_string_unref_parameter (name);
+    param->name = strdup(name);
 
 	return VISUAL_OK;
 }
@@ -1346,7 +1326,7 @@ int visual_param_entry_set_annotation(VisParamEntry *param, char *ann)
  *
  * @return The name of the VisParamEntry or NULL.
  */
-VisString *visual_param_entry_get_name (VisParamEntry *param)
+char *visual_param_entry_get_name (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail (param != NULL, NULL);
 
