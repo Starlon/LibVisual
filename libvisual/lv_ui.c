@@ -134,7 +134,8 @@ static int widget_dtor (VisObject *object)
 {
 	VisUIWidget *widget = VISUAL_UI_WIDGET (object);
 
-	visual_object_unref (VISUAL_OBJECT (&widget->tooltip));
+    if(widget->tooltip)
+        visual_mem_free(widget->tooltip);
 
 	return TRUE;
 }
@@ -1066,7 +1067,7 @@ int visual_ui_choice_add_many (VisUIChoice *choice, VisParamEntryProxy *paramcho
 	visual_log_return_val_if_fail (paramchoices != NULL, -VISUAL_ERROR_PARAM_NULL);
 
 	while (paramchoices[i].type != VISUAL_PARAM_ENTRY_TYPE_END) {
-		param = visual_param_entry_new (VIS_BSTR (paramchoices[i].name));
+		param = visual_param_entry_new (paramchoices[i].name);
 
 		visual_param_entry_set_from_proxy_param (param, &paramchoices[i]);
 

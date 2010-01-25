@@ -58,7 +58,7 @@ static int param_entry_dtor (VisObject *object)
 		visual_mem_free (param->string);
 
 	if (param->name != NULL)
-		visual_object_unref (VISUAL_OBJECT (param->name));
+        visual_mem_free(param->name);
 
 	if (param->objdata != NULL)
 		visual_object_unref (param->objdata);
