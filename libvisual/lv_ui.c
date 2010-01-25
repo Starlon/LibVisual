@@ -159,7 +159,7 @@ VisUIWidget *visual_ui_widget_new ()
 	/* Do the VisObject initialization */
 	visual_object_initialize (VISUAL_OBJECT (widget), TRUE, widget_dtor);
 
-	visual_string_init (&widget->tooltip);
+    widget->tooltip = NULL;
 
 	visual_ui_widget_set_size_request (VISUAL_UI_WIDGET (widget), -1, -1);
 
@@ -199,8 +199,6 @@ int visual_ui_widget_set_tooltip (VisUIWidget *widget, char *tooltip)
 
     if(widget->tooltip)
         visual_mem_free(widget->tooltip);
-
-	visual_string_unref_parameter (tooltip);
 
 	return VISUAL_OK;
 }
@@ -1038,7 +1036,6 @@ int visual_ui_choice_add (VisUIChoice *choice, char *name, VisParamEntry *value)
 	visual_log_return_val_if_fail (name != NULL, -VISUAL_ERROR_NULL);
 	visual_log_return_val_if_fail (value != NULL, -VISUAL_ERROR_PARAM_NULL);
 
-	visual_string_ref_parameter (name);
 	centry = visual_ui_choice_entry_new (name, value);
 
 	choice->choices.count++;
