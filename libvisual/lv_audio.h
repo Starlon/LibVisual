@@ -175,6 +175,8 @@ int visual_audio_sample_rate_get_length (VisAudioSampleRateType rate);
 int visual_audio_sample_format_get_size (VisAudioSampleFormatType format);
 int visual_audio_sample_format_is_signed (VisAudioSampleFormatType format);
 
+int visual_audio_is_beat(VisAudio *audio);
+
 VISUAL_END_DECLS
 
 #endif /* _LV_AUDIO_H */

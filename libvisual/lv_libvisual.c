@@ -40,6 +40,7 @@
 #include "lv_param.h"
 #include "lv_thread.h"
 #include "lv_mem_pool.h"
+#include "lv_cpu.h"
 #include "config.h"
 
 

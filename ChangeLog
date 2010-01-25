@@ -1,6 +1,8 @@
 2010-01-24  Scott Sibley <scott@starlon.net>
 
 	* Multipe files: Removed VisString
+	* libvisual/lv_audio.c: Added visual_audio_is_beat()
+	* Few files: Got rid of some warnings
 
 2010-01-21  gettextize  <bug-gnu-gettext@gnu.org>
 
