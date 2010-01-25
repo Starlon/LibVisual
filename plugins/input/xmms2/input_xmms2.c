@@ -68,8 +68,7 @@ int inp_xmms2_init( VisPluginData *plugin ) {
     const char *err_buf;
     VisParamContainer *paramcontainer = visual_plugin_get_params(plugin);
 
-    VisString *name = VIS_BSTR("songinfo");
-    VisParamEntry *param = visual_param_entry_new(name);
+    VisParamEntry *param = visual_param_entry_new("songinfo");
     param->type = VISUAL_PARAM_ENTRY_TYPE_OBJECT;
 
     visual_param_container_add(paramcontainer, param);

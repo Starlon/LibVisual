@@ -127,8 +127,7 @@ void config_string_genstring(BlurskPrivate *priv)
 
     VisParamContainer *paramcontainer = visual_plugin_get_params(priv->plugin);
     
-    VisString *name = VIS_BSTR("config_string");
-    VisParamEntry *param = visual_param_container_get(paramcontainer, name);
+    VisParamEntry *param = visual_param_container_get(paramcontainer, "config_string");
 
     /* don't set if it has already been set */
     if(strcmp(string, visual_param_entry_get_string(param)) != 0)
@@ -176,8 +175,7 @@ static void _config_load_preset(BlurskPrivate *priv, BlurskConfig *conf)
     for(i = 0; i < QTY(entries); i++)
     {
         VisParamContainer *paramcontainer = visual_plugin_get_params(priv->plugin);
-        VisString *name = VIS_BSTR(entries[i].name);
-        VisParamEntry *ptmp = visual_param_container_get(paramcontainer, name);
+        VisParamEntry *ptmp = visual_param_container_get(paramcontainer, entries[i].name);
         
         switch(entries[i].type)
         {
@@ -683,9 +681,8 @@ void config_change_param(BlurskPrivate *priv, VisParamEntry *p)
     int i;
     for(i = 0; i < QTY(parms); i++)
     {
-        VisString *name = VIS_BSTR(parms[i].name);
         /* not our parameter? -> continue the quest */
-        if(!visual_param_entry_is(p, name)) {
+        if(!visual_param_entry_is(p, parms[i].name)) {
             continue;
         }
         
