@@ -1176,10 +1176,14 @@ int visual_audio_is_beat(VisAudio *audio)
 {
     VisBuffer buffer;
     uint8_t isBeat = FALSE;
+    float data[2];
 
-    if(visual_audio_get_spectrum (audio, &buffer, 2, VISUAL_AUDIO_CHANNEL_CATEGORY_REAR, 0) == VISUAL_OK)
+    visual_log_return_val_if_fail(audio != NULL, -1);
+
+    visual_buffer_set_data_pair(&buffer, data, sizeof(data));
+
+    if(visual_audio_get_spectrum (audio, &buffer, 2, VISUAL_AUDIO_CHANNEL_LEFT, 0) == VISUAL_OK)
     {
-        float *data = visual_buffer_get_data(&buffer);
         int bass = (data[0] + data[1]) * 20;
         if(bass >= 9)
             isBeat = TRUE;
