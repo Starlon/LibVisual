@@ -70,7 +70,6 @@
 #include <libvisual/lv_gl.h>
 #include <libvisual/lv_math.h>
 #include <libvisual/lv_os.h>
-#include <libvisual/lv_string.h>
 #include <libvisual/lv_common.h>
 
 #endif /* LV_LIBVISUAL_H */
