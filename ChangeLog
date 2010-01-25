@@ -1,3 +1,7 @@
+2010-01-24  Scott Sibley <scott@starlon.net>
+
+	* Multipe files: Removed VisString
+
 2010-01-21  gettextize  <bug-gnu-gettext@gnu.org>
 
 	* Makefile.am (SUBDIRS): Add po.
