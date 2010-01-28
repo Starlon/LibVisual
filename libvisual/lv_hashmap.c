@@ -90,8 +90,9 @@ static int hashmap_chain_destroy (VisHashmap *hashmap, VisList *list)
 	destroyer = visual_collection_get_destroyer (VISUAL_COLLECTION (hashmap));
 
 	if (destroyer == NULL) {
-		while ((mentry = visual_list_next (list, &le)) != NULL)
+		while ((mentry = visual_list_next (list, &le)) != NULL) {
 			visual_list_destroy (list, &le);
+        }
 	} else {
 		while ((mentry = visual_list_next (list, &le)) != NULL) {
 			destroyer (mentry->data);
@@ -379,8 +380,9 @@ int visual_hashmap_put (VisHashmap *hashmap, void *key, VisHashmapKeyType keytyp
 
 	if (keytype == VISUAL_HASHMAP_KEY_TYPE_INTEGER)
 		mentry->key.integer = *((uint32_t *) key);
-	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING)
+	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING) {
 		mentry->key.string = strdup ((char *) key);
+    }
 
 	mentry->data = data;
 

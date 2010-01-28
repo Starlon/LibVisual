@@ -43,6 +43,7 @@
 #include <libvisual/lv_actor.h>
 #include <libvisual/lv_input.h>
 #include <libvisual/lv_audio.h>
+#include <libvisual/lv_beat.h>
 #include <libvisual/lv_fourier.h>
 #include <libvisual/lv_list.h>
 #include <libvisual/lv_queue.h>

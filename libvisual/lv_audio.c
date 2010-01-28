@@ -29,6 +29,7 @@
 
 #include "lv_common.h"
 #include "lv_math.h"
+#include "lv_beat.h"
 #include "lv_audio.h"
 
 static int audio_dtor (VisObject *object);
@@ -59,7 +60,11 @@ static int audio_dtor (VisObject *object)
 	if (audio->samplepool != NULL)
 		visual_object_unref (VISUAL_OBJECT (audio->samplepool));
 
+    if (audio->beat != NULL)
+        visual_object_unref (VISUAL_OBJECT (audio->beat));
+
 	audio->samplepool = NULL;
+    audio->beat = NULL;
 
 	return TRUE;
 }
@@ -157,6 +162,8 @@ int visual_audio_init (VisAudio *audio)
 
 	/* Reset the VisAudio data */
 	audio->samplepool = visual_audio_samplepool_new ();
+
+    audio->beat = visual_beat_new();
 
 	return VISUAL_OK;
 }
@@ -597,6 +604,10 @@ int visual_audio_samplepool_channel_init (VisAudioSamplePoolChannel *channel, ch
 	channel->samples = visual_ringbuffer_new ();
 
 	visual_time_set (&channel->samples_timeout, 1, 0); /* FIXME not safe against time screws */
+
+    if(channel->channelid != NULL)
+        visual_mem_free(channel->channelid);
+
 	channel->channelid = strdup (channelid);
 	channel->factor = 1.0;
 
@@ -1172,24 +1183,80 @@ static int input_interleaved_stereo (VisAudioSamplePool *samplepool, VisBuffer *
 	return VISUAL_OK;
 }
 
-int visual_audio_is_beat(VisAudio *audio)
+VisBeat *visual_audio_get_beat(VisAudio *audio)
 {
-    VisBuffer buffer;
-    uint8_t isBeat = FALSE;
-    float data[2];
+    visual_log_return_val_if_fail(audio != NULL, NULL);
 
-    visual_log_return_val_if_fail(audio != NULL, -1);
+    return audio->beat;
+}
 
-    visual_buffer_set_data_pair(&buffer, data, sizeof(data));
+#define max(a, b) (a > b ? a : b)
 
-    if(visual_audio_get_spectrum (audio, &buffer, 2, VISUAL_AUDIO_CHANNEL_LEFT, 0) == VISUAL_OK)
+/* Adapted from Winamp's AVS plugin. See lv_beat.h for copyright detals. */
+int visual_audio_is_beat(VisAudio *audio, float *buffer)
+{
+    visual_log_return_val_if_fail(audio != NULL, VISUAL_ERROR_AUDIO_NULL);
+
+    int audio_beat = 0;
+    int size = sizeof(buffer) / sizeof(float);
+    int lt[2]={0,0};
+    int ch = 0;
+    int b, x;
+    char *f;
+    VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
+
+    f = visual_mem_malloc0(size);
+
+    for(x = 0; x < size; x++)
     {
-        int bass = (data[0] + data[1]) * 20;
-        if(bass >= 9)
-            isBeat = TRUE;
+        f[x] = buffer[x] * UCHAR_MAX;
     }
 
-    return isBeat;
+    for(x = 0; x < size; x++)
+    {
+        int r = *f++^128;
+        r-=128;
+
+        if (r<0) 
+            r = -r;
+
+        lt[ch]+=r;
+
+        if(x == size/2)
+            ch++;
+    }
+
+    visual_mem_free(f);
+
+    lt[0] = max(lt[0], lt[1]);
+
+    peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3)/128;
+
+    peak->beat_cnt++;
+
+    if(lt[0] >= (peak->beat_peak1*34)/34 && lt[0] > (576*16))
+    {
+        if(peak->beat_cnt >= 0)
+        {
+            peak->beat_cnt=0;
+            audio_beat = 1;
+        }
+        peak->beat_peak1 = (lt[0]+peak->beat_peak1_peak)/2;
+        peak->beat_peak1_peak = lt[0];
+    }
+    else if (lt[0] > peak->beat_peak2)
+    {
+        peak->beat_peak2 = lt[0];
+    }
+    else
+        peak->beat_peak2 = (peak->beat_peak2 * 14) / 16;
+
+    b = visual_beat_refine_beat(audio->beat, audio_beat);
+
+    if(b)
+        return TRUE;
+
+    return FALSE;
 }
 
 /**

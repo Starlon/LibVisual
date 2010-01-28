@@ -401,7 +401,6 @@ int visual_param_container_copy_match (VisParamContainer *destcont, VisParamCont
 
 		/* Already exists, overwrite */
 		if (srcparam != NULL) {
-			printf ("[=======================] COPING PARAMS: %p %p :: %s\n", destparam, srcparam, srcparam->name);
 			visual_param_entry_set_from_param (destparam, srcparam);
 		}
 	}
@@ -428,8 +427,6 @@ VisParamEntry *visual_param_container_get (VisParamContainer *paramcontainer, ch
 
 	param = visual_hashmap_get_string (&paramcontainer->entries, name);
 
-	printf ("ALABAMBA ::: %s %p\n", name, param);
-
 	return param;
 }
 
@@ -450,15 +447,11 @@ VisParamEntry *visual_param_entry_new (const char *name)
 	/* Do the VisObject initialization */
 	visual_object_initialize (VISUAL_OBJECT (param), TRUE, param_entry_dtor);
 
-	visual_param_entry_set_name (param, name);
+	visual_param_entry_set_name (param, (char *)name);
 
 	visual_collection_set_destroyer (VISUAL_COLLECTION (&param->callbacks), visual_object_collection_destroyer);
 
     param->type = VISUAL_PARAM_ENTRY_TYPE_NULL;
-
-    param->string = NULL;
-    param->annotation = NULL;
-    param->objdata = NULL;
 
 	return param;
 }
@@ -838,7 +831,7 @@ int visual_param_entry_set_name (VisParamEntry *param, char *name)
 {
 	visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
-    if(param->name)
+    if(param->name != NULL)
         visual_mem_free(param->name);
 
     param->name = strdup(name);
@@ -857,8 +850,6 @@ int visual_param_entry_set_name (VisParamEntry *param, char *name)
 int visual_param_entry_set_string (VisParamEntry *param, char *string)
 {
     visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
-
-    printf("param_entry_set_string string %s\n", string);
 
     int ret = visual_param_entry_set_string_no_event(param, string);
 
@@ -1309,7 +1300,9 @@ int visual_param_entry_set_object (VisParamEntry *param, VisObject *object)
 int visual_param_entry_set_annotation(VisParamEntry *param, char *ann)
 {
     visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
-    visual_log_return_val_if_fail(ann != NULL, -VISUAL_ERROR_GENERAL);
+
+    if(ann == NULL)
+        return -VISUAL_ERROR_GENERAL;
 
     if(param->annotation != NULL)
         visual_mem_free(param->annotation);

@@ -12,7 +12,7 @@ library_include_HEADERS = lvconfig.h libvisual.h lv_actor.h \
 			  lv_time.h lv_random.h lv_error.h lv_ui.h \
 			  lv_types.h lv_thread.h lv_object.h \
 			  lv_transform.h lv_rectangle.h lv_ringbuffer.h \
-			  lv_buffer.h lv_config.h lv_hashmap.h \
+			  lv_buffer.h lv_config.h lv_hashmap.h lv_beat.h \
 			  lv_hashlist.h lv_queue.h lv_cache.h lv_collection.h \
 			  lv_utils.h lv_os.h lv_math.h lv_gl.h \
 			  lv_defines.h
@@ -35,7 +35,7 @@ libvisual_@LIBVISUAL_VERSION_SUFFIX@_la_LDFLAGS = -export-dynamic -no-undefined
 
 libvisual_@LIBVISUAL_VERSION_SUFFIX@_la_SOURCES = lv_actor.c lv_input.c lv_event.c \
 		       lv_bin.c lv_plugin.c lv_video.c lv_video_simd.c lv_mem.c \
-		       lv_mem_ops.c lv_mem_pool.c lv_mem_utils.c \
+		       lv_mem_ops.c lv_mem_pool.c lv_mem_utils.c lv_beat.c \
 		       lv_audio.c lv_fourier.c lv_list.c lv_log.c lv_palette.c \
 		       lv_libvisual.c lv_songinfo.c lv_morph.c lv_bmp.c lv_param.c \
 		       lv_cpu.c lv_color.c lv_time.c lv_random.c lv_error.c lv_ui.c \

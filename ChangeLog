@@ -1,3 +1,12 @@
+2010-01-28  Scott Sibley <scott@starlon.net>
+
+	* libvisual/lv_beat.*: Added new beat system based on
+	Winamp's AVS adaptive learning beat design.
+	* libvisual/lv_time.*: Added two new functions for
+	VisTime: visual_time_get_msec and visual_time_set_from_msec.
+	* libvisual/lv_audio.*: Modified visual_audio_is_beat to reflect VisBeat
+	addition. VisAudio now has a VisBeat.
+
 2010-01-24  Scott Sibley <scott@starlon.net>
 
 	* Multipe files: Removed VisString

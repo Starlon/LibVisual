@@ -231,6 +231,27 @@ int visual_plugin_info_copy (VisPluginInfo *dest, VisPluginInfo *src)
 	visual_log_return_val_if_fail (dest != NULL, -VISUAL_ERROR_PLUGIN_INFO_NULL);
 	visual_log_return_val_if_fail (src != NULL, -VISUAL_ERROR_PLUGIN_INFO_NULL);
 
+    if(dest->plugname != NULL)
+        free(dest->plugname);
+
+    if(dest->type != NULL)
+        visual_mem_free(dest->type);
+
+    if(dest->name != NULL)
+        visual_mem_free(dest->name);
+
+    if(dest->author != NULL)
+        visual_mem_free(dest->author);
+
+    if(dest->version != NULL)
+        visual_mem_free(dest->version);
+
+    if(dest->about != NULL)
+        visual_mem_free(dest->about);
+
+    if(dest->help != NULL)
+        visual_mem_free(dest->help);
+
 	visual_mem_copy (dest, src, sizeof (VisPluginInfo));
 
 	dest->plugname = strdup (src->plugname);
@@ -240,7 +261,6 @@ int visual_plugin_info_copy (VisPluginInfo *dest, VisPluginInfo *src)
 	dest->version = strdup (src->version);
 	dest->about = strdup (src->about);
 	dest->help = strdup (src->help);
-
 	return VISUAL_OK;
 }
 
