@@ -405,6 +405,13 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
         (beat->predictionBpm ? 0 : isBeat) : isBeat;
 }
 
+VisBeatPeak *visual_beat_get_peak(VisBeat *beat)
+{
+    visual_log_return_val_if_fail(beat != NULL, NULL);
+
+    return &beat->peak;
+}
+
 // The song changed or not. User sets flag with visual_beat_change_song()
 int beat_song_changed(VisBeat *beat)
 {

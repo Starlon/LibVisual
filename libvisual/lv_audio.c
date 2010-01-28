@@ -1193,17 +1193,18 @@ VisBeat *visual_audio_get_beat(VisAudio *audio)
 #define max(a, b) (a > b ? a : b)
 
 /* Adapted from Winamp's AVS plugin. See lv_beat.h for copyright detals. */
-int visual_audio_is_beat(VisAudio *audio, float *buffer)
+int visual_audio_is_beat(VisAudio *audio, float *buffer, int size)
 {
     visual_log_return_val_if_fail(audio != NULL, VISUAL_ERROR_AUDIO_NULL);
 
     int audio_beat = 0;
-    int size = sizeof(buffer) / sizeof(float);
     int lt[2]={0,0};
     int ch = 0;
     int b, x;
     char *f;
     VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
+
+    printf("is_beat size %d\n", size);
 
     f = visual_mem_malloc0(size);
 
@@ -1212,7 +1213,7 @@ int visual_audio_is_beat(VisAudio *audio, float *buffer)
         f[x] = buffer[x] * UCHAR_MAX;
     }
 
-    for(x = 0; x < size; x++)
+    for(x = size; x > 0; x--)
     {
         int r = *f++^128;
         r-=128;
@@ -1226,7 +1227,8 @@ int visual_audio_is_beat(VisAudio *audio, float *buffer)
             ch++;
     }
 
-    visual_mem_free(f);
+    //TODO: Why does this crash us?
+    //visual_mem_free(f);
 
     lt[0] = max(lt[0], lt[1]);
 

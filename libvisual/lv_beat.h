@@ -152,6 +152,7 @@ int visual_beat_set_smartbeat(VisBeat *beat, int smartbeat);
 int visual_beat_set_smartbeat_sticky(VisBeat *beat, int smartbeatsticky);
 int visual_beat_set_smartbeat_reset_on_newsong(VisBeat *beat, int smartbeatnewsong);
 int visual_beat_set_smartbeat_only_sticky(VisBeat *beat, int smartbeatonlysticky);
+VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
 char *visual_beat_get_info(VisBeat *beat);
 void visual_beat_reset_adapt(VisBeat *beat);
 
