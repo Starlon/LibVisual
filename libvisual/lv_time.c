@@ -170,6 +170,7 @@ int visual_time_set_from_msec(VisTime *time_, long msec)
 
     int sec = msec * 1000;
     int usec = msec / 1000;
+
     visual_time_set(time_, sec, usec);
 
     return VISUAL_OK;

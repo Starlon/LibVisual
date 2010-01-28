@@ -1201,12 +1201,12 @@ int visual_audio_is_beat(VisAudio *audio, float *buffer, int size)
     int lt[2]={0,0};
     int ch = 0;
     int b, x;
-    char *f;
+    char *f, *p;
     VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
 
     printf("is_beat size %d\n", size);
 
-    f = visual_mem_malloc0(size);
+    f = p = visual_mem_malloc0(size);
 
     for(x = 0; x < size; x++)
     {
@@ -1227,8 +1227,7 @@ int visual_audio_is_beat(VisAudio *audio, float *buffer, int size)
             ch++;
     }
 
-    //TODO: Why does this crash us?
-    //visual_mem_free(f);
+    visual_mem_free(p);
 
     lt[0] = max(lt[0], lt[1]);
 
