@@ -4,6 +4,13 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
+ * Parts of this file were adapted from Blursk - visualization plugin for XMMS
+ * Blursk Copyright (C) 1999  Steve Kirkendall
+ *
+ * Parts of this file were adapted from AVS Winamp plugin.
+ * Copyright 2005 Nullsoft, Inc.
+ * See this project's file lv_beat.h for full license.
+ *
  * $Id: lv_audio.c,v 1.44 2006-09-19 18:28:51 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify

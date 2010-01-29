@@ -209,7 +209,7 @@ int visual_beat_adv_init(VisBeatAdv *adv)
 
     // defaults
     adv->cfg_sensitivity = 15;
-    adv->cfg_max_detect = 1;
+    adv->cfg_max_detect = 200;
     adv->cfg_thick_on_beats = 0;
 
     visual_time_init(&adv->lastDetect);
