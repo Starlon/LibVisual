@@ -1312,6 +1312,8 @@ int visual_audio_is_beat(VisAudio *audio)
 {
     visual_log_return_val_if_fail(audio != NULL, -VISUAL_ERROR_AUDIO_NULL);
 
+    static int outPtr = 0, inPtr = 0;
+    char outBuf[9], inBuf[9];
     int audio_beat = 0;
     int lt[2]={0,0};
     int ch = 0, b, x;
@@ -1332,6 +1334,7 @@ int visual_audio_is_beat(VisAudio *audio)
 
     p = buffer;
 
+#if 0
     for(x = 1; x < BUF_SIZE; x++)
     {
         if(buffer[x] < buffer[imin[ch]])
@@ -1356,6 +1359,8 @@ int visual_audio_is_beat(VisAudio *audio)
 
     return b;
 
+#else
+
     for(x = BUF_SIZE; x > 0; x--)
     {
         int r = (int)(*p++ * UCHAR_MAX)^128;
@@ -1374,8 +1379,6 @@ int visual_audio_is_beat(VisAudio *audio)
     lt[0] = max(lt[0], lt[1]);
 
     peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3) / 128;
-
-    printf("beat_peak1 = %d\n", peak->beat_peak1);
 
     peak->beat_cnt++;
 
@@ -1400,11 +1403,39 @@ int visual_audio_is_beat(VisAudio *audio)
 
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 
+    memset(outBuf, ' ', 8);
+    memset(inBuf, ' ', 8);
+
+    outBuf[8] = 0;
+    inBuf[8] = 0;
+
+    outPtr += visual_beat_slider_get(audio->beat, BEAT_SLIDE_OUT);
+    inPtr += visual_beat_slider_get(audio->beat, BEAT_SLIDE_IN);
+
+    if(outPtr < 0)
+        outPtr = 0;
+    if(outPtr >= 8)
+        outPtr = 7;
+
+    if(inPtr < 0)
+        inPtr = 0;
+    if(inPtr >= 8)
+        inPtr = 7;
+
+    outBuf[outPtr] = '|';
+    inBuf[inPtr] = '|';
+
+    printf("    --------    \n");
+    printf("[I] %s [I]\n", inBuf);
+    printf("[O] %s [O]\n", outBuf);
+    printf("    --------    \n");
+
     if(b)
         return TRUE;
 
     return FALSE;
-    
+
+#endif    
 }
 
 /**

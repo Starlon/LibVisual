@@ -132,6 +132,8 @@ int visual_beat_init(VisBeat *beat)
     beat->oldDisplayConfidence=-1;
     beat->oldInSlide=0;
     beat->oldOutSlide=0;
+    beat->outInc = 1;
+    beat->inInc = 1;
     beat->bpm = 0;
     beat->avg = 0;
     beat->avg2 = 0;
@@ -277,7 +279,7 @@ void visual_beat_reset_adapt(VisBeat *beat)
     visual_time_set(&beat->lastTC, 0, 0);
 }
 
-int visual_beat_slider(VisBeat *beat, VisBeatSlider slider)
+int visual_beat_slider_get(VisBeat *beat, VisBeatSlider slider)
 {
     visual_log_return_val_if_fail(beat != NULL, 0);
 
@@ -728,10 +730,11 @@ void beat_slider_step(VisBeat *beat, int Ctl, int *slide)
     *slide += Ctl == BEAT_SLIDE_IN ? beat->inInc : beat->outInc;
 
     if (!*slide || *slide == 8) {
-        if(Ctl == BEAT_SLIDE_IN)
+        if(Ctl == BEAT_SLIDE_IN) {
             beat->inInc *= -1;
-        else
+        } else {
             beat->outInc *= -1;
+        }
     }
 }
 
