@@ -59,6 +59,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 VISUAL_BEGIN_DECLS
 
 #define VISUAL_BEAT(obj)				(VISUAL_CHECK_CAST ((obj), VisBeat))
+#define VISUAL_BEAT_ADV(obj)       (VISUAL_CHECK_CAST ((obj), VisBeatAdv))
 
 #define BEAT_REAL    1
 #define BEAT_GUESSED 2
@@ -71,14 +72,23 @@ VISUAL_BEGIN_DECLS
 #define BEAT_STICKY_THRESHOLD       70
 #define BEAT_STICKY_THRESHOLD_LOW   85
 
+#define BEAT_ADV_MAX 200
+#define BEAT_ADV_SIZE (576*2)
+
 typedef struct _VisBeat VisBeat;
 typedef struct _VisBeatType VisBeatType;
 typedef struct _VisBeatPeak VisBeatPeak;
+typedef struct _VisBeatAdv VisBeatAdv;
 
 typedef enum {
-    BEAT_SLIDE_IN,
-    BEAT_SLIDE_OUT
+    VISUAL_BEAT_SLIDE_IN,
+    VISUAL_BEAT_SLIDE_OUT
 } VisBeatSlider;
+
+typedef enum {
+    VISUAL_BEAT_ALGORITHM_PEAK,
+    VISUAL_BEAT_ALGORITHM_ADV
+} VisBeatAlgorithm;
 
 struct _VisBeatType {
     long TC;
@@ -92,10 +102,30 @@ struct _VisBeatPeak {
     int beat_peak1_peak;
 };
 
+struct _VisBeatAdv {
+    VisObject   obj;
+
+    VisTime     lastDetect;
+    int32_t cfg_sensitivity;      // How sensitive the algorithm is to loudness
+    int32_t cfg_max_detect;     // Max bpm to throttle input
+    int32_t cfg_thick_on_beats; // Should we create thick lines?
+    int32_t aged;               // smoothed out loudness
+    int32_t lowest;             // quietest poin in the current beat
+    int32_t elapsed;            // frames since last beat
+    int isquiet;                // was previous frame quiet
+    int prevbeat;               // period of previous beat
+    int32_t *beathistory;
+    int32_t beatbase;
+    int32_t beatquiet;
+    int32_t thick;
+    int32_t quiet;
+};
+
 struct _VisBeat {
     VisObject obj;
 
     VisBeatPeak peak;
+    VisBeatAdv *adv;
 
     int cfg_smartbeat;
     int cfg_smartbeatsticky;
@@ -153,8 +183,17 @@ int visual_beat_set_smartbeat_sticky(VisBeat *beat, int smartbeatsticky);
 int visual_beat_set_smartbeat_reset_on_newsong(VisBeat *beat, int smartbeatnewsong);
 int visual_beat_set_smartbeat_only_sticky(VisBeat *beat, int smartbeatonlysticky);
 VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
+VisBeatAdv *visual_beat_get_adv(VisBeat *beat);
 char *visual_beat_get_info(VisBeat *beat);
 void visual_beat_reset_adapt(VisBeat *beat);
+
+VisBeatAdv *visual_beat_adv_new();
+int visual_beat_adv_init(VisBeatAdv *adv);
+int visual_beat_adv_set_config(VisBeatAdv *adv, int sensitive, int max_bpm, int thick_on_beats);
+int visual_beat_adv_set_sensitivity(VisBeatAdv *adv, int sensitive);
+int visual_beat_adv_set_max_detect(VisBeatAdv *adv, int max_detect);
+int visual_beat_adv_set_thick_on_beats(VisBeatAdv *adv, int thick_on_beats);
+
 
 VISUAL_END_DECLS
 

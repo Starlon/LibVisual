@@ -1,3 +1,9 @@
+2010-01-29  Scott Sibley <scott@starlon.net>
+
+	* libvisual/lv_beat.*, libvisual/lv_audio.*: Created a choice between two
+	beat detection algorithms -- one based on avs and the other based on
+	blursk.
+
 2010-01-28  Scott Sibley <scott@starlon.net>
 
 	* libvisual/lv_beat.*: Added new beat system based on

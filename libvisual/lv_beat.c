@@ -103,6 +103,11 @@ int beat_dtor(VisObject *obj)
 
     beat->half_discriminated2 = NULL;
 
+    if(beat->adv != NULL)
+        visual_object_unref(VISUAL_OBJECT(beat->adv));
+
+    beat->adv = NULL;
+
     return TRUE;
 }
 
@@ -110,7 +115,7 @@ VisBeat *visual_beat_new()
 {
     VisBeat *beat = visual_mem_new0(VisBeat, 1);
 
-    visual_object_initialize (VISUAL_OBJECT(beat), FALSE, beat_dtor);
+    visual_object_initialize (VISUAL_OBJECT(beat), TRUE, beat_dtor);
 
     visual_beat_init(beat);
 
@@ -161,6 +166,53 @@ int visual_beat_init(VisBeat *beat)
     beat->smoother = visual_mem_malloc0(beat->smSize * sizeof(int));
     beat->half_discriminated = visual_mem_malloc0(beat->TCHistSize*(sizeof(int)));
     beat->half_discriminated2 = visual_mem_malloc0(beat->TCHistSize*(sizeof(int)));
+    beat->adv = visual_beat_adv_new();
+
+    return VISUAL_OK;
+}
+
+int beat_adv_dtor(VisObject *obj)
+{
+    VisBeatAdv *adv = VISUAL_BEAT_ADV(obj);
+    
+    if(adv->beathistory != NULL)
+        visual_mem_free(adv->beathistory);
+
+    adv->beathistory = NULL;
+
+    return TRUE;
+}
+
+VisBeatAdv *visual_beat_adv_new()
+{
+    VisBeatAdv *adv = visual_mem_new0(VisBeatAdv, 1);
+
+    visual_object_initialize (VISUAL_OBJECT(adv), TRUE, beat_adv_dtor);
+
+    visual_beat_adv_init(adv);
+
+    return adv;
+}
+
+int visual_beat_adv_init(VisBeatAdv *adv)
+{
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
+    adv->beathistory = visual_mem_malloc0(BEAT_ADV_MAX * sizeof(int32_t));
+    adv->aged = 0;
+    adv->lowest = 0;
+    adv->elapsed = 0;
+    adv->isquiet = 0;
+    adv->prevbeat = 0;
+    adv->beatbase = 0;
+    adv->beatquiet = 0;
+
+    // defaults
+    adv->cfg_sensitivity = 15;
+    adv->cfg_max_detect = 1;
+    adv->cfg_thick_on_beats = 0;
+
+    visual_time_init(&adv->lastDetect);
 
     return VISUAL_OK;
 }
@@ -283,7 +335,7 @@ int visual_beat_slider_get(VisBeat *beat, VisBeatSlider slider)
 {
     visual_log_return_val_if_fail(beat != NULL, 0);
 
-    return slider == BEAT_SLIDE_IN ? beat->inInc : beat->outInc;
+    return slider == VISUAL_BEAT_SLIDE_IN ? beat->inInc : beat->outInc;
 }
 
 int visual_beat_refine_beat(VisBeat *beat, int isBeat)
@@ -304,7 +356,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     TCNow = visual_time_get_msec(&now);
 
     if (isBeat) // Show the beat received from AVS
-        beat_slider_step(beat, BEAT_SLIDE_IN, &beat->inSlide);
+        beat_slider_step(beat, VISUAL_BEAT_SLIDE_IN, &beat->inSlide);
 
     if (beat_song_changed(beat))
     {
@@ -383,7 +435,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     if (resyncin)
     {
         beat->predictionLastTC = TCNow;
-        beat_slider_step(beat, BEAT_SLIDE_OUT, &beat->outSlide);
+        beat_slider_step(beat, VISUAL_BEAT_SLIDE_OUT, &beat->outSlide);
         beat->doResyncBpm=TRUE;
         return ((beat->cfg_smartbeat && !beat->cfg_smartbeatonlysticky) || 
             (beat->cfg_smartbeat && beat->cfg_smartbeatonlysticky && beat->sticked)) ? 
@@ -394,7 +446,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
         beat->predictionLastTC = TCNow;
         if (beat->confidence > 25) 
             beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_GUESSED);
-        beat_slider_step(beat, BEAT_SLIDE_OUT, &beat->outSlide);
+        beat_slider_step(beat, VISUAL_BEAT_SLIDE_OUT, &beat->outSlide);
         beat->doResyncBpm=FALSE;
         return ((beat->cfg_smartbeat && !beat->cfg_smartbeatonlysticky) || 
             (beat->cfg_smartbeat && beat->cfg_smartbeatonlysticky && beat->sticked)) ? 
@@ -420,6 +472,51 @@ VisBeatPeak *visual_beat_get_peak(VisBeat *beat)
     visual_log_return_val_if_fail(beat != NULL, NULL);
 
     return &beat->peak;
+}
+
+VisBeatAdv *visual_beat_get_adv(VisBeat *beat)
+{
+    visual_log_return_val_if_fail(beat != NULL, NULL);
+
+    return beat->adv;
+}
+
+int visual_beat_adv_set_config(VisBeatAdv *adv, int sensitivity, int max_bpm, int thick_on_beats)
+{
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
+    adv->cfg_sensitivity = sensitivity;
+    adv->cfg_max_detect = max_bpm;
+    adv->cfg_thick_on_beats = thick_on_beats;
+
+    return VISUAL_OK;
+}
+
+int visual_beat_adv_set_sensitivity(VisBeatAdv *adv, int sensitivity)
+{
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
+    adv->cfg_sensitivity = sensitivity;
+
+    return VISUAL_OK;
+}
+
+int visual_beat_adv_set_max_detect(VisBeatAdv *adv, int max_bpm)
+{
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
+    adv->cfg_max_detect = max_bpm;
+
+    return VISUAL_OK;
+}
+
+int visual_beat_adv_set_thick_on_beats(VisBeatAdv *adv, int thick_on_beats)
+{
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
+    adv->cfg_thick_on_beats = thick_on_beats;
+
+    return VISUAL_OK;
 }
 
 // The song changed or not. User sets flag with visual_beat_change_song()
@@ -727,10 +824,10 @@ void beat_slider_step(VisBeat *beat, int Ctl, int *slide)
 {
     visual_log_return_if_fail(beat != NULL); 
 
-    *slide += Ctl == BEAT_SLIDE_IN ? beat->inInc : beat->outInc;
+    *slide += Ctl == VISUAL_BEAT_SLIDE_IN ? beat->inInc : beat->outInc;
 
     if (!*slide || *slide == 8) {
-        if(Ctl == BEAT_SLIDE_IN) {
+        if(Ctl == VISUAL_BEAT_SLIDE_IN) {
             beat->inInc *= -1;
         } else {
             beat->outInc *= -1;
@@ -738,9 +835,3 @@ void beat_slider_step(VisBeat *beat, int Ctl, int *slide)
     }
 }
 
-int beat_get_time_offset_since_start(VisBeat *beat, long TC)
-{
-   visual_log_return_val_if_fail(beat != NULL, -VISUAL_ERROR_BEAT_NULL);
-
-   return TC - visual_time_get_msec(&beat->startTC); 
-}

@@ -134,7 +134,7 @@ long visual_time_get_msec(VisTime *time_)
 {
     visual_log_return_val_if_fail(time_ != NULL, 0);
 
-    return time_->tv_sec * 1000 + time_->tv_usec / 1000;
+    return time_->tv_sec * 1000 + (time_->tv_usec + 500) / 1000;
 }
 
 /**
@@ -170,7 +170,7 @@ int visual_time_set_from_msec(VisTime *time_, long msec)
 
     
     long sec = msec / 1000;
-    long usec = (msec - 1000*sec) * 1000;
+    long usec = (msec % 1000) * 1000;
 
     visual_time_set(time_, sec, usec);
 

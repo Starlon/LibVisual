@@ -1191,70 +1191,72 @@ VisBeat *visual_audio_get_beat(VisAudio *audio)
 }
 
 #define max(a, b) (a > b ? a : b)
-#define BUF_SIZE (576*2)
-#define BEAT_MAX 200
 
-static int32_t beathistory[BEAT_MAX];
-static int beatbase;
-static int beatquiet;
-
-static int detect_beat(int32_t loudness, int *thickref, int *quietref)
+static int detect_beat(VisBeatAdv *adv, int32_t loudness)
 {
-    static int32_t  aged;       /* smoothed out loudness */
-    static int32_t  lowest;     /* quietest point in current beat */
-    static int  elapsed;    /* frames since last beat */
-    static int  isquiet;    /* was previous frame quiet */
-    static int  prevbeat;   /* period of previous beat */
+    visual_log_return_val_if_fail(adv != NULL, -VISUAL_ERROR_BEAT_ADV_NULL);
+
     int     beat, i, j;
     int32_t     total;
     int     sensitivity;
+    VisTime now;
+    int bpm;
+
+    visual_time_init(&now);
+    visual_time_get(&now);
+
+    bpm = 60000 / (visual_time_get_msec(&now) - visual_time_get_msec(&adv->lastDetect));
+
+    if(bpm && bpm < adv->cfg_max_detect)
+        return 0;
+
+    visual_time_get(&adv->lastDetect);
 
     /* Incorporate the current loudness into history */
-    aged = (aged * 7 + loudness) >> 3;
-    elapsed++;
+    adv->aged = (adv->aged * 7 + loudness) >> 3;
+    adv->elapsed++;
 
     /* If silent, then clobber the beat */
-    if (aged < 2000 || elapsed > BEAT_MAX)
+    if (adv->aged < 2000 || adv->elapsed > BEAT_ADV_MAX)
     {
-        elapsed = 0;
-        lowest = aged;
-        memset(beathistory, 0, sizeof beathistory);
+        adv->elapsed = 0;
+        adv->lowest = adv->aged;
+        memset(adv->beathistory, 0, BEAT_ADV_MAX * sizeof(int32_t));
     }
-    else if (aged < lowest)
-        lowest = aged;
+    else if (adv->aged < adv->lowest)
+        adv->lowest = adv->aged;
 
     /* Beats are detected by looking for a sudden loudness after a lull.
      * They are also limited to occur no more than once every 15 frames,
      * so the beat flashes don't get too annoying.
      */
-    j = (beatbase + elapsed) % BEAT_MAX;
-    beathistory[j] = loudness - aged;
+    j = (adv->beatbase + adv->elapsed) % BEAT_ADV_MAX;
+    adv->beathistory[j] = loudness - adv->aged;
     beat = FALSE;
-    if (elapsed > 1 && aged > 2000 && loudness * 4 > aged * 5)
+    if (adv->aged > 2000 && loudness * 4 > adv->aged * 5)
     {
-        printf("elapsed > 15\n");
         /* Compute the average loudness change, assuming this is beat */
-        for (i = BEAT_MAX / elapsed, total = 0;
+        for (i = BEAT_ADV_MAX / adv->elapsed, total = 0;
              --i > 0;
-             j = (j + BEAT_MAX - elapsed) % BEAT_MAX)
+             j = (j + BEAT_ADV_MAX - adv->elapsed) % BEAT_ADV_MAX)
         {
-            total += beathistory[j];
+            total += adv->beathistory[j];
         }
-        total = total * elapsed / BEAT_MAX;
+        total = total * adv->elapsed / BEAT_ADV_MAX;
 
         /* Tweak the sensitivity to emphasize a consistent rhythm */
-        sensitivity = 20;//config.beat_sensitivity;
-        i = 3 - abs(elapsed - prevbeat)/2;
+        sensitivity = adv->cfg_sensitivity;
+        i = 3 - abs(adv->elapsed - adv->prevbeat)/2;
         if (i > 0)
             sensitivity += i;
         /* If average change is significantly positive, this is a beat.
          */
-        if (total * sensitivity > aged)
+        if (total * sensitivity > adv->aged)
         {
-            prevbeat = elapsed;
-            beatbase = (beatbase + elapsed) % BEAT_MAX;
-            lowest = aged;
-            elapsed = 0;
+            adv->prevbeat = adv->elapsed;
+            adv->beatbase = (adv->beatbase + adv->elapsed) % BEAT_ADV_MAX;
+            adv->lowest = adv->aged;
+            adv->elapsed = 0;
             beat = TRUE;
         }
     }
@@ -1263,15 +1265,15 @@ static int detect_beat(int32_t loudness, int *thickref, int *quietref)
      * loudness and the aged loudness.  Thus, a sudden increase in volume
      * will produce a thick line, regardless of rhythm.
      */
-    if (aged < 1500)
-        *thickref = 0;
-    else if (!1)//config.thick_on_beats)
-        *thickref = 1;
+    if (adv->aged < 1500)
+        adv->thick = 0;
+    else if (adv->cfg_thick_on_beats)
+        adv->thick = 1;
     else
     {
-        *thickref = loudness * 2 / aged;
-        if (*thickref > 3)
-            *thickref = 3;
+        adv->thick = loudness * 2 / adv->aged;
+        if (adv->thick > 3)
+            adv->thick = 3;
     }
 
     /* Silence is computed from the aged loudness.  The quietref value is
@@ -1281,17 +1283,17 @@ static int detect_beat(int32_t loudness, int *thickref, int *quietref)
      * periods -- that sort of thing happens during many fade edits, so
      * we have to account for it.
      */
-    if (beatquiet || aged < (isquiet ? 1500 : 500))
+    if (adv->beatquiet || adv->aged < (adv->isquiet ? 1500 : 500))
     {
         /* Quiet now -- is this the start of quiet? */
-        *quietref = !isquiet;
-        isquiet = TRUE;
-        beatquiet = FALSE;
+        adv->quiet = !adv->isquiet;
+        adv->isquiet = TRUE;
+        adv->beatquiet = FALSE;
     }
     else
     {
-        *quietref = FALSE;
-        isquiet = FALSE;
+        adv->quiet = FALSE;
+        adv->isquiet = FALSE;
     }
 
     /* return the result */
@@ -1305,10 +1307,12 @@ static int detect_beat(int32_t loudness, int *thickref, int *quietref)
  *
  * @return 0 or 1 on success, -VISUAL_ERROR_AUDIO_NULL on failure
  *
- * Adapted from Winamp's AVS plugin. See lv_beat.h for copyright detals.
+ * Peak algorithm adapted from Winamp's AVS plugin.
+ * Adv algorithm adapted from the Blursk plugin for xmms.
+ * See lv_beat.h for copyright details.
  */
 
-int visual_audio_is_beat(VisAudio *audio)
+int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
 {
     visual_log_return_val_if_fail(audio != NULL, -VISUAL_ERROR_AUDIO_NULL);
 
@@ -1319,10 +1323,11 @@ int visual_audio_is_beat(VisAudio *audio)
     int ch = 0, b, x;
     int imin[2] = {0, 0}, imax[2] = {0, 0};
     int delta_sum[2] = {0, 0};
-    int loudness, thick, quiet;
+    int loudness;
     VisBuffer pcm;
-    float buffer[BUF_SIZE], *p;
+    float buffer[BEAT_ADV_SIZE], *p;
     VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
+    VisBeatAdv *adv = visual_beat_get_adv(audio->beat);
 
     visual_buffer_set_data_pair(&pcm, buffer, sizeof(buffer));
 
@@ -1334,70 +1339,71 @@ int visual_audio_is_beat(VisAudio *audio)
 
     p = buffer;
 
-#if 0
-    for(x = 1; x < BUF_SIZE; x++)
+    if(algo == VISUAL_BEAT_ALGORITHM_ADV)
     {
-        if(buffer[x] < buffer[imin[ch]])
-            imin[ch] = x;
-        if(buffer[x] > buffer[imax[ch]])
-            imin[ch] = imax[ch] = x;
-        delta_sum[ch] += abs(buffer[x] * INT16_MAX - buffer[x - x] * INT16_MAX);
-        if(x == BUF_SIZE / 2)
-            ch++;
-    }
-
-    lt[0] = (((int32_t)buffer[imax[0]] - (int32_t)buffer[imin[0]]) * 60 + delta_sum[0]) / 75;
-    lt[1] = (((int32_t)buffer[imax[1]] - (int32_t)buffer[imin[1]]) * 60 + delta_sum[1]) / 75;
-
-    loudness = max(lt[0], lt[1]);
-
-    audio_beat = detect_beat(loudness, &thick, &quiet);
-
-    b = visual_beat_refine_beat(audio->beat, audio_beat);
-
-    printf("Beat info: %s, isBeat: %d, refined: %d, loudness: %d\n", visual_beat_get_info(audio->beat), audio_beat, b, loudness);
-
-    return b;
-
-#else
-
-    for(x = BUF_SIZE; x > 0; x--)
-    {
-        int r = (int)(*p++ * UCHAR_MAX)^128;
-        r-=128;
-
-        if (r<0) 
-            r = -r;
-
-        lt[ch]+=r;
-
-        if(x == BUF_SIZE/2)
-            ch++;
-    }
-
-
-    lt[0] = max(lt[0], lt[1]);
-
-    peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3) / 128;
-
-    peak->beat_cnt++;
-
-    if(lt[0] >= (peak->beat_peak1*34)/32 && lt[0] > (BUF_SIZE/2*16))
-    {
-        if(peak->beat_cnt >= 0)
+        for(x = 1; x < BEAT_ADV_SIZE; x++)
         {
-            peak->beat_cnt=0;
-            audio_beat = 1;
+            if(buffer[x] < buffer[imin[ch]])
+                imin[ch] = x;
+            if(buffer[x] > buffer[imax[ch]])
+                imin[ch] = imax[ch] = x;
+            delta_sum[ch] += abs(buffer[x] * INT16_MAX - buffer[x - x] * INT16_MAX);
+            if(x == BEAT_ADV_SIZE / 2)
+                ch++;
         }
-        peak->beat_peak1 = (lt[0]+peak->beat_peak1_peak)/2;
-        peak->beat_peak1_peak = lt[0];
+    
+        lt[0] = (((int32_t)buffer[imax[0]] - (int32_t)buffer[imin[0]]) * 60 + delta_sum[0]) / 75;
+        lt[1] = (((int32_t)buffer[imax[1]] - (int32_t)buffer[imin[1]]) * 60 + delta_sum[1]) / 75;
+    
+        loudness = max(lt[0], lt[1]);
+    
+        audio_beat = detect_beat(adv, loudness);
     }
-    else if (lt[0] > peak->beat_peak2)
+    else if(algo == VISUAL_BEAT_ALGORITHM_PEAK)
     {
-        peak->beat_peak2 = lt[0];
+
+        for(x = BEAT_ADV_SIZE; x > 0; x--)
+        {
+            int r = (int)(*p++ * UCHAR_MAX)^128;
+            r-=128;
+    
+            if (r<0) 
+                r = -r;
+    
+            lt[ch]+=r;
+    
+            if(x == BEAT_ADV_SIZE/2)
+                ch++;
+        }
+    
+    
+        lt[0] = max(lt[0], lt[1]);
+    
+        peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3) / 128;
+    
+        peak->beat_cnt++;
+    
+        if(lt[0] >= (peak->beat_peak1*34)/32 && lt[0] > (BEAT_ADV_SIZE/2*16))
+        {
+            if(peak->beat_cnt >= 0)
+            {
+                peak->beat_cnt=0;
+                audio_beat = 1;
+            }
+            peak->beat_peak1 = (lt[0]+peak->beat_peak1_peak)/2;
+            peak->beat_peak1_peak = lt[0];
+        }
+        else if (lt[0] > peak->beat_peak2)
+        {
+            peak->beat_peak2 = lt[0];
+        }
+        else
+            peak->beat_peak2 = (peak->beat_peak2 * 14) / 16;
+    
+    } else {
+        visual_log(VISUAL_LOG_INFO, "%s", "Bad algorithm for beat detection");
+        return FALSE;
     }
-    else
-        peak->beat_peak2 = (peak->beat_peak2 * 14) / 16;
 
     b = visual_beat_refine_beat(audio->beat, audio_beat);
 
@@ -1409,8 +1415,8 @@ int visual_audio_is_beat(VisAudio *audio)
     outBuf[8] = 0;
     inBuf[8] = 0;
 
-    outPtr += visual_beat_slider_get(audio->beat, BEAT_SLIDE_OUT);
-    inPtr += visual_beat_slider_get(audio->beat, BEAT_SLIDE_IN);
+    outPtr += visual_beat_slider_get(audio->beat, VISUAL_BEAT_SLIDE_OUT);
+    inPtr += visual_beat_slider_get(audio->beat, VISUAL_BEAT_SLIDE_IN);
 
     if(outPtr < 0)
         outPtr = 0;
@@ -1435,7 +1441,6 @@ int visual_audio_is_beat(VisAudio *audio)
 
     return FALSE;
 
-#endif    
 }
 
 /**
