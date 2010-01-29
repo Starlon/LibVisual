@@ -59,17 +59,17 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lv_time.h"
 
 int beat_song_changed(VisBeat *beat);
-void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint8_t TC, int type, int i);
+void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint32_t TC, int type, int i);
 void beat_double_beat(VisBeat *beat);
 void beat_half_beat(VisBeat *beat);
-int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_half_discriminated, 
-        int *_hdPos, VisTime *_lastTC, uint8_t TC, int type);
+int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int type);
 int beat_ready_to_learn(VisBeat *beat);
 int beat_ready_to_guess(VisBeat *beat);
 void beat_new_bpm(VisBeat *beat, int thisBpm);
 int beat_get_bpm(VisBeat *beat);
 void beat_calc_bpm(VisBeat *beat);
 void beat_slider_step(VisBeat *beat, int Ctl, int *slide);
+int beat_get_time_offset_since_start(VisBeat *beat, long TC);
 
 #define min(a, b) a < b ? a : b;
 #define max(a, b) a > b ? a : b;
@@ -150,8 +150,10 @@ int visual_beat_init(VisBeat *beat)
     beat->stickyConfidenceCount=0;
     beat->sticked=0;
     beat->oldsticked=-1;
-    beat->new_song = FALSE;
+    beat->new_song = TRUE;
     visual_time_init(&beat->lastTC);
+    visual_time_init(&beat->startTC);
+    visual_time_get(&beat->startTC);
     beat->txt = visual_mem_malloc0(256);
     beat->TCHist = visual_mem_malloc0(beat->TCHistSize*sizeof(VisBeatType));
     beat->smoother = visual_mem_malloc0(beat->smSize * sizeof(int));
@@ -224,16 +226,21 @@ char *visual_beat_get_info(VisBeat *beat)
 
     visual_log_return_val_if_fail(beat->txt != NULL, NULL);
 
-    if(beat->oldDisplayBpm != beat->predictionBpm || beat->oldsticked != beat->sticked) 
+    /*if(beat->oldDisplayBpm != beat->predictionBpm || beat->oldsticked != beat->sticked) 
     {
-        snprintf(beat->txt, 255, beat->predictionBpm ? "%d%s" : "Learning...", beat->predictionBpm, beat->cfg_smartbeatsticky && beat->sticked ? " Got it!": "");
+        beat->oldDisplayBpm = beat->predictionBpm;
+        beat->oldsticked = beat->sticked;
     }
 
     if(beat->oldDisplayConfidence != beat->confidence)
     {
-        snprintf(beat->txt, 255, "%d%%", beat->confidence);
         beat->oldDisplayConfidence = beat->confidence;
-    }
+    }*/
+
+    snprintf(beat->txt, 255, beat->predictionBpm ? "Current BPM: %d%s" : "Learning...", beat->predictionBpm, beat->cfg_smartbeatsticky && beat->sticked ? " Got it!": "");
+    char *tmp = strdup(beat->txt);
+    snprintf(beat->txt, 255, "%s -- Confidence: %d%%", tmp, beat->confidence);
+    visual_mem_free(tmp);
 
     return beat->txt;
 }
@@ -265,7 +272,6 @@ void visual_beat_reset_adapt(VisBeat *beat)
     beat->oldsticked=-1;
     beat->stickyConfidenceCount=0;
     memset(beat->TCHist, 0, beat->TCHistSize*sizeof(VisBeatType));
-    memset(beat->TCHist2, 0, beat->TCHistSize*sizeof(VisBeatType));
     memset(beat->smoother, 0, beat->smSize*sizeof(int));
     memset(beat->half_discriminated, 0, beat->TCHistSize*sizeof(int));
     visual_time_set(&beat->lastTC, 0, 0);
@@ -287,11 +293,13 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     int resyncin=FALSE;
     int resyncout=FALSE;
     VisTime now;
-    int TCNow;
+    long TCNow;
 
     visual_time_init(&now);
 
-    TCNow = visual_time_get(&now);
+    visual_time_get(&now);
+
+    TCNow = visual_time_get_msec(&now);
 
     if (isBeat) // Show the beat received from AVS
         beat_slider_step(beat, BEAT_SLIDE_IN, &beat->inSlide);
@@ -311,7 +319,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
 
 
     if (isBeat) // If it is a real beat, do discrimination/guessing and computations, then see if it is accepted
-        accepted = beat_TC_hist_step(beat, beat->TCHist, beat->half_discriminated, &beat->hdPos, &beat->lastTC, TCNow, BEAT_REAL);
+        accepted = beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_REAL);
 
     // Calculate current Bpm
     beat_calc_bpm(beat);
@@ -383,8 +391,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     {
         beat->predictionLastTC = TCNow;
         if (beat->confidence > 25) 
-            beat_TC_hist_step(beat, beat->TCHist, beat->half_discriminated, 
-                &beat->hdPos, &beat->lastTC, TCNow, BEAT_GUESSED);
+            beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_GUESSED);
         beat_slider_step(beat, BEAT_SLIDE_OUT, &beat->outSlide);
         beat->doResyncBpm=FALSE;
         return ((beat->cfg_smartbeat && !beat->cfg_smartbeatonlysticky) || 
@@ -403,6 +410,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     return ((beat->cfg_smartbeat && !beat->cfg_smartbeatonlysticky) || 
         (beat->cfg_smartbeat && beat->cfg_smartbeatonlysticky && beat->sticked)) ? 
         (beat->predictionBpm ? 0 : isBeat) : isBeat;
+
 }
 
 VisBeatPeak *visual_beat_get_peak(VisBeat *beat)
@@ -426,12 +434,12 @@ int beat_song_changed(VisBeat *beat)
 }
 
 // Insert a beat in history table. May be either real beat or guessed 
-void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint8_t TC, int type, int i)
+void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint32_t TC, int type, int i)
 {
     visual_log_return_if_fail(beat != NULL); 
 
     if (i >= beat->TCHistSize) return;
-    if (t == beat->TCHist && beat->insertionCount < beat->TCHistSize*2) 
+    if (beat->insertionCount < beat->TCHistSize*2) 
         beat->insertionCount++;
     memmove(t+i+1, t+i, sizeof(VisBeatType)*(beat->TCHistSize-(i+1)));
     t[0].TC = TC;
@@ -486,9 +494,7 @@ void beat_half_beat(VisBeat *beat)
 }
 
 // Called whenever isBeat was true in render
-// FIXME: Not all of these parameters are being used.
-int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_half_discriminated, 
-        int *_hdPos, VisTime *_lastTC, uint8_t TC, int type)
+int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int type)
 {
     visual_log_return_val_if_fail(beat != NULL, FALSE); 
 
@@ -496,38 +502,44 @@ int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_half_discriminated,
     int offI;
     uint8_t thisLen;
     int learning = beat_ready_to_learn(beat);
-    thisLen = TC - visual_time_get_msec(&beat->lastTC); 
+    thisLen = TC - visual_time_get_msec(&beat->lastTC);
     
     // If this beat is sooner than half the average - 20%, throw it away
-    if (thisLen < beat->avg/2 - beat->avg*0.2)
+    // FIXME: Why doesn't this work?
+    /*if (thisLen < beat->avg/2 - beat->avg*0.2)
     {
+        printf("inside level 1\n");
         if (learning)
         {
+            printf("inside level 2 %ld %ld %ld\n", TC, t[0].TC, t[1].TC);
+            printf("inside %d < %d\n", abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)));
+            printf("inside %ld < %ld\n", beat->avg - (TC - t[1].TC), beat->avg - (t[0].TC - t[1].TC));
             if (abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)))
             {
-                t[0].TC = TC;
+                printf("inside level 3\n");
+                t[0].TC = TC + visual_time_get_msec(&beat->startTC);
                 t[0].type = type;
                 return TRUE;
             }
         }
         return FALSE;
-    }
+    }*/
     
     if (learning) 
       for (offI = 2; offI < beat->offIMax; offI++) // Try to see if this beat is in the middle of our current Bpm, or maybe 1/3, 1/4 etc... to offIMax
         if ((float)abs((beat->avg/offI)-thisLen) < (float)(beat->avg/offI)*0.2)
         {
-            _half_discriminated[(*_hdPos)++]=1; // Should test if offI==2 before doing that, but seems to have better results ? I'll have to investigate this
+            beat->half_discriminated[(*_hdPos)++]=1; // Should test if offI==2 before doing that, but seems to have better results ? I'll have to investigate this
             (*_hdPos)%=8;
             return FALSE;
         }
     
     // This beat is accepted, so set this discrimination entry to false
-    _half_discriminated[beat->hdPos++]=0;
+    beat->half_discriminated[beat->hdPos++]=0;
     (*_hdPos)%=8;
     
     // Remember this tick count
-    visual_time_set_from_msec(_lastTC, TC);
+    visual_time_set_from_msec(&beat->lastTC, TC + visual_time_get_msec(&beat->startTC));
 
     // Insert this beat.
     beat_insert_hist_step(beat, t, TC, type, 0); 
@@ -605,7 +617,7 @@ void beat_calc_bpm(VisBeat *beat)
         totalTC += beat->TCHist[i].TC - beat->TCHist[i+1].TC;
     
     beat->avg = totalTC/(beat->TCHistSize-1);
-    
+
     // Count how many of then are real as opposed to guessed
     for (i=0;i<beat->TCHistSize;i++)
         if (beat->TCHist[i].type == BEAT_REAL)
@@ -723,4 +735,9 @@ void beat_slider_step(VisBeat *beat, int Ctl, int *slide)
     }
 }
 
+int beat_get_time_offset_since_start(VisBeat *beat, long TC)
+{
+   visual_log_return_val_if_fail(beat != NULL, -VISUAL_ERROR_BEAT_NULL);
 
+   return TC - visual_time_get_msec(&beat->startTC); 
+}

@@ -81,7 +81,7 @@ typedef enum {
 } VisBeatSlider;
 
 struct _VisBeatType {
-    uint8_t TC;
+    long TC;
     int type;
 };
 
@@ -105,8 +105,8 @@ struct _VisBeat {
     int arbVal, skipVal;        // Values of arbitrary beat and beat skip
     int bpm, confidence, confidence1, confidence2; // Calculated BPM  (realtime), confidence computation
     VisTime lastTC;             // Last beat tick count
+    VisTime startTC;            // Time we started
     VisBeatType *TCHist;         // History of last 8 beats
-    VisBeatType *TCHist2;        // History of last 8 beats;
     int *smoother;            // History of last 8 BPM values, used to smooth changes
     int *half_discriminated;    // Discriminated beats table
     int *half_discriminated2;   // Discriminated beats table
@@ -118,9 +118,9 @@ struct _VisBeat {
     int offIMax;                // Max divisor/multiplier used to guess/discriminate beats
     int lastBPM;                // Last calculated BPM, used by the smoother to detect new entry
     int insertionCount;          // Remembers how many beats were guessed
-    uint8_t predictionLastTC;   // Last tick count guessed/accepted beat
-    uint8_t avg;                // Average tick count interval between beats
-    uint8_t avg2;               // Average tick count interval between beats
+    int32_t predictionLastTC;   // Last tick count guessed/accepted beat
+    int32_t avg;                // Average tick count interval between beats
+    int32_t avg2;               // Average tick count interval between beats
     int skipCount;              // Beat counter used by beat skipper
     int inInc, outInc;          // +1/-1, Used by the nifty beatsynced sliders
     int inSlide, outSlide;      // Position of sliders

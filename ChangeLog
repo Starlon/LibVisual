@@ -6,6 +6,10 @@
 	VisTime: visual_time_get_msec and visual_time_set_from_msec.
 	* libvisual/lv_audio.*: Modified visual_audio_is_beat to reflect VisBeat
 	addition. VisAudio now has a VisBeat.
+	* libvisual/lv_beat.*: After some sleep I killed some bugs in lv_beat.
+	* libvisual/lv_audio.c: There's some code from blursk here. I'm not sure
+	if we're keeping this yet, providing two different algorithms for
+	detecting beats. Will discuss with others.
 
 2010-01-24  Scott Sibley <scott@starlon.net>
 
