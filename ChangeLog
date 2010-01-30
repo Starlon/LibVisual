@@ -3,6 +3,7 @@
 	* libvisual/lv_beat.*, libvisual/lv_audio.*: Created a choice between two
 	beat detection algorithms -- one based on avs and the other based on
 	blursk.
+	* libvisual/lv_beat.c: Included documentation for public functions.
 
 2010-01-28  Scott Sibley <scott@starlon.net>
 
