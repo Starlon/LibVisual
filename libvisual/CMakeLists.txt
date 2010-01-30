@@ -27,7 +27,7 @@ set(libvisual_HEADERS
   lv_buffer.h lv_config.h lv_hashmap.h
   lv_hashlist.h lv_queue.h lv_cache.h lv_collection.h
   lv_utils.h lv_os.h lv_math.h lv_gl.h
-  lv_defines.h lv_string.h)
+  lv_defines.h lv_beat.c)
 
 set(lib_LTLIBRARIES
   libvisual-@LIBVISUAL_VERSION_SUFFIX@.la)
@@ -59,7 +59,7 @@ set(libvisual_SRCS
   lv_thread.c lv_object.c lv_transform.c lv_rectangle.c lv_config.c
   lv_ringbuffer.c lv_buffer.c lv_cache.c lv_hashmap.c lv_hashlist.c
   lv_queue.c lv_collection.c lv_utils.c lv_os.c lv_math.c lv_gl.c
-  gettext.h lv_string.c)
+  gettext.h lv_beat.h)
 
 set(lib_TARGET ${LIBRARY_NAME}-${LIBVISUAL_VERSION_SUFFIX})
 
