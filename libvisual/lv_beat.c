@@ -112,9 +112,14 @@ int beat_dtor(VisObject *obj)
 }
 
 /**
+ * @defgroup VisBeat VisBeat
+ * @{
+ */
+
+/**
  * Create a new VisBeat
  *
- * @return A newly allocated VisBeat.
+ * @return A newly allocated VisBeat, or NULL on failure.
  */
 VisBeat *visual_beat_new()
 {
@@ -198,7 +203,7 @@ int beat_adv_dtor(VisObject *obj)
 /**
  * Create a VisBeat and initialize it. This object should not be reinitialized.
  *
- * @return A newly allocated VisBeat.
+ * @return A newly allocated VisBeatAdv, or NULL on failure.
  */
 VisBeatAdv *visual_beat_adv_new()
 {

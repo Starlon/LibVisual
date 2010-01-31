@@ -1207,12 +1207,13 @@ static int detect_beat(VisBeatAdv *adv, int32_t loudness)
     int32_t     total;
     int     sensitivity;
     VisTime now;
-    int bpm;
+    int bpm, dif;
 
     visual_time_init(&now);
     visual_time_get(&now);
 
-    bpm = 60000 / (visual_time_get_msec(&now) - visual_time_get_msec(&adv->lastDetect));
+    dif = visual_time_get_msec(&now) - visual_time_get_msec(&adv->lastDetect);
+    bpm = 60000 / (dif ? dif : 1000);
 
     if(bpm && bpm < adv->cfg_max_detect)
         return 0;

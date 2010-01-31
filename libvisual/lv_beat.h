@@ -175,7 +175,7 @@ int visual_beat_init(VisBeat *beat);
 VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
 int visual_beat_refine_beat(VisBeat *beat, int beat_in);
 int visual_beat_change_song(VisBeat *beat);
-void visual_beat_reset_adapt(VisBeat *beat);
+int visual_beat_reset_adapt(VisBeat *beat);
 int visual_beat_slider_get(VisBeat *beat, VisBeatSlider slider);
 int visual_beat_set_config(VisBeat *beat, int smartbeat, int smartbeatsticky, int smartbeatresetnewsong, int smartbeatonlysticky);
 int visual_beat_set_smartbeat(VisBeat *beat, int smartbeat);
@@ -185,7 +185,6 @@ int visual_beat_set_smartbeat_only_sticky(VisBeat *beat, int smartbeatonlysticky
 VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
 VisBeatAdv *visual_beat_get_adv(VisBeat *beat);
 char *visual_beat_get_info(VisBeat *beat);
-void visual_beat_reset_adapt(VisBeat *beat);
 
 VisBeatAdv *visual_beat_adv_new();
 int visual_beat_adv_init(VisBeatAdv *adv);
