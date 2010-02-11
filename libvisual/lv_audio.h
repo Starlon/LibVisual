@@ -179,6 +179,7 @@ int visual_audio_sample_format_is_signed (VisAudioSampleFormatType format);
 
 VisBeat *visual_audio_get_beat(VisAudio *audio);
 int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo);
+int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, float *data, int size);
 
 VISUAL_END_DECLS
 

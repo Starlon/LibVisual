@@ -1324,6 +1324,22 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
 {
     visual_log_return_val_if_fail(audio != NULL, -VISUAL_ERROR_AUDIO_NULL);
 
+    VisBuffer pcm;
+    float buffer[BEAT_ADV_SIZE], *p;
+
+    visual_buffer_set_data_pair(&pcm, buffer, BEAT_ADV_SIZE * sizeof(float));
+
+    visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
+        VISUAL_AUDIO_CHANNEL_LEFT,
+        VISUAL_AUDIO_CHANNEL_RIGHT,
+        1.0,
+        1.0);
+
+    return visual_audio_is_beat_with_data(audio, algo, buffer, BEAT_ADV_SIZE);
+}
+
+int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, float *data, int size)
+{
     static int outPtr = 0, inPtr = 0;
     char outBuf[9], inBuf[9];
     int audio_beat = 0;
@@ -1332,36 +1348,27 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
     int imin[2] = {0, 0}, imax[2] = {0, 0};
     int delta_sum[2] = {0, 0};
     int loudness;
-    VisBuffer pcm;
-    float buffer[BEAT_ADV_SIZE], *p;
+    float *p;
     VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
     VisBeatAdv *adv = visual_beat_get_adv(audio->beat);
 
-    visual_buffer_set_data_pair(&pcm, buffer, sizeof(buffer));
-
-    visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
-        VISUAL_AUDIO_CHANNEL_LEFT,
-        VISUAL_AUDIO_CHANNEL_RIGHT,
-        1.0,
-        1.0);
-
-    p = buffer;
+    p = data;
 
     if(algo == VISUAL_BEAT_ALGORITHM_ADV)
     {
         for(x = 1; x < BEAT_ADV_SIZE; x++)
         {
-            if(buffer[x] < buffer[imin[ch]])
+            if(data[x] < data[imin[ch]])
                 imin[ch] = x;
-            if(buffer[x] > buffer[imax[ch]])
+            if(data[x] > data[imax[ch]])
                 imin[ch] = imax[ch] = x;
-            delta_sum[ch] += abs(buffer[x] * INT16_MAX - buffer[x - x] * INT16_MAX);
+            delta_sum[ch] += abs(data[x] * INT16_MAX - data[x - x] * INT16_MAX);
             if(x == BEAT_ADV_SIZE / 2)
                 ch++;
         }
     
-        lt[0] = (((int32_t)buffer[imax[0]] - (int32_t)buffer[imin[0]]) * 60 + delta_sum[0]) / 75;
-        lt[1] = (((int32_t)buffer[imax[1]] - (int32_t)buffer[imin[1]]) * 60 + delta_sum[1]) / 75;
+        lt[0] = (((int32_t)data[imax[0]] - (int32_t)data[imin[0]]) * 60 + delta_sum[0]) / 75;
+        lt[1] = (((int32_t)data[imax[1]] - (int32_t)data[imin[1]]) * 60 + delta_sum[1]) / 75;
     
         loudness = max(lt[0], lt[1]);
     
@@ -1415,6 +1422,7 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
 
     b = visual_beat_refine_beat(audio->beat, audio_beat);
 
+/*
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 
     memset(outBuf, ' ', 8);
@@ -1443,6 +1451,7 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
     printf("[I] %s [I]\n", inBuf);
     printf("[O] %s [O]\n", outBuf);
     printf("    --------    \n");
+*/
 
     if(b)
         return TRUE;

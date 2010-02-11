@@ -1,3 +1,8 @@
+2010-02-11  Scott Sibley <scott@starlon.net>
+
+	* libvisual/lv_audio.c: Provide isBeat with and without data provided by
+	user.
+
 2010-01-29  Scott Sibley <scott@starlon.net>
 
 	* libvisual/lv_beat.*, libvisual/lv_audio.*: Created a choice between two
