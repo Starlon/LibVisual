@@ -305,7 +305,7 @@ const char *visual_actor_get_prev_by_name (const char *name)
  */
 int visual_actor_valid_by_name (const char *name)
 {
-	if (visual_plugin_find (visual_actor_get_list (), name) == NULL)
+	if (visual_plugin_find (__lv_plugins_actor, name) == NULL)
 		return FALSE;
 	else
 		return TRUE;
