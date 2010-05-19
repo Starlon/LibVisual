@@ -46,7 +46,6 @@
    On pre-ANSI systems without 'const', the config.h file is supposed to
    contain "#define const".  */
 # define gettext(Msgid) ((const char *) (Msgid))
-# define gettext_noop(Msgid) ((const char *) (Msgid))
 # define dgettext(Domainname, Msgid) ((const char *) (Msgid))
 # define dcgettext(Domainname, Msgid, Category) ((const char *) (Msgid))
 # define ngettext(Msgid1, Msgid2, N) \

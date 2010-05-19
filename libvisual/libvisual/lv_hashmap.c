@@ -169,8 +169,11 @@ static int hashmap_iter_has_more (VisCollectionIterator *iter, VisCollection *co
 	if (context->first) {
 		context->first = FALSE;
 
-		for (; context->index < hashmap->tablesize; context->index++) {
-			if (visual_collection_size (VISUAL_COLLECTION (&hashmap->table[context->index].list)) > 0) {
+		for (; context->index < hashmap->tablesize; context->index++) 
+		{
+			VisCollection *col = VISUAL_COLLECTION (&hashmap->table[context->index].list);
+			
+			if (col && visual_collection_size (col) > 0) {
 				context->le = hashmap->table[context->index].list.head;
 				context->retrieved = FALSE;
 

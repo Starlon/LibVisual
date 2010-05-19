@@ -489,6 +489,21 @@ int visual_morph_run (VisMorph *morph, VisAudio *audio, VisVideo *src1, VisVideo
 }
 
 /**
+ * Checks if the morph plugin is in the registry, based on it's name.
+ *
+ * @param name The name of the plugin that needs to be checked.
+ *
+ * @return TRUE if found, else FALSE.
+ */
+int visual_morph_valid_by_name (const char *name)
+{
+	if (visual_plugin_find (visual_morph_get_map (), name) == NULL)
+		return FALSE;
+	else
+		return TRUE;
+}
+
+/**
  * @}
  */
 

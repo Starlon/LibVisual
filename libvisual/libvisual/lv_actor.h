@@ -176,6 +176,7 @@ VisVideoAttributeOptions *visual_actor_get_video_attribute_options (VisActor *ac
 int visual_actor_set_video (VisActor *actor, VisVideo *video);
 
 int visual_actor_run (VisActor *actor, VisAudio *audio);
+int visual_actor_valid_by_name (const char *name);
 
 VISUAL_END_DECLS
 

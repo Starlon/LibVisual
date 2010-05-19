@@ -531,9 +531,14 @@ VisHashmap *visual_plugin_registry_filter (VisHashmap *plugmap, const char *doma
 		return NULL;
 	}
 
-	visual_collection_get_iterator (&iter, VISUAL_COLLECTION (plugmap));
+	if(visual_collection_get_iterator (&iter, VISUAL_COLLECTION (plugmap)) != VISUAL_OK)
+	{
+		visual_log (VISUAL_LOG_CRITICAL, _("Failed to get iterator for plugins"));
+		return NULL;
+	}
 
-	while (visual_collection_iterator_has_more (&iter)) {
+	while(visual_collection_iterator_has_more (&iter)) 
+	{
 		VisPluginRef *ref;
 		int ret;
 

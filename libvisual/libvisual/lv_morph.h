@@ -172,6 +172,7 @@ int visual_morph_is_done (VisMorph *morph);
 int visual_morph_requests_audio (VisMorph *morph);
 
 int visual_morph_run (VisMorph *morph, VisAudio *audio, VisVideo *src1, VisVideo *src2);
+int visual_morph_valid_by_name (const char *name);
 
 VISUAL_END_DECLS
 
