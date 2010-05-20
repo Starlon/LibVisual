@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_gl.c,v 1.7 2006-09-19 18:28:51 synap Exp $
+ * $Id: lv_gl.c,v 1.5.2.1 2006/03/04 12:32:47 descender Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,6 +33,10 @@
  * @defgroup VisGL VisGL
  * @{
  */
+void *visual_gl_get_proc_address (char *procname)
+{
+	return NULL;
+}
 
 /**
  * @}

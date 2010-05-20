@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_mem.c,v 1.31 2006-09-19 18:28:51 synap Exp $
+ * $Id: lv_mem.c,v 1.30 2006/02/05 18:45:57 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -32,64 +32,38 @@
 #include "lv_log.h"
 #include "lv_error.h"
 #include "lv_cpu.h"
-#include "lv_bits.h"
-#include "lv_hashmap.h"
 
-#define ALLOC_PROFILE_DATA(obj)				(VISUAL_CHECK_CAST ((obj), AllocProfileData))
-#define ALLOC_PROFILE_CALLENTRY(obj)			(VISUAL_CHECK_CAST ((obj), AllocProfileCallEntry))
-#define ALLOC_PROFILE_SIZES(obj)			(VISUAL_CHECK_CAST ((obj), AllocProfileSizes))
+/* FIXME sse, altivec versions, optionally with prefetching and such
+ * with checking for optimal scan lines */
 
-typedef struct _AllocProfileData AllocProfileData;
-typedef struct _AllocProfileCallEntry AllocProfileCallEntry;
-typedef struct _AllocProfileSizes AllocProfileSizes;
+/* Optimize mem function prototypes */
+static void *mem_copy_c (void *dest, const void *src, visual_size_t n);
+static void *mem_copy_mmx (void *dest, const void *src, visual_size_t n);
+static void *mem_copy_mmx2 (void *dest, const void *src, visual_size_t n);
+static void *mem_copy_3dnow (void *dest, const void *src, visual_size_t n);
+static void *mem_copy_altivec (void *dest, const void *src, visual_size_t n);
 
-#define ALLOC_PROFILE_HASHMAP_POINTERS_SIZE	65536
-#define ALLOC_PROFILE_HASHMAP_SIZES_SIZE	65536
+static void *mem_set8_c (void *dest, int c, visual_size_t n);
+static void *mem_set8_mmx (void *dest, int c, visual_size_t n);
+static void *mem_set8_mmx2 (void *dest, int c, visual_size_t n);
+static void *mem_set8_altivec (void *dest, int c, visual_size_t n);
 
-struct _AllocProfileData {
-	VisObject	 object;
+static void *mem_set16_c (void *dest, int c, visual_size_t n);
+static void *mem_set16_mmx (void *dest, int c, visual_size_t n);
+static void *mem_set16_mmx2 (void *dest, int c, visual_size_t n);
+static void *mem_set16_altivec (void *dest, int c, visual_size_t n);
 
-	VisHashmap	 allocated_pointers;
-	VisHashmap	 allocated_sizes;
+static void *mem_set32_c (void *dest, int c, visual_size_t n);
+static void *mem_set32_mmx (void *dest, int c, visual_size_t n);
+static void *mem_set32_mmx2 (void *dest, int c, visual_size_t n);
+static void *mem_set32_altivec (void *dest, int c, visual_size_t n);
 
-	int		 mem_allocated_total;
-	int		 mem_allocated_peak;
-	int		 mem_allocated;
+/* Optimal performance functions set by visual_mem_initialize(). */
+VisMemCopyFunc visual_mem_copy = mem_copy_c;
+VisMemSet8Func visual_mem_set = mem_set8_c;
+VisMemSet16Func visual_mem_set16 = mem_set16_c;
+VisMemSet32Func visual_mem_set32 = mem_set32_c;
 
-	int		 mem_count_malloc;
-	int		 mem_count_realloc;
-	int		 mem_count_free;
-};
-
-struct _AllocProfileCallEntry {
-	char		*file;
-	int		 line;
-	char		*funcname;
-};
-
-struct _AllocProfileSizes {
-	VisHashmap	 callers;
-
-	int		 count;
-};
-
-static void *alloc_standard_malloc (visual_size_t nbytes, const char *file, int line, const char *funcname);
-static void *alloc_standard_malloc0 (visual_size_t nbytes, const char *file, int line, const char *funcname);
-static void *alloc_standard_realloc (void *ptr, visual_size_t nbytes, const char *file, int line, const char *funcname);
-static int alloc_standard_free (void *ptr, const char *file, int line, const char *funcname);
-
-static void *alloc_profile_malloc (visual_size_t nbytes, const char *file, int line, const char *funcname);
-static void *alloc_profile_malloc0 (visual_size_t nbytes, const char *file, int line, const char *funcname);
-static void *alloc_profile_realloc (void *ptr, visual_size_t nbytes, const char *file, int line, const char *funcname);
-static int alloc_profile_free (void *ptr, const char *file, int line, const char *funcname);
-
-static VisMemAllocVTable __lv_alloc_vtable = {
-	.malloc		= alloc_standard_malloc,
-	.malloc0	= alloc_standard_malloc0,
-	.realloc	= alloc_standard_realloc,
-	.free		= alloc_standard_free,
-	.priv		= NULL
-};
 
 /**
  * @defgroup VisMem VisMem
@@ -97,29 +71,93 @@ static VisMemAllocVTable __lv_alloc_vtable = {
  */
 
 /**
+ * Initialize the memory functions. This is used to set the function pointers to the right optimized version.
+ * It's legal to call visual_mem_initialize more than once in the same context if it's needed to reset the optimal
+ * function pointers. This function bases it's choices upon the VisCPU system.
+ *
+ * Be aware that visual_mem_initialize() should be called to set the most optimize mem_copy() and
+ * mem_set() functions is called. Be sure that visual_cpu_initialize() is called before this however if
+ * possible the best solution is to just call visual_init() which will call all the libvisual initialize functions.
+ *
+ * return VISUAL_OK on succes.
+ */
+int visual_mem_initialize ()
+{
+	/* Arranged from slow to fast, so the slower version gets overloaded
+	 * every time */
+
+	visual_mem_copy = mem_copy_c;
+	visual_mem_set = mem_set8_c;
+	visual_mem_set16 = mem_set16_c;
+	visual_mem_set32 = mem_set32_c;
+
+	if (visual_cpu_get_mmx () > 0) {
+		visual_mem_copy = mem_copy_mmx;
+		visual_mem_set = mem_set8_mmx;
+		visual_mem_set16 = mem_set16_mmx;
+		visual_mem_set32 = mem_set32_mmx;
+	}
+
+	/* The k6-II and k6-III don't have mmx2, but of course can use the prefetch
+	 * facility that 3dnow provides. */
+	if (visual_cpu_get_3dnow () > 0) {
+		visual_mem_copy = mem_copy_3dnow;
+	}
+
+	if (visual_cpu_get_mmx2 () > 0) {
+		visual_mem_copy = mem_copy_mmx2;
+		visual_mem_set = mem_set8_mmx2;
+		visual_mem_set16 = mem_set16_mmx2;
+		visual_mem_set32 = mem_set32_mmx2;
+	}
+
+	return VISUAL_OK;
+}
+
+/**
  * Allocates @a nbytes of uninitialized memory.
  *
  * @param nbytes N bytes of mem requested to be allocated.
- *
+ * 
  * @return On success, a pointer to a new allocated memory block
- * of size @a nbytes, on failure, program is aborted.
+ * of size @a nbytes, on failure, program is aborted. 
  */
-void *visual_mem_malloc_impl (visual_size_t nbytes, const char *file, int line, const char *funcname)
+void *visual_mem_malloc (visual_size_t nbytes)
 {
-	return __lv_alloc_vtable.malloc (nbytes, file, line, funcname);
+	void *buf;
+
+	visual_log_return_val_if_fail (nbytes > 0, NULL);
+
+	buf = malloc (nbytes);
+
+	if (buf == NULL) {
+		visual_log (VISUAL_LOG_ERROR, _("Cannot get %" VISUAL_SIZE_T_FORMAT " bytes of memory"), nbytes);
+
+		return NULL;
+	}
+
+	return buf;
 }
 
 /**
  * Allocates @a nbytes of memory initialized to 0.
  *
  * @param nbytes N bytes of mem requested to be allocated.
- *
+ * 
  * @return On success, a pointer to a new allocated memory initialized
- * to 0 of size @a nbytes, on failure, program is aborted.
+ * to 0 of size @a nbytes, on failure, program is aborted. 
  */
-void *visual_mem_malloc0_impl (visual_size_t nbytes, const char *file, int line, const char *funcname)
+void *visual_mem_malloc0 (visual_size_t nbytes)
 {
-	return __lv_alloc_vtable.malloc0 (nbytes, file, line, funcname);
+	void *buf;
+
+	visual_log_return_val_if_fail (nbytes > 0, NULL);
+
+	buf = visual_mem_malloc (nbytes);
+
+	visual_mem_set (buf, 0, nbytes);
+
+	return buf;
 }
 
 /**
@@ -130,9 +168,9 @@ void *visual_mem_malloc0_impl (visual_size_t nbytes, const char *file, int line,
  *
  * @return On success, a pointer to the new reallocated memory, on failure NULL.
  */
-void *visual_mem_realloc_impl (void *ptr, visual_size_t nbytes, const char *file, int line, const char *funcname)
+void *visual_mem_realloc (void *ptr, visual_size_t nbytes)
 {
-	return __lv_alloc_vtable.realloc (ptr, nbytes, file, line, funcname);
+	return realloc (ptr, nbytes);
 }
 
 /**
@@ -142,134 +180,7 @@ void *visual_mem_realloc_impl (void *ptr, visual_size_t nbytes, const char *file
  *
  * @return VISUAL_OK on succes, -VISUAL_ERROR_MEM_NULL on failure.
  */
-int visual_mem_free_impl (void *ptr, const char *file, int line, const char *funcname)
-{
-	return __lv_alloc_vtable.free (ptr, file, line, funcname);
-}
-
-VisMemAllocVTable *visual_mem_alloc_vtable_standard ()
-{
-	static VisMemAllocVTable alloc_standard_vtable = {
-		.malloc		= alloc_standard_malloc,
-		.malloc0	= alloc_standard_malloc0,
-		.realloc	= alloc_standard_realloc,
-		.free		= alloc_standard_free,
-		.priv		= NULL
-	};
-
-	return &alloc_standard_vtable;
-}
-
-VisMemAllocVTable *visual_mem_alloc_vtable_profile ()
-{
-	static VisMemAllocVTable alloc_profile_vtable = {
-		.malloc		= alloc_profile_malloc,
-		.malloc0	= alloc_profile_malloc0,
-		.realloc	= alloc_profile_realloc,
-		.free		= alloc_profile_free,
-		.priv		= NULL
-	};
-
-	alloc_profile_vtable.priv = VISUAL_OBJECT (visual_mem_new0 (AllocProfileData, 1));
-
-	visual_hashmap_init (&ALLOC_PROFILE_DATA (alloc_profile_vtable.priv)->allocated_pointers, NULL);
-	visual_hashmap_set_table_size (&ALLOC_PROFILE_DATA (alloc_profile_vtable.priv)->allocated_pointers,
-			ALLOC_PROFILE_HASHMAP_POINTERS_SIZE);
-
-	visual_hashmap_init (&ALLOC_PROFILE_DATA (alloc_profile_vtable.priv)->allocated_sizes, NULL);
-	visual_hashmap_set_table_size (&ALLOC_PROFILE_DATA (alloc_profile_vtable.priv)->allocated_sizes,
-			ALLOC_PROFILE_HASHMAP_SIZES_SIZE);
-
-	return &alloc_profile_vtable;
-}
-
-int visual_mem_alloc_profile ()
-{
-	VisCollectionIterator iter;
-	visual_log_return_val_if_fail (-VISUAL_ERROR_GENERAL, &__lv_alloc_vtable == visual_mem_alloc_vtable_profile ());
-
-	/* FIXME: should probably be LOG_DEBUG.. */
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Total amount of memory allocated: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_total);
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Total amount of memory still allocated: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated);
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Peak amount of memory allocated: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_peak);
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Malloc calls: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_malloc);
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Realloc calls: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_realloc);
-	visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Free calls: %d",
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_free);
-
-	visual_collection_get_iterator (&iter, VISUAL_COLLECTION (
-				&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_sizes));
-
-	while (visual_collection_iterator_has_more (&iter)) {
-		VisHashmapChainEntry *mentry = visual_collection_iterator_get_data (&iter);
-
-		visual_log (VISUAL_LOG_INFO, "[ALLOC PROFILE] Allocated sizes %d\t::\t%d",
-				mentry->key.integer, mentry->data);
-
-		visual_collection_iterator_next (&iter);
-	}
-
-	visual_object_unref (VISUAL_OBJECT (&iter));
-
-	return VISUAL_OK;
-}
-
-int visual_mem_alloc_install_vtable (VisMemAllocVTable *allocvtable)
-{
-	if (__lv_alloc_vtable.priv != NULL)
-		visual_object_unref (__lv_alloc_vtable.priv);
-
-	__lv_alloc_vtable = *allocvtable;
-
-	return VISUAL_OK;
-}
-
-VisMemAllocVTable *visual_mem_alloc_installed_vtable (void)
-{
-	return &__lv_alloc_vtable;
-}
-
-static void *alloc_standard_malloc (visual_size_t nbytes, const char *file, int line, const char *funcname)
-{
-	void *buf;
-
-	visual_log_return_val_if_fail (nbytes > 0, NULL);
-
-	buf = malloc (nbytes);
-
-	if (buf == NULL) {
-		visual_log (VISUAL_LOG_ERROR, _("Cannot get %" VISUAL_SIZE_T_FORMAT " bytes of memory"), nbytes);
-
-		return NULL;
-	}
-
-	return buf;
-}
-
-static void *alloc_standard_malloc0 (visual_size_t nbytes, const char *file, int line, const char *funcname)
-{
-	void *buf;
-
-	visual_log_return_val_if_fail (nbytes > 0, NULL);
-
-	buf = visual_mem_malloc (nbytes);
-
-	visual_mem_set (buf, 0, nbytes);
-
-	return buf;
-}
-
-static void *alloc_standard_realloc (void *ptr, visual_size_t nbytes, const char *file, int line, const char *funcname)
-{
-	return realloc (ptr, nbytes);
-}
-
-static int alloc_standard_free (void *ptr, const char *file, int line, const char *funcname)
+int visual_mem_free (void *ptr)
 {
 	/* FIXME remove eventually, we keep it for now for explicit debug */
 	visual_log_return_val_if_fail (ptr != NULL, -VISUAL_ERROR_MEM_NULL);
@@ -279,131 +190,597 @@ static int alloc_standard_free (void *ptr, const char *file, int line, const cha
 	return VISUAL_OK;
 }
 
-static void *alloc_profile_malloc (visual_size_t nbytes, const char *file, int line, const char *funcname)
+
+/* Optimize mem functions */
+static void *mem_copy_c (void *dest, const void *src, visual_size_t n)
 {
-	void *buf;
-	VisMemMallocFunc malloc_;
-	int size_count;
+	uint32_t *d = dest;
+	const uint32_t *s = src;
+	uint8_t *dc = dest;
+	const uint8_t *sc = src;
 
-	visual_log_return_val_if_fail (nbytes > 0, NULL);
-
-	buf = malloc (nbytes);
-
-	if (buf == NULL) {
-		visual_log (VISUAL_LOG_ERROR, _("Cannot get %" VISUAL_SIZE_T_FORMAT " bytes of memory"), nbytes);
-
-		return NULL;
+	while (n >= 4) {
+		*d++ = *s++;
+		n -= 4;
 	}
 
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_total += nbytes;
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_malloc++;
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated += nbytes;
+	dc = (uint8_t *) d;
+	sc = (const uint8_t *) s;
 
-	if (ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated >
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_peak) {
+	while (n--)
+		*dc++ = *sc++;
 
-		ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_peak =
-			ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated;
+	return dest;
+}
+
+static void *mem_copy_mmx (void *dest, const void *src, visual_size_t n)
+{
+	uint32_t *d = dest;
+	const uint32_t *s = src;
+	uint8_t *dc = dest;
+	const uint8_t *sc = src;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movq (%0), %%mm0"
+			 "\n\t movq 8(%0), %%mm1"
+			 "\n\t movq 16(%0), %%mm2"
+			 "\n\t movq 24(%0), %%mm3"
+			 "\n\t movq 32(%0), %%mm4"
+			 "\n\t movq 40(%0), %%mm5"
+			 "\n\t movq 48(%0), %%mm6"
+			 "\n\t movq 56(%0), %%mm7"
+			 "\n\t movq %%mm0, (%1)"
+			 "\n\t movq %%mm1, 8(%1)"
+			 "\n\t movq %%mm2, 16(%1)"
+			 "\n\t movq %%mm3, 24(%1)"
+			 "\n\t movq %%mm4, 32(%1)"
+			 "\n\t movq %%mm5, 40(%1)"
+			 "\n\t movq %%mm6, 48(%1)"
+			 "\n\t movq %%mm7, 56(%1)"
+			 :: "r" (s), "r" (d) : "memory");
+
+		d += 16;
+		s += 16;
+
+		n -= 64;
 	}
 
-	malloc_ = __lv_alloc_vtable.malloc;
-	__lv_alloc_vtable.malloc = alloc_standard_malloc;
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
 
-	visual_hashmap_put_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) buf, (void *) nbytes);
+	while (n >= 4) {
+		*d++ = *s++;
+		n -= 4;
+	}
 
-	size_count = (int) visual_hashmap_get_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_sizes,
-			(uint32_t) nbytes);
-	size_count++;
+	dc = (uint8_t *) d;
+	sc = (const uint8_t *) s;
 
-	visual_hashmap_put_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_sizes,
-			(uint32_t) nbytes, (void *) size_count);
+	while (n--)
+		*dc++ = *sc++;
 
-	__lv_alloc_vtable.malloc = malloc_;
-
-	return buf;
+	return dest;
 }
 
-static void *alloc_profile_malloc0 (visual_size_t nbytes, const char *file, int line, const char *funcname)
+static void *mem_copy_mmx2 (void *dest, const void *src, visual_size_t n)
 {
-	void *buf;
+	uint32_t *d = dest;
+	const uint32_t *s = src;
+	uint8_t *dc = dest;
+	const uint8_t *sc = src;
 
-	visual_log_return_val_if_fail (nbytes > 0, NULL);
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t prefetchnta 256(%0)"
+			 "\n\t prefetchnta 320(%0)"
+			 "\n\t movq (%0), %%mm0"
+			 "\n\t movq 8(%0), %%mm1"
+			 "\n\t movq 16(%0), %%mm2"
+			 "\n\t movq 24(%0), %%mm3"
+			 "\n\t movq 32(%0), %%mm4"
+			 "\n\t movq 40(%0), %%mm5"
+			 "\n\t movq 48(%0), %%mm6"
+			 "\n\t movq 56(%0), %%mm7"
+			 "\n\t movntq %%mm0, (%1)"
+			 "\n\t movntq %%mm1, 8(%1)"
+			 "\n\t movntq %%mm2, 16(%1)"
+			 "\n\t movntq %%mm3, 24(%1)"
+			 "\n\t movntq %%mm4, 32(%1)"
+			 "\n\t movntq %%mm5, 40(%1)"
+			 "\n\t movntq %%mm6, 48(%1)"
+			 "\n\t movntq %%mm7, 56(%1)"
+			 :: "r" (s), "r" (d) : "memory");
 
-	buf = visual_mem_malloc (nbytes);
+		d += 16;
+		s += 16;
 
-	visual_mem_set (buf, 0, nbytes);
+		n -= 64;
+	}
 
-	return buf;
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n >= 4) {
+		*d++ = *s++;
+		n -= 4;
+	}
+
+	dc = (uint8_t *) d;
+	sc = (const uint8_t *) s;
+
+	while (n--)
+		*dc++ = *sc++;
+
+	return dest;
 }
 
-static void *alloc_profile_realloc (void *ptr, visual_size_t nbytes, const char *file, int line, const char *funcname)
+static void *mem_copy_3dnow (void *dest, const void *src, visual_size_t n)
 {
-	int size;
-	int size_count;
-	void *buf = NULL;
-	VisMemMallocFunc malloc_;
+	uint32_t *d = dest;
+	const uint32_t *s = src;
+	uint8_t *dc = dest;
+	const uint8_t *sc = src;
 
-	buf = realloc (ptr, nbytes);
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t prefetch 256(%0)"
+			 "\n\t prefetch 320(%0)"
+			 "\n\t movq (%0), %%mm0"
+			 "\n\t movq 8(%0), %%mm1"
+			 "\n\t movq 16(%0), %%mm2"
+			 "\n\t movq 24(%0), %%mm3"
+			 "\n\t movq 32(%0), %%mm4"
+			 "\n\t movq 40(%0), %%mm5"
+			 "\n\t movq 48(%0), %%mm6"
+			 "\n\t movq 56(%0), %%mm7"
+			 "\n\t movq %%mm0, (%1)"
+			 "\n\t movq %%mm1, 8(%1)"
+			 "\n\t movq %%mm2, 16(%1)"
+			 "\n\t movq %%mm3, 24(%1)"
+			 "\n\t movq %%mm4, 32(%1)"
+			 "\n\t movq %%mm5, 40(%1)"
+			 "\n\t movq %%mm6, 48(%1)"
+			 "\n\t movq %%mm7, 56(%1)"
+			 :: "r" (s), "r" (d) : "memory");
 
-	size = (int) visual_hashmap_get_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) ptr);
+		d += 16;
+		s += 16;
 
-	visual_hashmap_remove_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) ptr, FALSE);
+		n -= 64;
+	}
 
-	if (size != 0)
-		ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated -= size;
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
 
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated_total += nbytes;
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_realloc++;
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated += nbytes;
+	while (n >= 4) {
+		*d++ = *s++;
+		n -= 4;
+	}
 
-	malloc_ = __lv_alloc_vtable.malloc;
-	__lv_alloc_vtable.malloc = alloc_standard_malloc;
+	dc = (uint8_t *) d;
+	sc = (const uint8_t *) s;
 
-	visual_hashmap_put_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) buf, (void *) nbytes);
+	while (n--)
+		*dc++ = *sc++;
 
-	size_count = (int) visual_hashmap_get_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_sizes,
-			(uint32_t) nbytes);
-	size_count++;
-
-	visual_hashmap_put_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) nbytes, (void *) size_count);
-
-	__lv_alloc_vtable.malloc = malloc_;
-
-	return buf;
+	return dest;
 }
 
-static int alloc_profile_free (void *ptr, const char *file, int line, const char *funcname)
+static void *mem_copy_altivec (void *dest, const void *src, visual_size_t n)
 {
-	int size;
-	VisMemFreeFunc free_;
 
-	/* FIXME remove eventually, we keep it for now for explicit debug */
-	visual_log_return_val_if_fail (ptr != NULL, -VISUAL_ERROR_MEM_NULL);
+}
 
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_count_free++;
+/* Memset functions, 1 byte memset */
+static void *mem_set8_c (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint8_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xff) |
+		((c << 8) & 0xff00) |
+		((c << 16) & 0xff0000) |
+		((c << 24) & 0xff000000);
+	uint8_t setflag8 = c & 0xff;
 
-	// FIXME will bork on 64 bits.
-	size = (int) visual_hashmap_get_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) ptr);
+	while (n >= 4) {
+		*d++ = setflag32;
+		n -= 4;
+	}
 
-	ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->mem_allocated -= size;
+	dc = (uint8_t *) d;
 
-	free (ptr);
+	while (n--)
+		*dc++ = setflag8;
 
-	free_ = __lv_alloc_vtable.free;
-	__lv_alloc_vtable.free = alloc_standard_free;
+	return dest;
+}
 
-	visual_hashmap_remove_integer (&ALLOC_PROFILE_DATA (__lv_alloc_vtable.priv)->allocated_pointers,
-			(uint32_t) ptr, FALSE);
+static void *mem_set8_mmx (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint8_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xff) |
+		((c << 8) & 0xff00) |
+		((c << 16) & 0xff0000) |
+		((c << 24) & 0xff000000);
+	uint8_t setflag8 = c & 0xff;
 
-	__lv_alloc_vtable.free = free_;
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
 
-	return VISUAL_OK;
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movq %%mm0, (%0)"
+			 "\n\t movq %%mm1, 8(%0)"
+			 "\n\t movq %%mm2, 16(%0)"
+			 "\n\t movq %%mm3, 24(%0)"
+			 "\n\t movq %%mm4, 32(%0)"
+			 "\n\t movq %%mm5, 40(%0)"
+			 "\n\t movq %%mm6, 48(%0)"
+			 "\n\t movq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 64;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n >= 4) {
+		*d++ = setflag32;
+		n -= 4;
+	}
+
+	dc = (uint8_t *) d;
+
+	while (n--)
+		*dc++ = setflag8;
+
+	return dest;
+}
+
+static void *mem_set8_mmx2 (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint8_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xff) |
+		((c << 8) & 0xff00) |
+		((c << 16) & 0xff0000) |
+		((c << 24) & 0xff000000);
+	uint8_t setflag8 = c & 0xff;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
+
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movntq %%mm0, (%0)"
+			 "\n\t movntq %%mm1, 8(%0)"
+			 "\n\t movntq %%mm2, 16(%0)"
+			 "\n\t movntq %%mm3, 24(%0)"
+			 "\n\t movntq %%mm4, 32(%0)"
+			 "\n\t movntq %%mm5, 40(%0)"
+			 "\n\t movntq %%mm6, 48(%0)"
+			 "\n\t movntq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 64;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n >= 4) {
+		*d++ = setflag32;
+		n -= 4;
+	}
+
+	dc = (uint8_t *) d;
+
+	while (n--)
+		*dc++ = setflag8;
+
+	return dest;
+}
+
+static void *mem_set8_altivec (void *dest, int c, visual_size_t n)
+{
+
+}
+
+/* Memset functions, 2 byte memset */
+static void *mem_set16_c (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint16_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xffff) |
+		((c << 16) & 0xffff0000);
+	uint16_t setflag16 = c & 0xffff;
+
+	while (n >= 2) {
+		*d++ = setflag32;
+		n -= 2;
+	}
+
+	dc = (uint16_t *) d;
+
+	while (n--)
+		*dc++ = setflag16;
+
+	return dest;
+}
+
+static void *mem_set16_mmx (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint16_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xffff) |
+		((c << 16) & 0xffff0000);
+	uint16_t setflag16 = c & 0xffff;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
+
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movq %%mm0, (%0)"
+			 "\n\t movq %%mm1, 8(%0)"
+			 "\n\t movq %%mm2, 16(%0)"
+			 "\n\t movq %%mm3, 24(%0)"
+			 "\n\t movq %%mm4, 32(%0)"
+			 "\n\t movq %%mm5, 40(%0)"
+			 "\n\t movq %%mm6, 48(%0)"
+			 "\n\t movq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 32;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n >= 2) {
+		*d++ = setflag32;
+		n -= 2;
+	}
+
+	dc = (uint16_t *) d;
+
+	while (n--)
+		*dc++ = setflag16;
+
+	return dest;
+}
+
+static void *mem_set16_mmx2 (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint16_t *dc = dest;
+	uint32_t setflag32 =
+		(c & 0xffff) |
+		((c << 16) & 0xffff0000);
+	uint16_t setflag16 = c & 0xffff;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
+
+	while (n >= 32) {
+		__asm __volatile
+			("\n\t movntq %%mm0, (%0)"
+			 "\n\t movntq %%mm1, 8(%0)"
+			 "\n\t movntq %%mm2, 16(%0)"
+			 "\n\t movntq %%mm3, 24(%0)"
+			 "\n\t movntq %%mm4, 32(%0)"
+			 "\n\t movntq %%mm5, 40(%0)"
+			 "\n\t movntq %%mm6, 48(%0)"
+			 "\n\t movntq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 32;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n >= 2) {
+		*d++ = setflag32;
+		n -= 2;
+	}
+
+	dc = (uint16_t *) d;
+
+	while (n--)
+		*dc++ = setflag16;
+
+	return dest;
+}
+
+static void *mem_set16_altivec (void *dest, int c, visual_size_t n)
+{
+
+}
+
+/* Memset functions, 4 byte memset */
+static void *mem_set32_c (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint32_t setflag32 = c;
+
+	while (n--)
+		*d++ = setflag32;
+
+	return dest;
+}
+
+static void *mem_set32_mmx (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint32_t setflag32 = c;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
+
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movq %%mm0, (%0)"
+			 "\n\t movq %%mm1, 8(%0)"
+			 "\n\t movq %%mm2, 16(%0)"
+			 "\n\t movq %%mm3, 24(%0)"
+			 "\n\t movq %%mm4, 32(%0)"
+			 "\n\t movq %%mm5, 40(%0)"
+			 "\n\t movq %%mm6, 48(%0)"
+			 "\n\t movq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 16;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n--) 
+		*d++ = setflag32;
+
+	return dest;
+}
+
+static void *mem_set32_mmx2 (void *dest, int c, visual_size_t n)
+{
+	uint32_t *d = dest;
+	uint32_t setflag32 = c;
+
+#if defined(VISUAL_ARCH_X86) || defined(VISUAL_ARCH_X86_64)
+	__asm __volatile
+		("\n\t movd (%0), %%mm0"
+		 "\n\t movd (%0), %%mm1"
+		 "\n\t psllq $32, %%mm1"
+		 "\n\t por %%mm1, %%mm0"
+		 "\n\t movq %%mm0, %%mm2"
+		 "\n\t movq %%mm0, %%mm1"
+		 "\n\t movq %%mm2, %%mm3"
+		 "\n\t movq %%mm1, %%mm4"
+		 "\n\t movq %%mm0, %%mm5"
+		 "\n\t movq %%mm2, %%mm6"
+		 "\n\t movq %%mm1, %%mm7"
+		 :: "r" (&setflag32) : "memory");
+
+	while (n >= 64) {
+		__asm __volatile
+			("\n\t movntq %%mm0, (%0)"
+			 "\n\t movntq %%mm1, 8(%0)"
+			 "\n\t movntq %%mm2, 16(%0)"
+			 "\n\t movntq %%mm3, 24(%0)"
+			 "\n\t movntq %%mm4, 32(%0)"
+			 "\n\t movntq %%mm5, 40(%0)"
+			 "\n\t movntq %%mm6, 48(%0)"
+			 "\n\t movntq %%mm7, 56(%0)"
+			 :: "r" (d) : "memory");
+
+		d += 16;
+
+		n -= 16;
+	}
+
+	__asm __volatile
+		("\n\t emms");
+#endif /* VISUAL_ARCH_X86 */
+
+	while (n--)
+		*d++ = setflag32;
+
+	return dest;
+}
+
+static void *mem_set32_altivec (void *dest, int c, visual_size_t n)
+{
+
 }
 
 /**

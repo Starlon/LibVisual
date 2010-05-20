@@ -7,7 +7,7 @@
  *	    Chong Kai Xiong <descender@phreaker.net>
  *	    Jean-Christophe Hoelt <jeko@ios-software.com>
  *
- * $Id: lv_video.h,v 1.37 2006-09-25 20:42:53 synap Exp $
+ * $Id: lv_video.h,v 1.34.2.1 2006/03/04 12:32:48 descender Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -29,7 +29,6 @@
 
 #include <libvisual/lv_common.h>
 #include <libvisual/lv_palette.h>
-#include <libvisual/lv_color.h>
 #include <libvisual/lv_rectangle.h>
 #include <libvisual/lv_buffer.h>
 #include <libvisual/lv_gl.h>
@@ -120,11 +119,11 @@ typedef struct _VisVideoAttributeOptions VisVideoAttributeOptions;
  *         int i
  *         uint8_t *destbuf = dest->pixels;
  *         uint8_t *srcbuf = src->pixels;
- *
+ * 
  *         for (i = 0; i < src->height; i++) {
  *                 for (j = 0; j < src->width; j++) {
- *
- *
+ *	                   
+ *	                   
  *	                   destbuf += dest->bpp;
  *	                   srcbuf += src->bpp;
  *                 }
@@ -239,34 +238,15 @@ int visual_video_composite_set_surface (VisVideo *video, uint8_t alpha);
 VisVideoCustomCompositeFunc visual_video_composite_get_function (VisVideo *dest, VisVideo *src, int alpha);
 int visual_video_composite_set_function (VisVideo *video, VisVideoCustomCompositeFunc compfunc);
 
-
 int visual_video_blit_overlay_rectangle (VisVideo *dest, VisRectangle *drect, VisVideo *src, VisRectangle *srect, int alpha);
-int visual_video_blit_overlay_rectangle_transform_reuse (VisVideo *dest, VisRectangle *drect, VisVideo *src,
-		VisVideo **transform, VisRectangle *srect, int alpha);
-
 int visual_video_blit_overlay_rectangle_custom (VisVideo *dest, VisRectangle *drect, VisVideo *src, VisRectangle *srect,
 		VisVideoCustomCompositeFunc compfunc);
-int visual_video_blit_overlay_rectangle_custom_transform_reuse (VisVideo *dest, VisRectangle *drect, VisVideo *src,
-		VisRectangle *srect, VisVideo **transform, VisVideoCustomCompositeFunc compfunc);
-
 int visual_video_blit_overlay_rectangle_scale (VisVideo *dest, VisRectangle *drect, VisVideo *src, VisRectangle *srect,
 		int alpha, VisVideoScaleMethod scale_method);
-int visual_video_blit_overlay_rectangle_scale_transform_reuse (VisVideo *dest, VisRectangle *drect, VisVideo *src,
-		VisRectangle *srect, VisVideo **transform, int alpha, VisVideoScaleMethod scale_method);
-
-int visual_video_blit_overlay_rectangle_scale_custom_transform_reuse (VisVideo *dest, VisRectangle *drect, VisVideo *src,
-		VisRectangle *srect, VisVideo **transform, VisVideoScaleMethod scale_method,
-		VisVideoCustomCompositeFunc compfunc);
-int visual_video_blit_overlay_rectangle_scale_custom (VisVideo *dest, VisRectangle *drect, VisVideo *src,
-		VisRectangle *srect, VisVideoScaleMethod scale_method, VisVideoCustomCompositeFunc compfunc);
-
+int visual_video_blit_overlay_rectangle_scale_custom (VisVideo *dest, VisRectangle *drect, VisVideo *src, VisRectangle *srect,
+		VisVideoScaleMethod scale_method, VisVideoCustomCompositeFunc compfunc);
 int visual_video_blit_overlay (VisVideo *dest, VisVideo *src, int x, int y, int alpha);
-int visual_video_blit_overlay_transform_reuse (VisVideo *dest, VisVideo *src, VisVideo **transform, int x, int y, int alpha);
-
 int visual_video_blit_overlay_custom (VisVideo *dest, VisVideo *src, int x, int y, VisVideoCustomCompositeFunc compfunc);
-int visual_video_blit_overlay_custom_transform_reuse (VisVideo *dest, VisVideo *src,
-		VisVideo **transform, int x, int y, VisVideoCustomCompositeFunc compfunc);
-
 
 int visual_video_fill_alpha_color (VisVideo *video, VisColor *color, uint8_t density);
 int visual_video_fill_alpha (VisVideo *video, uint8_t density);
@@ -284,6 +264,7 @@ VisVideo *visual_video_mirror_new (VisVideo *src, VisVideoMirrorOrient orient);
 
 int visual_video_depth_transform (VisVideo *viddest, VisVideo *vidsrc);
 
+VisVideo *visual_video_zoom_new (VisVideo *src, VisVideoScaleMethod scale_method, float zoom_factor);
 int visual_video_zoom_double (VisVideo *dest, VisVideo *src);
 
 int visual_video_scale (VisVideo *dest, VisVideo *src, VisVideoScaleMethod scale_method);

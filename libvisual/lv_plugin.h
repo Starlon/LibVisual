@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_plugin.h,v 1.52 2006-09-19 18:28:51 synap Exp $
+ * $Id: lv_plugin.h,v 1.51 2006/02/13 20:54:08 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -27,10 +27,10 @@
 #include <libvisual/lv_video.h>
 #include <libvisual/lv_audio.h>
 #include <libvisual/lv_palette.h>
-#include <libvisual/lv_hashmap.h>
+#include <libvisual/lv_list.h>
 #include <libvisual/lv_songinfo.h>
-#include <libvisual/lv_param.h>
 #include <libvisual/lv_event.h>
+#include <libvisual/lv_param.h>
 #include <libvisual/lv_ui.h>
 #include <libvisual/lv_random.h>
 #include <libvisual/lv_types.h>
@@ -51,7 +51,7 @@ VISUAL_BEGIN_DECLS
 /**
  * Indicates at which version the plugin API is.
  */
-#define VISUAL_PLUGIN_API_VERSION	5001
+#define VISUAL_PLUGIN_API_VERSION	3004
 
 /**
  * Defination that should be used in plugins to set the plugin type for a NULL plugin.
@@ -71,9 +71,8 @@ VISUAL_BEGIN_DECLS
  */
 #define VISUAL_PLUGIN_LICENSE_BSD	"BSD"
 
-#define VISUAL_PLUGIN_VERSION_TAG		__lv_plugin_libvisual_api_version
-#define VISUAL_PLUGIN_VERSION_TAG_STRING	"__lv_plugin_libvisual_api_version"
-#define VISUAL_PLUGIN_API_VERSION_VALIDATOR	VISUAL_C_LINKAGE const int VISUAL_PLUGIN_VERSION_TAG = \
+#define VISUAL_PLUGIN_VERSION_TAG		"__lv_plugin_libvisual_api_version"
+#define VISUAL_PLUGIN_API_VERSION_VALIDATOR	VISUAL_C_LINKAGE const int __lv_plugin_libvisual_api_version = \
 						VISUAL_PLUGIN_API_VERSION;
 
 
@@ -174,10 +173,8 @@ struct _VisPluginInfo {
 	VisObject		 object;	/**< The VisObject data. */
 
 	char			*type;		/**< Plugin type, in the format of "domain:package:type", as example,
-						 * this could be "Libvisual:core:actor".
-						 * It's adviced to use the stnadard defination macros here
+						 * this could be "Libvisual:core:actor". It's adviced to use the defination macros here
 						 * instead of filling in the string yourself. */
-
 	char			*plugname;	/**< The plugin name as it's saved in the registry. */
 
 	char			*name;		/**< Long name */
@@ -225,7 +222,7 @@ struct _VisPluginData {
 	void			*handle;	/**< The dlopen handle */
 #endif
 
-	VisHashmap		 environment;	/**< Misc environment specific data. */
+	VisList			 environment;	/**< Misc environment specific data. */
 };
 
 /**
@@ -242,7 +239,6 @@ struct _VisPluginEnviron {
 
 /* prototypes */
 VisPluginInfo *visual_plugin_info_new (void);
-int visual_plugin_info_init (VisPluginInfo *pluginfo);
 int visual_plugin_info_copy (VisPluginInfo *dest, VisPluginInfo *src);
 
 int visual_plugin_events_pump (VisPluginData *plugin);
@@ -259,23 +255,23 @@ VisRandomContext *visual_plugin_get_random_context (VisPluginData *plugin);
 void *visual_plugin_get_specific (VisPluginData *plugin);
 
 VisPluginRef *visual_plugin_ref_new (void);
-int visual_plugin_ref_init (VisPluginRef *ref);
 
 VisPluginData *visual_plugin_new (void);
-int visual_plugin_init (VisPluginData *plugin);
 
-VisHashmap *visual_plugin_get_registry (void);
-int visual_plugin_set_registry (VisHashmap *map);
-VisHashmap *visual_plugin_registry_filter (VisHashmap *plugmap, const char *domain);
+VisList *visual_plugin_get_registry (void);
+VisList *visual_plugin_registry_filter (VisList *pluglist, const char *domain);
+
+const char *visual_plugin_get_next_by_name (VisList *list, const char *name);
+const char *visual_plugin_get_prev_by_name (VisList *list, const char *name);
 
 int visual_plugin_unload (VisPluginData *plugin);
 VisPluginData *visual_plugin_load (VisPluginRef *ref);
 int visual_plugin_realize (VisPluginData *plugin);
 
 VisPluginRef **visual_plugin_get_references (const char *pluginpath, int *count);
-VisHashmap *visual_plugin_get_map (const char **paths, int ignore_non_existing);
+VisList *visual_plugin_get_list (const char **paths, int ignore_non_existing);
 
-VisPluginRef *visual_plugin_find (VisHashmap *map, const char *name);
+VisPluginRef *visual_plugin_find (VisList *list, const char *name);
 
 int visual_plugin_get_api_version (void);
 
@@ -288,7 +284,6 @@ const char *visual_plugin_type_get_flags (const char *type);
 int visual_plugin_type_has_flag (const char *type, const char *flag);
 
 VisPluginEnviron *visual_plugin_environ_new (const char *type, VisObject *envobj);
-int visual_plugin_environ_init (VisPluginEnviron *enve, const char *type, VisObject *envobj);
 int visual_plugin_environ_add (VisPluginData *plugin, VisPluginEnviron *enve);
 int visual_plugin_environ_remove (VisPluginData *plugin, const char *type);
 VisObject *visual_plugin_environ_get (VisPluginData *plugin, const char *type);

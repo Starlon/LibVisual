@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_plugin.c,v 1.82 2006-09-19 18:28:51 synap Exp $
+ * $Id: lv_plugin.c,v 1.80.2.1 2006/03/04 12:32:47 descender Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -44,15 +44,14 @@
 #include "lv_log.h"
 #include "lv_mem.h"
 
-/* Internal variables */
-static VisHashmap *__lv_plugins = NULL;
+extern VisList *__lv_plugins;
 
 static int plugin_info_dtor (VisObject *object);
 static int plugin_ref_dtor (VisObject *object);
 static int plugin_environ_dtor (VisObject *object);
 static int plugin_dtor (VisObject *object);
 
-static int plugin_add_dir_to_map (VisHashmap *map, const char *dir);
+static int plugin_add_dir_to_list (VisList *list, const char *dir);
 static char *get_delim_node (const char *str, char delim, int index);
 
 static int plugin_info_dtor (VisObject *object)
@@ -88,7 +87,7 @@ static int plugin_info_dtor (VisObject *object)
 	pluginfo->about = NULL;
 	pluginfo->help = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 static int plugin_ref_dtor (VisObject *object)
@@ -107,7 +106,7 @@ static int plugin_ref_dtor (VisObject *object)
 	ref->file = NULL;
 	ref->info = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 static int plugin_environ_dtor (VisObject *object)
@@ -119,7 +118,7 @@ static int plugin_environ_dtor (VisObject *object)
 
 	enve->environment = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 static int plugin_dtor (VisObject *object)
@@ -137,7 +136,7 @@ static int plugin_dtor (VisObject *object)
 	plugin->ref = NULL;
 	plugin->params = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 static char *get_delim_node (const char *str, char delim, int index)
@@ -193,28 +192,10 @@ VisPluginInfo *visual_plugin_info_new ()
 
 	pluginfo = visual_mem_new0 (VisPluginInfo, 1);
 
-	visual_plugin_info_init (pluginfo);
-
 	/* Do the VisObject initialization */
-	visual_object_set_allocated (VISUAL_OBJECT (pluginfo), TRUE);
-	visual_object_ref (VISUAL_OBJECT (pluginfo));
+	visual_object_initialize (VISUAL_OBJECT (pluginfo), TRUE, plugin_info_dtor);
 
 	return pluginfo;
-}
-
-int visual_plugin_info_init (VisPluginInfo *pluginfo)
-{
-	visual_log_return_val_if_fail (pluginfo != NULL, -VISUAL_ERROR_PLUGIN_INFO_NULL);
-
-	/* Do the VisObject initialization */
-	visual_object_clear (VISUAL_OBJECT (pluginfo));
-	visual_object_set_dtor (VISUAL_OBJECT (pluginfo), plugin_info_dtor);
-	visual_object_set_allocated (VISUAL_OBJECT (pluginfo), FALSE);
-
-	/* Set the VisPluginInfo data */
-	visual_object_clean (VISUAL_OBJECT (pluginfo), VisPluginInfo);
-
-	return VISUAL_OK;
 }
 
 /**
@@ -372,7 +353,7 @@ void *visual_plugin_get_specific (VisPluginData *plugin)
 
 	pluginfo = visual_plugin_get_info (plugin);
 	visual_log_return_val_if_fail (pluginfo != NULL, NULL);
-
+	
 	return pluginfo->plugin;
 }
 
@@ -389,28 +370,10 @@ VisPluginRef *visual_plugin_ref_new ()
 
 	ref = visual_mem_new0 (VisPluginRef, 1);
 
-	visual_plugin_ref_init (ref);
-
 	/* Do the VisObject initialization */
-	visual_object_set_allocated (VISUAL_OBJECT (ref), TRUE);
-	visual_object_ref (VISUAL_OBJECT (ref));
+	visual_object_initialize (VISUAL_OBJECT (ref), TRUE, plugin_ref_dtor);
 
 	return ref;
-}
-
-int visual_plugin_ref_init (VisPluginRef *ref)
-{
-	visual_log_return_val_if_fail (ref != NULL, -VISUAL_ERROR_PLUGIN_REF_NULL);
-
-	/* Do the VisObject initialization */
-	visual_object_clear (VISUAL_OBJECT (ref));
-	visual_object_set_dtor (VISUAL_OBJECT (ref), plugin_ref_dtor);
-	visual_object_set_allocated (VISUAL_OBJECT (ref), FALSE);
-
-	/* Set the VisPluginRef data */
-	visual_object_clean (VISUAL_OBJECT (ref), VisPluginRef);
-
-	return VISUAL_OK;
 }
 
 /**
@@ -423,123 +386,152 @@ VisPluginData *visual_plugin_new ()
 	VisPluginData *plugin;
 
 	plugin = visual_mem_new0 (VisPluginData, 1);
-
-	visual_plugin_init (plugin);
-
+	
 	/* Do the VisObject initialization */
-	visual_object_set_allocated (VISUAL_OBJECT (plugin), TRUE);
-	visual_object_ref (VISUAL_OBJECT (plugin));
+	visual_object_initialize (VISUAL_OBJECT (plugin), TRUE, plugin_dtor);
+
+	plugin->params = visual_param_container_new ();
 
 	return plugin;
 }
 
-int visual_plugin_init (VisPluginData *plugin)
-{
-	visual_log_return_val_if_fail (plugin != NULL, -VISUAL_ERROR_PLUGIN_NULL);
-
-	/* Do the VisObject initialization */
-	visual_object_clear (VISUAL_OBJECT (plugin));
-	visual_object_set_dtor (VISUAL_OBJECT (plugin), plugin_dtor);
-	visual_object_set_allocated (VISUAL_OBJECT (plugin), FALSE);
-
-	/* Set the VisPluginRef data */
-	visual_object_clean (VISUAL_OBJECT (plugin), VisPluginData);
-
-	visual_event_queue_init (&plugin->eventqueue);
-	plugin->params = visual_param_container_new ();
-
-	visual_hashmap_init (&plugin->environment, visual_object_collection_destroyer);
-
-	return VISUAL_OK;
-}
-
-
-
 /**
- * Gives a VisHashmap that contains references to all the plugins in the registry.
+ * Gives a VisList that contains references to all the plugins in the registry.
  *
  * @see VisPluginRef
- * @see visual_plugin_set_registry
  * 
- * @return VisHashmap of references to all the libvisual plugins.
+ * @return VisList of references to all the libvisual plugins.
  */
-VisHashmap *visual_plugin_get_registry ()
+VisList *visual_plugin_get_registry ()
 {
 	return __lv_plugins;
 }
 
 /**
- * Sets the VisHashmap that is used as the main plugin repository.
- *
- * @see visual_plugin_get_registry
- *
- * @return VISUAL_OK on succes.
- */
-int visual_plugin_set_registry (VisHashmap *map)
-{
-	if (__lv_plugins != NULL)
-		visual_object_unref (VISUAL_OBJECT (__lv_plugins));
-
-	__lv_plugins = map;
-
-	return VISUAL_OK;
-}
-
-/**
- * Gives a newly allocated VisHashmap with references for one plugin type.
+ * Gives a newly allocated VisList with references for one plugin type.
  *
  * @see VisPluginRef
  *
- * @param plugmap Pointer to the VisHashmap that contains the plugin registry.
+ * @param pluglist Pointer to the VisList that contains the plugin registry.
  * @param domain The plugin type that is filtered for.
  *
- * @return Newly allocated VisHashmap that is a filtered version of the plugin registry.
+ * @return Newly allocated VisList that is a filtered version of the plugin registry.
  */
-VisHashmap *visual_plugin_registry_filter (VisHashmap *plugmap, const char *domain)
+VisList *visual_plugin_registry_filter (VisList *pluglist, const char *domain)
 {
-	VisCollectionIterator iter;
-	VisHashmap *map;
+	VisList *list;
+	VisListEntry *entry = NULL;
+	VisPluginRef *ref;
 	int ret;
 
-	visual_log_return_val_if_fail (plugmap != NULL, NULL);
+	visual_log_return_val_if_fail (pluglist != NULL, NULL);
 
-	map = visual_hashmap_new (visual_object_collection_destroyer);
+	list = visual_list_new (visual_object_collection_destroyer);
 
-	if (map == NULL) {
-		visual_log (VISUAL_LOG_CRITICAL, _("Cannot create a new map"));
+	if (list == NULL) {
+		visual_log (VISUAL_LOG_CRITICAL, _("Cannot create a new list"));
 
 		return NULL;
 	}
 
-	visual_collection_get_iterator (&iter, VISUAL_COLLECTION (plugmap));
-
-	while (visual_collection_iterator_has_more (&iter)) {
-		VisPluginRef *ref;
-		int ret;
-
-		VisHashmapChainEntry *mentry = visual_collection_iterator_get_data (&iter);
-
-		ref = mentry->data;
-
-		if ((ret = visual_plugin_type_member_of (ref->info->type, domain)) == TRUE) {
+	while ((ref = visual_list_next (pluglist, &entry)) != NULL) {
+		
+		if ((ret = visual_plugin_type_member_of (ref->info->type, domain))) {
+			if (ret == TRUE) {
 				visual_object_ref (VISUAL_OBJECT (ref));
-
-				visual_hashmap_put_string (map, ref->info->plugname, ref);
-		} else if (ret != FALSE) {
+				
+				visual_list_add (list, ref);
+			} else if (ret != FALSE) {
+				visual_log (VISUAL_LOG_WARNING, visual_error_to_string (ret));
+			}
+		}
+		else if (ret != FALSE) { /* FIXME XXX TODO, patch frmo duilio check how this works */
 			visual_log (VISUAL_LOG_WARNING, visual_error_to_string (ret));
 		}
-
-		visual_collection_iterator_next (&iter);
 	}
 
-	visual_object_unref (VISUAL_OBJECT (&iter));
-
-	return map;
+	return list;
 }
 
-static int plugin_add_dir_to_map (VisHashmap *map, const char *dir)
+/**
+ * Get the next plugin based on it's name.
+ *
+ * @see visual_plugin_registry_filter
+ * 
+ * @param list Pointer to the VisList containing the plugins. Adviced is to filter
+ *	this list first using visual_plugin_registry_filter.
+ * @param name Name of a plugin entry of which we want the next entry or NULL to get
+ * 	the first entry.
+ *
+ * @return The name of the next plugin or NULL on failure.
+ */
+const char *visual_plugin_get_next_by_name (VisList *list, const char *name)
 {
-	VisPluginRef **refs;
+	VisListEntry *entry = NULL;
+	VisPluginRef *ref;
+	int tagged = FALSE;
+
+	visual_log_return_val_if_fail (list != NULL, NULL);
+
+	while ((ref = visual_list_next (list, &entry)) != NULL) {
+		if (name == NULL)
+			return ref->info->plugname;
+
+		if (tagged == TRUE)
+			return ref->info->plugname;
+
+		if (strcmp (name, ref->info->plugname) == 0)
+			tagged = TRUE;
+	}
+
+	return NULL;
+}
+
+/**
+ * Get the previous plugin based on it's name.
+ *
+ * @see visual_plugin_registry_filter
+ * 
+ * @param list Pointer to the VisList containing the plugins. Adviced is to filter
+ *	this list first using visual_plugin_registry_filter.
+ * @param name Name of a plugin entry of which we want the previous entry or NULL to get
+ * 	the last entry.
+ *
+ * @return The name of the next plugin or NULL on failure.
+ */
+const char *visual_plugin_get_prev_by_name (VisList *list, const char *name)
+{
+	VisListEntry *entry = NULL;
+	VisPluginRef *ref, *pref = NULL;
+
+	visual_log_return_val_if_fail (list != NULL, NULL);
+
+	if (name == NULL) {
+		ref = visual_list_get (list, visual_collection_size (VISUAL_COLLECTION (list)) - 1);
+
+		if (ref == NULL)
+			return NULL;
+
+		return ref->info->plugname;
+	}
+
+	while ((ref = visual_list_next (list, &entry)) != NULL) {
+		if (strcmp (name, ref->info->plugname) == 0) {
+			if (pref != NULL)
+				return pref->info->plugname;
+			else
+				return NULL;
+		}
+
+		pref = ref;
+	}
+
+	return NULL;
+}
+
+static int plugin_add_dir_to_list (VisList *list, const char *dir)
+{
+	VisPluginRef **ref;
 	char temp[FILENAME_MAX];
 	int i, j, n;
 	size_t len;
@@ -566,7 +558,7 @@ static int plugin_add_dir_to_map (VisHashmap *map, const char *dir)
 	fFinished = FALSE;
 
 	while (!fFinished) {
-		refs = NULL;
+		ref = NULL;
 
 		if (!(FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
 
@@ -574,14 +566,14 @@ static int plugin_add_dir_to_map (VisHashmap *map, const char *dir)
 
 			len = strlen (temp);
 			if (len > 5 && (strncmp (&temp[len - 5], ".dll", 5) == 0))
-				refs = visual_plugin_get_references (temp, &cnt);
+				ref = visual_plugin_get_references (temp, &cnt);
 
-			if (refs != NULL) {
+			if (ref != NULL) {
 				for (j = 0; j < cnt; j++)
-					visual_hashmap_put_string (map, refs[j]->info->plugname, refs[j]);
+					visual_list_add (list, ref[j]);
 
 				/* This is the pointer pointer pointer, not a ref itself */
-				visual_mem_free (refs);
+				visual_mem_free (ref);
 			}
 
 			if (!FindNextFile (hList, &FileData)) {
@@ -608,20 +600,20 @@ static int plugin_add_dir_to_map (VisHashmap *map, const char *dir)
 	visual_mem_set (temp, 0, sizeof (temp));
 
 	for (i = 2; i < n; i++) {
-		refs = NULL;
+		ref = NULL;
 
 		snprintf (temp, 1023, "%s/%s", dir, namelist[i]->d_name);
 
 		len = strlen (temp);
 		if (len > 3 && (strncmp (&temp[len - 3], ".so", 3) == 0))
-			refs = visual_plugin_get_references (temp, &cnt);
+			ref = visual_plugin_get_references (temp, &cnt);
 
-		if (refs != NULL) {
+		if (ref != NULL) {
 			for (j = 0; j < cnt; j++)
-				visual_hashmap_put_string (map, refs[j]->info->plugname, refs[j]);
+				visual_list_add (list, ref[j]);
 
 			/* This is the pointer pointer pointer, not a ref itself */
-			visual_mem_free (refs);
+			visual_mem_free (ref);
 		}
 
 		visual_mem_free (namelist[i]);
@@ -658,7 +650,7 @@ int visual_plugin_unload (VisPluginData *plugin)
 
 		return -VISUAL_ERROR_PLUGIN_HANDLE_NULL;
 	}
-
+	
 	if (plugin->realized == TRUE)
 		plugin->info->cleanup (plugin);
 
@@ -669,7 +661,7 @@ int visual_plugin_unload (VisPluginData *plugin)
 		visual_object_unref (VISUAL_OBJECT (plugin->info));
 
 #if defined(VISUAL_OS_WIN32)
-	FreeLibrary (plugin->handle);
+	FreeLibrary (plugin->handle);	
 #else
 	dlclose (plugin->handle);
 #endif
@@ -684,7 +676,7 @@ int visual_plugin_unload (VisPluginData *plugin)
 	visual_param_container_set_eventqueue (plugin->params, NULL);
 
 	visual_object_unref (VISUAL_OBJECT (plugin));
-
+	
 	return VISUAL_OK;
 }
 
@@ -748,7 +740,7 @@ VisPluginData *visual_plugin_load (VisPluginRef *ref)
 		FreeLibrary (handle);
 #else
 		visual_log (VISUAL_LOG_CRITICAL, _("Cannot initialize plugin: %s"), dlerror ());
-
+	
 		dlclose (handle);
 #endif
 
@@ -854,9 +846,9 @@ VisPluginRef **visual_plugin_get_references (const char *pluginpath, int *count)
 	}
 
 #if defined(VISUAL_OS_WIN32)
-	plugin_version = (int *) GetProcAddress (handle, VISUAL_PLUGIN_VERSION_TAG_STRING);
+	plugin_version = (int *) GetProcAddress (handle, VISUAL_PLUGIN_VERSION_TAG);
 #else
-	plugin_version = (int *) dlsym (handle, VISUAL_PLUGIN_VERSION_TAG_STRING);
+	plugin_version = (int *) dlsym (handle, VISUAL_PLUGIN_VERSION_TAG);
 #endif
 
 	if (plugin_version == NULL || *plugin_version != VISUAL_PLUGIN_API_VERSION) {
@@ -936,20 +928,20 @@ VisPluginRef **visual_plugin_get_references (const char *pluginpath, int *count)
 /**
  * Private function to create the complete plugin registry from a set of paths.
  *
- * @param paths A pointer array to a set of paths.
+ * @param paths A pointer list to a set of paths.
  * @param ignore_non_existing A flag that can be set with TRUE or FALSE to ignore non existing dirs.
  *
- * @return A newly allocated VisHashmap containing the plugin registry for the set of paths.
+ * @return A newly allocated VisList containing the plugin registry for the set of paths.
  */
-VisHashmap *visual_plugin_get_map (const char **paths, int ignore_non_existing)
+VisList *visual_plugin_get_list (const char **paths, int ignore_non_existing)
 {
-	VisHashmap *hashmap;
+	VisList *list;
 	int i = 0;
 
-	hashmap = visual_hashmap_new (visual_object_collection_destroyer);
+	list = visual_list_new (visual_object_collection_destroyer);
 
 	while (paths[i] != NULL) {
-		if (plugin_add_dir_to_map (hashmap, paths[i]) < 0) {
+		if (plugin_add_dir_to_list (list, paths[i]) < 0) {
 			if (ignore_non_existing == FALSE)
 				visual_log (VISUAL_LOG_WARNING, _("Failed to add the %s directory to the plugin registry"), paths[i]);
 		}
@@ -957,24 +949,33 @@ VisHashmap *visual_plugin_get_map (const char **paths, int ignore_non_existing)
 		i++;
 	}
 
-	return hashmap;
+	return list;
 }
 
 /**
  * Private function to find a plugin in a plugin registry.
  *
- * @param map Pointer to a VisHashmap containing VisPluginRefs in which
+ * @param list Pointer to a VisList containing VisPluginRefs in which
  *	the search is done.
  * @param name The name of the plugin we're looking for.
  *
  * @return The VisPluginRef for the plugin if found, or NULL when not found.
  */
-VisPluginRef *visual_plugin_find (VisHashmap *map, const char *name)
+VisPluginRef *visual_plugin_find (VisList *list, const char *name)
 {
-	visual_log_return_val_if_fail (map != NULL, NULL);
-	visual_log_return_val_if_fail (name != NULL, NULL);
+	VisListEntry *entry = NULL;
+	VisPluginRef *ref;
 
-	return visual_hashmap_get_string (map, name);
+	while ((ref = visual_list_next (list, &entry)) != NULL) {
+
+		if (ref->info->plugname == NULL)
+			continue;
+
+		if (strcmp (name, ref->info->plugname) == 0)
+			return ref;
+	}
+
+	return NULL;
 }
 
 /**
@@ -1072,8 +1073,7 @@ VisPluginTypeDepth visual_plugin_type_get_depth (const char *type)
 
 		i++;
 
-		// FIXME can't free, why!! ?
-//		visual_mem_free (part);
+		visual_mem_free (part);
 	}
 
 	return i;
@@ -1163,12 +1163,12 @@ const char *visual_plugin_type_get_flags (const char *type)
 		return NULL;
 
 	flagstr += 2; /* Skip the ".[" */
-
+	
 	flagsret = visual_mem_malloc0 (strlen (flagstr) - 1);
 
 	strncpy (flagsret, flagstr, strlen (flagstr) - 1);
 	flagsret[strlen (flagstr) - 1] = '\0';
-
+	
 	return flagsret;
 }
 
@@ -1184,7 +1184,7 @@ int visual_plugin_type_has_flag (const char *type, const char *flag)
 {
 	char *flags;
 	char *nflag, *s;
-
+	
 	visual_log_return_val_if_fail (type != NULL, -VISUAL_ERROR_NULL);
 	visual_log_return_val_if_fail (flag != NULL, -VISUAL_ERROR_NULL);
 
@@ -1195,7 +1195,7 @@ int visual_plugin_type_has_flag (const char *type, const char *flag)
 
 	do {
 		s = strchr (nflag, '|');
-
+		
 		if (s != NULL) {
 			if (strncmp (nflag, flag, s - nflag - 1) == 0) {
 				visual_mem_free (flags);
@@ -1231,41 +1231,23 @@ VisPluginEnviron *visual_plugin_environ_new (const char *type, VisObject *envobj
 
 	enve = visual_mem_new0 (VisPluginEnviron, 1);
 
-	visual_plugin_environ_init (enve, type, envobj);
-
 	/* Do the VisObject initialization */
-	visual_object_set_allocated (VISUAL_OBJECT (enve), TRUE);
-	visual_object_ref (VISUAL_OBJECT (enve));
-
-	return enve;
-}
-
-int visual_plugin_environ_init (VisPluginEnviron *enve, const char *type, VisObject *envobj)
-{
-	visual_log_return_val_if_fail (enve != NULL, -VISUAL_ERROR_PLUGIN_ENVIRON_NULL);
-
-	/* Do the VisObject initialization */
-	visual_object_clear (VISUAL_OBJECT (enve));
-	visual_object_set_dtor (VISUAL_OBJECT (enve), plugin_environ_dtor);
-	visual_object_set_allocated (VISUAL_OBJECT (enve), FALSE);
-
-	/* Set the VisPluginRef data */
-	visual_object_clean (VISUAL_OBJECT (enve), VisPluginEnviron);
+	visual_object_initialize (VISUAL_OBJECT (enve), TRUE, plugin_environ_dtor);
 
 	enve->type = type;
 	enve->environment = envobj;
 
-	return VISUAL_OK;
+	return enve;
 }
 
 /**
- * Adds a VisPluginEnviron to the plugin it's environment map.
+ * Adds a VisPluginEnviron to the plugin it's environment list.
  *
  * @param plugin Pointer to the VisPluginData to which the VisPluginEnviron is added.
  * @param enve Pointer to the VisPluginEnviron that is added to the VisPluginData.
  *
  * @return VISUAL_OK on succes, -VISUAL_ERROR_PLUGIN_NULL, -VISUAL_ERROR_PLUGIN_ENVIRON_NULL,
- *	-VISUAL_ERROR_NULL or error values returned by visual_hashmap_put_string() on failure.
+ *	-VISUAL_ERROR_NULL or error values returned by visual_list_add() on failure.
  */
 int visual_plugin_environ_add (VisPluginData *plugin, VisPluginEnviron *enve)
 {
@@ -1275,11 +1257,11 @@ int visual_plugin_environ_add (VisPluginData *plugin, VisPluginEnviron *enve)
 
 	visual_plugin_environ_remove (plugin, enve->type);
 
-	return visual_hashmap_put_string (&plugin->environment, enve->type, enve);
+	return visual_list_add (&plugin->environment, enve);
 }
 
 /**
- * Removes a VisPluginEnviron from the plugin it's environment map.
+ * Removes a VisPluginEnviron from the plugin it's environment list.
  *
  * @param plugin Pointer to the VisPluginData from which the VisPluginEnviron is removed.
  * @param type The Environ type that is removed.
@@ -1289,17 +1271,28 @@ int visual_plugin_environ_add (VisPluginData *plugin, VisPluginEnviron *enve)
 int visual_plugin_environ_remove (VisPluginData *plugin, const char *type)
 {
 	VisPluginEnviron *enve;
+	VisListEntry *le = NULL;
 
 	visual_log_return_val_if_fail (plugin != NULL, -VISUAL_ERROR_PLUGIN_NULL);
 	visual_log_return_val_if_fail (type != NULL, -VISUAL_ERROR_NULL);
 
-	visual_hashmap_remove_string (&plugin->environment, enve->type, TRUE);
+	while ((enve = visual_list_next (&plugin->environment, &le)) != NULL) {
+
+		/* Remove from list */
+		if (strcmp (enve->type, type) == 0) {
+			visual_list_delete (&plugin->environment, &le);
+
+			visual_object_unref (VISUAL_OBJECT (enve));
+
+			return VISUAL_OK;
+		}
+	}
 
 	return VISUAL_OK;
 }
 
 /**
- * Retrieves a VisPluginEnviron from the plugin it's environment map.
+ * Retrieves a VisPluginEnviron from the plugin it's environment list.
  *
  * @param plugin Pointer to the VisPluginData from which the VisPluginEnviron is requested.
  * @param type The Environ type that is requested.
@@ -1309,11 +1302,18 @@ int visual_plugin_environ_remove (VisPluginData *plugin, const char *type)
 VisObject *visual_plugin_environ_get (VisPluginData *plugin, const char *type)
 {
 	VisPluginEnviron *enve;
+	VisListEntry *le = NULL;
 
 	visual_log_return_val_if_fail (plugin != NULL, NULL);
 	visual_log_return_val_if_fail (type != NULL, NULL);
 
-	return visual_hashmap_get_string (&plugin->environment, type);
+	while ((enve = visual_list_next (&plugin->environment, &le)) != NULL) {
+
+		if (strcmp (enve->type, type) == 0)
+			return enve->environment;
+	}
+
+	return NULL;
 }
 
 /**

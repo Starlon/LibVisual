@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_transform.c,v 1.9 2006-09-19 18:28:52 synap Exp $
+ * $Id: lv_transform.c,v 1.8 2006/01/27 20:18:26 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,7 +35,7 @@
 #include "lv_transform.h"
 #include "lv_mem.h"
 
-static VisHashmap *__lv_plugins_transform = NULL;
+extern VisList *__lv_plugins_transform;
 
 static int transform_dtor (VisObject *object);
 
@@ -51,7 +51,7 @@ static int transform_dtor (VisObject *object)
 
 	transform->plugin = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 static VisTransformPlugin *get_transform_plugin (VisTransform *transform)
@@ -84,30 +84,56 @@ VisPluginData *visual_transform_get_plugin (VisTransform *transform)
 }
 
 /**
- * Sets the VisHashmap that is used as the plugin registry for transform plugins.
+ * Gives a list of VisTransforms in the current plugin registry.
  *
- * @param map Pointer to the VisHashmap that contains the transform plugin registry.
- *
- * @return VISUAL_OK on succes.
+ * @return An VisList containing the VisTransforms in the plugin registry.
  */
-int visual_transform_set_map (VisHashmap *map)
+VisList *visual_transform_get_list ()
 {
-	if (__lv_plugins_transform != NULL)
-		visual_object_unref (VISUAL_OBJECT (__lv_plugins_transform));
-
-	__lv_plugins_transform = map;
-
-	return VISUAL_OK;
+	return __lv_plugins_transform;
 }
 
 /**
- * Gives a hashmap of tranform plugins in the current plugin registry.
+ * Gives the next transform plugin based on the name of a plugin.
  *
- * @return A VisHashmap containing the VisPluginRef entries containing the transform plugins in the plugin registry.
+ * @see visual_transform_get_prev_by_name
+ * 
+ * @param name The name of the current plugin, or NULL to get the first.
+ *
+ * @return The name of the next plugin within the list.
  */
-VisHashmap *visual_transform_get_map ()
+const char *visual_transform_get_next_by_name (const char *name)
 {
-	return __lv_plugins_transform;
+	return visual_plugin_get_next_by_name (visual_transform_get_list (), name);
+}
+
+/**
+ * Gives the previous transform plugin based on the name of a plugin.
+ *
+ * @see visual_transform_get_next_by_name
+ * 
+ * @param name The name of the current plugin. or NULL to get the last.
+ *
+ * @return The name of the previous plugin within the list.
+ */
+const char *visual_transform_get_prev_by_name (const char *name)
+{
+	return visual_plugin_get_prev_by_name (visual_transform_get_list (), name);
+}
+
+/**
+ * Checks if the transform plugin is in the registry, based on it's name.
+ *
+ * @param name The name of the plugin that needs to be checked.
+ *
+ * @return TRUE if found, else FALSE.
+ */
+int visual_transform_valid_by_name (const char *name)
+{
+	if (visual_plugin_find (visual_transform_get_list (), name) == NULL)
+		return FALSE;
+	else
+		return TRUE;
 }
 
 /**
@@ -144,7 +170,7 @@ VisTransform *visual_transform_new (const char *transformname)
  * @param transformname
  *	The name of the plugin to load, or NULL to simply initialize a new transform.
  *
- * @return VISUAL_OK on succes, -VISUAL_ERROR_TRANSFORM_NULL or -VISUAL_ERROR_PLUGIN_NO_MAP on failure.
+ * @return VISUAL_OK on succes, -VISUAL_ERROR_TRANSFORM_NULL or -VISUAL_ERROR_PLUGIN_NO_LIST on failure.
  */
 int visual_transform_init (VisTransform *transform, const char *transformname)
 {
@@ -154,7 +180,7 @@ int visual_transform_init (VisTransform *transform, const char *transformname)
 
 	if (__lv_plugins_transform == NULL && transformname != NULL) {
 		visual_log (VISUAL_LOG_CRITICAL, _("the plugin list is NULL"));
-		return -VISUAL_ERROR_PLUGIN_NO_MAP;
+		return -VISUAL_ERROR_PLUGIN_NO_LIST;
 	}
 
 	/* Do the VisObject initialization */

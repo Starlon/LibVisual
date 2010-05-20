@@ -4,7 +4,7 @@
  *
  * Authors: Dennis Smit <ds@nerds-incorporated.org>
  *
- * $Id: lv_collection.c,v 1.7 2006-09-19 18:28:51 synap Exp $
+ * $Id: lv_collection.c,v 1.6 2006/01/22 13:23:37 synap Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -28,11 +28,11 @@
 #include "lv_common.h"
 #include "lv_collection.h"
 
-static int collection_iterator_dtor (VisObject *object);
+static int collection_iter_dtor (VisObject *object);
 
-static int collection_iterator_dtor (VisObject *object)
+static int collection_iter_dtor (VisObject *object)
 {
-	VisCollectionIterator *iter = VISUAL_COLLECTIONITERATOR (object);
+	VisCollectionIter *iter = VISUAL_COLLECTIONITER (object);
 
 	if (iter->collection != NULL)
 		visual_object_unref (VISUAL_OBJECT (iter->collection));
@@ -43,7 +43,7 @@ static int collection_iterator_dtor (VisObject *object)
 	iter->collection = NULL;
 	iter->context = NULL;
 
-	return TRUE;
+	return VISUAL_OK;
 }
 
 
@@ -100,7 +100,7 @@ VisCollectionSizeFunc visual_collection_get_size_func (VisCollection *collection
 	return collection->sizefunc;
 }
 
-int visual_collection_set_iterator_func (VisCollection *collection, VisCollectionIteratorFunc iterfunc)
+int visual_collection_set_iter_func (VisCollection *collection, VisCollectionIterFunc iterfunc)
 {
 	visual_log_return_val_if_fail (collection != NULL, -VISUAL_ERROR_COLLECTION_NULL);
 
@@ -109,7 +109,7 @@ int visual_collection_set_iterator_func (VisCollection *collection, VisCollectio
 	return VISUAL_OK;
 }
 
-VisCollectionIteratorFunc visual_collection_get_iterator_func (VisCollection *collection)
+VisCollectionIterFunc visual_collection_get_iter_func (VisCollection *collection)
 {
 	visual_log_return_val_if_fail (collection != NULL, NULL);
 
@@ -145,41 +145,26 @@ int visual_collection_size (VisCollection *collection)
 	return VISUAL_OK;
 }
 
-VisCollectionIterator *visual_collection_get_iterator_new (VisCollection *collection)
+VisCollectionIter *visual_collection_get_iter (VisCollection *collection)
 {
-	VisCollectionIterator *iter;
-
 	visual_log_return_val_if_fail (collection != NULL, NULL);
 
-	iter = visual_mem_new0 (VisCollectionIterator, 1);
-
-	visual_collection_get_iterator (iter, collection);
-
-	/* do the visobject initialization */
-	visual_object_set_allocated (VISUAL_OBJECT (iter), TRUE);
-	visual_object_ref (VISUAL_OBJECT (iter));
-
-	return iter;
-}
-
-int visual_collection_get_iterator (VisCollectionIterator *iter, VisCollection *collection)
-{
 	if (collection->iterfunc != NULL)
-		return collection->iterfunc (iter, collection);
+		return collection->iterfunc (collection);
 
-	return -VISUAL_ERROR_COLLECTION_ITERATOR_NULL;
+	return NULL;
 }
 
-VisCollectionIterator *visual_collection_iterator_new (
-		VisCollectionIteratorAssignFunc assignfunc, VisCollectionIteratorNextFunc nextfunc,
-		VisCollectionIteratorHasMoreFunc hasmorefunc, VisCollectionIteratorGetDataFunc getdatafunc,
+VisCollectionIter *visual_collection_iter_new (
+		VisCollectionIterAssignFunc assignfunc, VisCollectionIterNextFunc nextfunc,
+		VisCollectionIterHasMoreFunc hasmorefunc, VisCollectionIterGetDataFunc getdatafunc,
 		VisCollection *collection, VisObject *context)
 {
-	VisCollectionIterator *iter;
+	VisCollectionIter *iter;
 
-	iter = visual_mem_new0 (VisCollectionIterator, 1);
+	iter = visual_mem_new0 (VisCollectionIter, 1);
 
-	visual_collection_iterator_init (iter, assignfunc, nextfunc, hasmorefunc, getdatafunc, collection, context);
+	visual_collection_iter_init (iter, assignfunc, nextfunc, hasmorefunc, getdatafunc, collection, context);
 
 	/* do the visobject initialization */
 	visual_object_set_allocated (VISUAL_OBJECT (iter), TRUE);
@@ -188,19 +173,19 @@ VisCollectionIterator *visual_collection_iterator_new (
 	return iter;
 }
 
-int visual_collection_iterator_init (VisCollectionIterator *iter,
-		VisCollectionIteratorAssignFunc assignfunc, VisCollectionIteratorNextFunc nextfunc,
-		VisCollectionIteratorHasMoreFunc hasmorefunc, VisCollectionIteratorGetDataFunc getdatafunc,
+int visual_collection_iter_init (VisCollectionIter *iter,
+		VisCollectionIterAssignFunc assignfunc, VisCollectionIterNextFunc nextfunc,
+		VisCollectionIterHasMoreFunc hasmorefunc, VisCollectionIterGetDataFunc getdatafunc,
 		VisCollection *collection, VisObject *context)
 {
-	visual_log_return_val_if_fail (iter != NULL, -VISUAL_ERROR_COLLECTION_ITERATOR_NULL);
+	visual_log_return_val_if_fail (iter != NULL, -VISUAL_ERROR_COLLECTION_ITER_NULL);
 
 	/* Do the VisObject initialization */
 	visual_object_clear (VISUAL_OBJECT (iter));
 	visual_object_set_dtor (VISUAL_OBJECT (iter), NULL);
 	visual_object_set_allocated (VISUAL_OBJECT (iter), FALSE);
 
-	/* Set the VisCollectionIterator data */
+	/* Set the VisCollectionIter data */
 	iter->assignfunc = assignfunc;
 	iter->nextfunc = nextfunc;
 	iter->hasmorefunc = hasmorefunc;
@@ -214,7 +199,7 @@ int visual_collection_iterator_init (VisCollectionIterator *iter,
 	return VISUAL_OK;
 }
 
-void visual_collection_iterator_assign (VisCollectionIterator *iter, int index)
+void visual_collection_iter_assign (VisCollectionIter *iter, int index)
 {
 	visual_log_return_if_fail (iter != NULL);
 
@@ -223,7 +208,7 @@ void visual_collection_iterator_assign (VisCollectionIterator *iter, int index)
 }
 
 
-void visual_collection_iterator_next (VisCollectionIterator *iter)
+void visual_collection_iter_next (VisCollectionIter *iter)
 {
 	visual_log_return_if_fail (iter != NULL);
 
@@ -231,9 +216,9 @@ void visual_collection_iterator_next (VisCollectionIterator *iter)
 		iter->nextfunc (iter, iter->collection, iter->context);
 }
 
-int visual_collection_iterator_has_more (VisCollectionIterator *iter)
+int visual_collection_iter_has_more (VisCollectionIter *iter)
 {
-	visual_log_return_val_if_fail (iter != NULL, -VISUAL_ERROR_COLLECTION_ITERATOR_NULL);
+	visual_log_return_val_if_fail (iter != NULL, -VISUAL_ERROR_COLLECTION_ITER_NULL);
 
 	if (iter->hasmorefunc != NULL)
 		return iter->hasmorefunc (iter, iter->collection, iter->context);
@@ -241,7 +226,7 @@ int visual_collection_iterator_has_more (VisCollectionIterator *iter)
 	return FALSE;
 }
 
-void *visual_collection_iterator_get_data (VisCollectionIterator *iter)
+void *visual_collection_iter_get_data (VisCollectionIter *iter)
 {
 	visual_log_return_val_if_fail (iter != NULL, NULL);
 
