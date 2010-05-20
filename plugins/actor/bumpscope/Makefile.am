@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_bumpscope.la
 
-LIBS += $(LIBVISUAL_LIBS)
+actor_bumpscope_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS)
 

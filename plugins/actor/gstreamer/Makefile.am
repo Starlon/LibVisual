@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_gstreamer.la
 
-LIBS += $(LIBVISUAL_LIBS) $(GSTREAMER_LIBS)
+actor_gstreamer_la_LIBADD = $(LIBVISUAL_LIBS) $(GSTREAMER_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS) $(GSTREAMER_CFLAGS)
 

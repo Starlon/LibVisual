@@ -2,7 +2,7 @@
 
 input_plugin_LTLIBRARIES = input_alsa.la
 
-LIBS += $(ALSA_LIBS) $(LIBVISUAL_LIBS)
+input_alsa_la_LIBADD = $(ALSA_LIBS) $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(ALSA_CFLAGS) $(LIBVISUAL_CFLAGS)
 

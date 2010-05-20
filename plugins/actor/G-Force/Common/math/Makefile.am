@@ -15,7 +15,7 @@ INCLUDES = \
 
 ALLSOURCES = ExprArray.cpp ExprVirtualMachine.cpp Expression.cpp ExpressionDict.cpp FourierAnalyzer.cpp R3Matrix.cpp V3.cpp 
 
-LIBS = $(LIBVISUAL_LIBS)
+libmath_la_LIBADD = $(LIBVISUAL_LIBS)
 AM_CXXFLAGS = $(LIBVISUAL_CFLAGS)
 
 noinst_LTLIBRARIES = libmath.la

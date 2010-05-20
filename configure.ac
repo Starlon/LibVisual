@@ -3,7 +3,7 @@
 AC_PREREQ(2.57)
 
 m4_define([lv_plugins_version_major], [0])
-m4_define([lv_plugins_version_minor], [4])
+m4_define([lv_plugins_version_minor], [5])
 m4_define([lv_plugins_version_micro], [0])
 m4_define([lv_plugins_version], [lv_plugins_version_major.lv_plugins_version_minor.lv_plugins_version_micro])
 m4_define([lv_plugins_version_suffix], [lv_plugins_version_major.lv_plugins_version_minor])
@@ -14,7 +14,7 @@ AM_INIT_AUTOMAKE([1.7.0 dist-bzip2])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADER([config.h])
 
-m4_define([libvisual_required_version], [0.4.0])
+m4_define([libvisual_required_version], [lv_plugins_version])
 m4_define([esound_required_version], [0.2.28])
 m4_define([jack_required_version], [0.98.0])
 m4_define([gtk_required_version], [2.0])
@@ -41,9 +41,6 @@ PKG_CHECK_MODULES([LIBVISUAL], [libvisual_pkg >= libvisual_required_version],
 dnl C/C++ compilers
 AC_PROG_CC
 AC_PROG_CXX
-
-dnl Assembly compiler
-AM_PROG_AS
 
 dnl Check for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -92,7 +89,18 @@ AC_SUBST([DYNAMIC_LOADER_LIBS])
 
 dnl Libraries
 
+dnl List of plugins to build
+build_input_plugins=""
+build_actor_plugins=""
+build_morph_plugins=""
+
 dnl EsounD
+AC_ARG_ENABLE([esd], AS_HELP_STRING([--disable-esd],
+	[Do not build esound input plugin @<:@default=enabled@:>@]),
+	[ENABLE_INPUT_ESD=$enableval],
+	[ENABLE_INPUT_ESD=yes])
+
+if test "$ENABLE_INPUT_ESD" = "yes"; then
 PKG_CHECK_MODULES([LIBESD], [esound >= esound_required_version],
   [HAVE_ESD="yes"], [HAVE_ESD="no"])
 
@@ -101,8 +109,15 @@ if test "$HAVE_ESD" = "yes"; then
 else
   AC_MSG_WARN([*** EsounD not found or too old. The EsounD input plugin won't be built])
 fi
+fi
 
 dnl JACK
+AC_ARG_ENABLE([jack], AS_HELP_STRING([--disable-jack],
+	[Do not build jack input plugin @<:@default=enabled@:>@]),
+        [ENABLE_INPUT_JACK=$enableval],
+	[ENABLE_INPUT_JACK=yes])
+
+if test "$ENABLE_INPUT_JACK" = "yes"; then
 PKG_CHECK_MODULES([LIBJACK], [jack >= jack_required_version], [HAVE_JACK="yes"], [HAVE_JACK="no"])
 if test "$HAVE_JACK" = "yes"; then
   build_input_plugins="$build_input_plugins jack"
@@ -110,11 +125,7 @@ else
   AC_MSG_WARN([*** libjack is too old. You can download a newer version at
              http://jackit.sf.net/. The jackit input plugin won't be built])
 fi
-
-dnl List of plugins to build
-build_input_plugins=""
-build_actor_plugins=""
-build_morph_plugins=""
+fi
 
 dnl GdkPixbuf
 AC_ARG_ENABLE([gdkpixbuf-plugin],
@@ -130,7 +141,7 @@ if test "$ENABLE_PLUGIN_GDKPIXBUF" = "yes"; then
   if test "$HAVE_GTK" = "yes"; then
     build_actor_plugins="$build_actor_plugins gdkpixbuf"
   else
-    AC_MSG_WARN([*** GTK+ >= gtk_required_version is not found.
+    AC_MSG_WARN([*** GTK+ >= ${gtk_required_version} is not found.
 	  	The libvisual GdkPixbuf image loader plugin won't be build.
 		GdkPixbuf is included within gtk-2.0 and newer, which can be
 		downloaded at http://www.gtk.org/])
@@ -151,7 +162,7 @@ if test "$ENABLE_GSTREAMER_PLUGIN" = "yes"; then
   if test "$HAVE_GSTREAMER" = "yes"; then
     build_actor_plugins="$build_actor_plugins gstreamer"
   else
-    AC_MSG_WARN([*** GStreamer >= gst_required_version is not found.
+    AC_MSG_WARN([*** GStreamer >= ${gst_required_version} is not found.
 	  	The libvisual GStreamer viewer plugin won't be build.
 		GStreamer can be downloaded from http://www.gstreamer.org/])
   fi
@@ -199,10 +210,6 @@ CPPFLAGS=$CPPFLAGS_SAVE
 
 AC_SUBST([XF86VMODE_LIB])
 AM_CONDITIONAL([HAVE_XF86VMODE], [test "$HAVE_XF86VMODE" = "yes"])
-
-dnl x86
-AM_CONDITIONAL(ARCH_X86,test "$ARCH_TYPE" = "i386" || test "$ARCH_TYPE" = "i486" || test "$ARCH_TYPE" =
-"i586" || test "$ARCH_TYPE" = "i686" || test "$ARCH_TYPE" = "i86pc")
 
 dnl ALSA
 LV_ALSA_MIN_VERSION=0.9.0
@@ -312,22 +319,6 @@ if test "$ENABLE_MADSPIN" = "yes"; then
   fi
 fi
 
-dnl Dancing Particles
-AC_ARG_ENABLE([dancingparticles],
-  AS_HELP_STRING([--disable-dancingparticles],
-    [Do not build Dancing Particles plugin @<:@default=enabled@:>@]),
-  [ENABLE_DANCINGPARTICLES=$enableval],
-  [ENABLE_DANCINGPARTICLES=yes])
-
-if test "$ENABLE_DANCINGPARTICLES" = "yes"; then
-  if test "$HAVE_OPENGL" = "yes"; then
-    build_actor_plugins="$build_actor_plugins dancingparticles"
-  else
-    AC_MSG_WARN([*** No OpenGL found.
-		Dancing Particles plugin will not be built.])
-  fi
-fi
-
 dnl Pseudotoad Flower
 AC_ARG_ENABLE([flower],
   AS_HELP_STRING([--disable-flower],
@@ -341,22 +332,6 @@ if test "$ENABLE_FLOWER" = "yes"; then
   else
     AC_MSG_WARN([*** No OpenGL found.
 		Pseudotoad Flower plugin will not be built.])
-  fi
-fi
-
-dnl Nebulus
-AC_ARG_ENABLE([nebulus],
-  AS_HELP_STRING([--disable-nebulus],
-    [Do not build Nebulus plugin @<:@default=enabled@:>@]),
-  [ENABLE_NEBULUS=$enableval],
-  [ENABLE_NEBULUS=yes])
-
-if test "$ENABLE_NEBULUS" = "yes"; then
-  if test "$HAVE_OPENGL" = "yes"; then
-    build_actor_plugins="$build_actor_plugins nebulus"
-  else
-    AC_MSG_WARN([*** No OpenGL found.
-		Nebulus plugin will not be built.])
   fi
 fi
 
@@ -400,19 +375,8 @@ AC_ARG_ENABLE([analyzer],
   [ENABLE_ANALYZER=$enableval],
   [ENABLE_ANALYZER=yes])
 
-if test "$ENABLE_ANALYZER" = xyes; then
+if test "x$ENABLE_ANALYZER" = "xyes"; then
   build_actor_plugins="$build_actor_plugins lv_analyzer"
-fi
-
-dnl Finespectrum
-AC_ARG_ENABLE([finespectrum],
-  AS_HELP_STRING([--disable-finespectrum],
-    [Do not build Finespectrum plugin @<:@default=enabled@:>@]),
-  [ENABLE_FINESPECTRUM=$enableval],
-  [ENABLE_FINESPECTRUM=yes])
-
-if test "$ENABLE_FINESPECTRUM" = "yes"; then
-  build_actor_plugins="$build_actor_plugins finespectrum"
 fi
 
 dnl Scope
@@ -448,17 +412,6 @@ if test "$ENABLE_JAKDAW" = "yes"; then
   build_actor_plugins="$build_actor_plugins jakdaw"
 fi
 
-dnl Plazma
-AC_ARG_ENABLE([plazma],
-  AS_HELP_STRING([--disable-plazma],
-    [Do not build plazma plugin @<:@default=enabled@:>@]),
-  [ENABLE_PLAZMA=$enableval],
-  [ENABLE_PLAZMA=yes])
-
-if test "$ENABLE_PLAZMA" = "yes"; then
-  build_actor_plugins="$build_actor_plugins plazma"
-fi
-
 dnl Bumpscope
 AC_ARG_ENABLE([bumpscope],
   AS_HELP_STRING([--disable-bumpscope],
@@ -483,17 +436,6 @@ if test "$ENABLE_GFORCE" = "yes"; then
   # Special flags for G-Force, make this only for G-Force FIXME FIXME!!! 
   GFORCE_CFLAGS="-DUNIX_X -D_REENTRANT"
   AC_SUBST([GFORCE_FLAGS])
-fi
-
-dnl goom2k4
-AC_ARG_ENABLE([goom2k4],
-  AS_HELP_STRING([--disable-goom2k4],
-    [Do not build goom2k4 plugin @<:@default=enabled@:>@]),
-    [ENABLE_GOOM2K4=$enableval],
-    [ENABLE_GOOM2K4=yes])
-
-if test "$ENABLE_GOOM2K4" = "yes"; then
-  build_actor_plugins="$build_actor_plugins goom2k4"
 fi
 
 dnl Alphabend
@@ -587,7 +529,7 @@ fi
 AC_SUBST(OPT_CFLAGS)
 
 AC_SUBST(CFLAGS, "${CFLAGS} ${DEBUG_CFLAGS} ${OPT_CFLAGS} ${GFORCE_CFLAGS}")
-AC_SUBST(CXXFLAGS, "${CFLAGS} ${DEBUG_CFLAGS} ${OPT_CFLAGS} ${GFORCE_CFLAGS}")
+AC_SUBST(CXXFLAGS, "${CXXFLAGS} ${DEBUG_CFLAGS} ${OPT_CFLAGS} ${GFORCE_CFLAGS}")
 
 dnl Plugin installation paths
 
@@ -618,10 +560,7 @@ AC_CONFIG_FILES([
 	plugins/actor/Makefile
 	plugins/actor/bumpscope/Makefile
 	plugins/actor/corona/Makefile
-	plugins/actor/dancingparticles/Makefile
-	plugins/actor/finespectrum/Makefile
 	plugins/actor/gdkpixbuf/Makefile
-	plugins/actor/goom2k4/Makefile
 	plugins/actor/gstreamer/Makefile
 	plugins/actor/infinite/Makefile
 	plugins/actor/jakdaw/Makefile
@@ -631,9 +570,7 @@ AC_CONFIG_FILES([
 	plugins/actor/lv_scope/Makefile
 	plugins/actor/madspin/Makefile
 	plugins/actor/nastyfft/Makefile
-	plugins/actor/nebulus/Makefile
 	plugins/actor/oinksie/Makefile
-	plugins/actor/plazma/Makefile
 	plugins/actor/pseudotoad_flower/Makefile
 	plugins/actor/G-Force/Makefile
 	plugins/actor/G-Force/docs/Makefile
@@ -657,14 +594,12 @@ AC_CONFIG_FILES([
 	plugins/actor/G-Force/GForceParticles/Makefile
 	plugins/actor/G-Force/GForceWaveShapes/Makefile
 	plugins/actor/G-Force/NotWorkingWaveShapes/Makefile
-    plugins/actor/blursk/Makefile
 	plugins/input/Makefile
 	plugins/input/esd/Makefile
 	plugins/input/alsa/Makefile
 	plugins/input/mplayer/Makefile
 	plugins/input/jack/Makefile
 	plugins/input/debug/Makefile
-    plugins/input/xmms2/Makefile
 	plugins/morph/Makefile
 	plugins/morph/alphablend/Makefile
 	plugins/morph/tentacle/Makefile

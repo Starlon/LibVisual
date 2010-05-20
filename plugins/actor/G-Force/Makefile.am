@@ -4,7 +4,7 @@ SUBDIRS = Common GForceCommon unix GForceColorMaps \
 
 actor_plugin_LTLIBRARIES = actor_gforce.la
 
-LIBS = $(LIBVISUAL_LIBS)
+actor_gforce_la_LIBADD = $(LIBVISUAL_LIBS)
 
 INCLUDES = $(all_includes) -I$(top_srcdir)
 

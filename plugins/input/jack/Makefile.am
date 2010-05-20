@@ -2,7 +2,7 @@
 
 input_plugin_LTLIBRARIES = input_jack.la
 
-LIBS += $(LIBJACK_LIBS) $(LIBVISUAL_LIBS)
+input_jack_la_LIBADD = $(LIBJACK_LIBS) $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBJACK_CFLAGS) $(LIBVISUAL_CFLAGS)
 

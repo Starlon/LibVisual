@@ -459,9 +459,6 @@ long ScreenDevice::GetDisplayID( long inDeviceNum ) {
 	//#pragma unused( inX, inY )
 	return 0;
 	#endif
-
-	// FIXME: Need implementation for UNIX_X
-	return 0;
 }
 	
 	
@@ -511,8 +508,5 @@ long ScreenDevice::GetDisplayID( long inX, long inY ) {
 	#pragma unused( inX, inY )
 	return 0;
 	#endif
-
-	// FIXME: Need implementation for UNIX_X
-	return 0;
 }
 

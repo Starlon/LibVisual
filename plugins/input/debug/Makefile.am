@@ -2,7 +2,7 @@
 
 input_plugin_LTLIBRARIES = input_debug.la
 
-LIBS += $(LIBVISUAL_LIBS)
+input_debug_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS)
 

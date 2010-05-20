@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_corona.la
 
-LIBS += $(LIBVISUAL_LIBS)
+actor_corona_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CXXFLAGS = $(LIBVISUAL_CFLAGS)
 

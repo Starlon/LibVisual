@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_lv_scope.la
 
-LIBS += $(LIBVISUAL_LIBS)
+actor_lv_scope_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS)
 

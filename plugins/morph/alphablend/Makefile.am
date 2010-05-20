@@ -2,7 +2,7 @@
 
 morph_plugin_LTLIBRARIES = morph_alphablend.la
 
-LIBS += $(LIBVISUAL_LIBS)
+morph_alphablend_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS)
 

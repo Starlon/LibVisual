@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_JESS.la
 
-LIBS += $(LIBVISUAL_LIBS)
+actor_JESS_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS)
 

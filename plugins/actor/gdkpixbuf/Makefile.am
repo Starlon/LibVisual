@@ -2,7 +2,7 @@
 
 actor_plugin_LTLIBRARIES = actor_gdkpixbuf.la
 
-LIBS += $(LIBVISUAL_LIBS) $(GTK_LIBS)
+actor_gdkpixbuf_la_LIBADD = $(LIBVISUAL_LIBS) $(GTK_LIBS)
 
 AM_CFLAGS = $(LIBVISUAL_CFLAGS) $(GTK_CFLAGS)
 

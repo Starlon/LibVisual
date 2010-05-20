@@ -2,7 +2,7 @@
 
 input_plugin_LTLIBRARIES = input_esd.la
 
-LIBS += $(LIBESD_LIBS) $(LIBVISUAL_LIBS)
+input_esd_la_LIBADD = $(LIBESD_LIBS) $(LIBVISUAL_LIBS)
 
 AM_CFLAGS = $(LIBESD_CFLAGS) $(LIBVISUAL_CFLAGS)
 

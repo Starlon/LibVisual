@@ -4,7 +4,7 @@ noinst_LTLIBRARIES = libactor_gforce.la
 
 GFORCE_TOP_SRCDIR = $(top_srcdir)/plugins/actor/G-Force
 
-LIBS = $(LIBVISUAL_LIBS)
+libactor_gforce_la_LIBADD = $(LIBVISUAL_LIBS)
 
 AM_CXXFLAGS = $(LIBVISUAL_CFLAGS)
 
