@@ -8,10 +8,10 @@ output = visualCflags + " -I js/src/"
 
 env = Environment(CCFLAGS = Split("-g -Wall -DXP_UNIX " + output))
 
-visualLdflags, visualLdflagse = subprocess.Popen(["pkg-config", "--libs", "libvisual-0.4"],
+visualLdflags, visualLdflagse = subprocess.Popen(["pkg-config", "--libs", "libvisual-0.5"],
     stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 
-output = visualLdflags + " js/src/Linux_All_DBG.OBJ/libjs.a"
+output = visualLdflags + " libjs.a"
 
 libs = env.ParseFlags(Split(output));
 env.MergeFlags(libs)

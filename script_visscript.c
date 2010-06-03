@@ -59,15 +59,15 @@ void * get_context(VisPluginData *plugin)
 	VisscriptPrivate *priv = visual_object_get_private(VISUAL_OBJECT(plugin));
 	JSObject *global;
 
-	JSContext ctx = JS_NewContext(priv->rt, 8192);
+	JSContext *ctx = JS_NewContext(priv->rt, 8192);
 
-	JS_SetOPtions(ctx, JSOPTION_VAROBJFIX);
+	JS_SetOptions(ctx, JSOPTION_VAROBJFIX);
 	JS_SetVersion(ctx, JSVERSION_LATEST);
 	//JS_SetError(ctx, reportError);
 
 	global = JS_NewObject(ctx, &global_class, NULL, NULL);
 
-	JS_DefineFunctions(ctx, global, global_functions)
+	JS_DefineFunctions(ctx, global, global_functions);
 
 	return ctx;
 }
