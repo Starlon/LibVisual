@@ -6,6 +6,8 @@
 #include "jsapi.h"
 #include "script_visscript.h"
 
+VISUAL_PLUGIN_API_VERSION_VALIDATOR
+
 typedef struct {
 	JSRuntime *rt;
 } VisscriptPrivate;
@@ -68,6 +70,8 @@ void * get_data(VisPluginData *plugin)
 	VisscriptPrivate *priv = visual_object_get_private(VISUAL_OBJECT(plugin));
         PrivateDataOut *data = visual_mem_new0(PrivateDataOut, 1);
 
+        visual_log_return_val_if_fail(priv != NULL, NULL);
+
         visual_object_set_dtor (VISUAL_OBJECT(data), data_dtor);
         visual_object_set_allocated (VISUAL_OBJECT(data), TRUE);
 
@@ -86,7 +90,7 @@ void * get_data(VisPluginData *plugin)
 
         visual_log_return_val_if_fail(JS_InitStandardClasses(ctx, global), NULL);
 
-	visual_log_return_val_if_fail(JS_DefineFunctions(ctx, global, global_functions), NULL);
+	//visual_log_return_val_if_fail(JS_DefineFunctions(ctx, global, global_functions), NULL);
 
         data->ctx = ctx;
         data->global = global;
@@ -103,10 +107,12 @@ const VisPluginInfo *get_plugin_info(int *count)
 
 	static VisPluginInfo info[] = {{
 		.type = VISUAL_PLUGIN_TYPE_SCRIPT,
+                .plugname = "visscript",
 		.name = "VisScript plugin",
 		.author = "Scott Sibley <starlon@sf.net>",
 		.version = "0.1",
 		.about = "Libvisual javascript plugin",
+                .help = "SpiderMonkey Javascript plugin",
 		.license = VISUAL_PLUGIN_LICENSE_GPL,
 		.init = script_visscript_init,
 		.cleanup = script_visscript_cleanup,
@@ -115,6 +121,7 @@ const VisPluginInfo *get_plugin_info(int *count)
 
 	*count = sizeof(info) / sizeof(*info);
 
+        printf("bleh --------- %p\n", info[0].plugin);
 	return info;
 }
 
