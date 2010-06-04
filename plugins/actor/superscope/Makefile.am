@@ -1,17 +1,23 @@
 ## Process this file with automake to generate a Makefile.in
 
-actor_plugin_LTLIBRARIES = actor_superscope.la
+lib_LTLIBRARIES = $(AVS_SUPERSCOPE)
 
-actor_superscope_la_LIBADD = $(LIBVISUAL_LIBS)
+EXTRA_LTLIBRARIES = actor_avs_superscope.la
 
-AM_CFLAGS = $(LIBVISUAL_CFLAGS)
+libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
-INCLUDES = $(all_includes) -I$(top_srcdir) 
+LIBS += -L. -L$(prefix)/lib @LIBVISUAL_LIBS@
 
-actor_superscope_la_LDFLAGS = -module -avoid-version 
+AM_CFLAGS = @LIBVISUAL_CFLAGS@ -DXP_UNIX
 
-actor_superscope_la_SOURCES = actor_superscope.c \
-			  actor_superscope.h \
-			  bump_scope.c \
-			  bump_scope.h
+INCLUDES = $(all_includes) \
+	-I$(top_srcdir) \
+	-I$(top_srcdir)/../libvisual-avs/common/ \
+	-Ijs/src/
+
+actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
+
+actor_avs_superscope_la_SOURCES = actor_avs_superscope.c
+
+actor_avs_superscope_la_LIBADD = libjs.a
 
