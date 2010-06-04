@@ -32,7 +32,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include "jscntxt.h"
 #include "jsapi.h"
+#include "script_visscript.h"
 
 #include <libvisual/libvisual.h>
 
@@ -77,6 +79,11 @@ typedef struct {
     AvsRunnable         *runnable[4];
     AvsGlobalProxy      *proxy;
     */
+
+    JSContext *ctx;
+    JSObject *global;
+    JSScript *runnable[4];
+
     double n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode; 
 
     char            *point;
@@ -91,11 +98,10 @@ typedef struct {
     int             needs_init;
 
     VisAudio    *audio;
+    PrivateDataOut *data;
 
     //AVSGfxColorCycler   *cycler;
 } SuperScopePrivate;
-
-SuperScopePrivate *priv;
 
 int lv_superscope_init (VisPluginData *plugin);
 int lv_superscope_cleanup (VisPluginData *plugin);
@@ -143,6 +149,8 @@ const VisPluginInfo *get_plugin_info (int *count)
 
 JSBool prop_getter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
+    SuperScopePrivate *priv = cx->data;
+
     if (JSVAL_IS_INT(idval)) {
         switch(JSVAL_TO_INT(idval)) {
             case MY_N: 
@@ -197,6 +205,8 @@ JSBool prop_getter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 
 JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
+    SuperScopePrivate *priv = cx->data;
+
     if (JSVAL_IS_INT(idval)) {
         switch(JSVAL_TO_INT(idval)) {
             case MY_N: 
@@ -251,17 +261,20 @@ JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 }
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
-{
-    /*AvsRunnable *obj = avs_runnable_new(priv->ctx);
-    avs_runnable_set_variable_manager(obj, priv->vm);
-    priv->runnable[runnable] = obj;
-    avs_runnable_compile(obj, (unsigned char *)buf, strlen(buf));
-    */
+{extern JS_PUBLIC_API(JSScript *)
+JS_CompileScript(JSContext *cx, JSObject *obj,
+                 const char *bytes, size_t length,
+                 const char *filename, uintN lineno);
+
+    JSScript *script = JS_CompileScript(priv->ctx, priv->global, buf, len(buf), "script", 0); 
+    priv->runnable[runnable] = script;
+
     return 0;
 }
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
+    //JS_EvaluateScript(priv->ctx, priv->global, priv->runnable[runnable]);
     /*priv->runnable[runnable]->audio = priv->audio;
     avs_runnable_execute(priv->runnable[runnable]);
     */
@@ -271,10 +284,14 @@ int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 
 int lv_superscope_init (VisPluginData *plugin)
 {
+    SuperScopePrivate *priv;
+    VisScript *script;
+    JSContext *ctx;
+
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     int i;
 
-    visual_log_return_val_if_fail(priv != NULL, -VISUAL_ERROR_GENERAL);
+    visual_log_return_val_if_fail(priv != NULL, -VISUAL_ERROR_GENERAL); // Allow only one script plugin
 
     static VisParamEntry params[] = {
         VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4; x = cos(r)*d; y = sin(r) * d;"),
@@ -289,8 +306,17 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_param_container_add_many (paramcontainer, params);
     
+    script = visual_script_get_script(0);
+
+    visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
+    
+    priv->data = VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
+
+    visual_log_return_val_if_fail(ctx != NULL, -VISUAL_ERROR_GENERAL);
 
     priv = visual_mem_new0 (SuperScopePrivate, 1);
+
+    ctx->data = (void *)priv;
 
     //priv->proxy = visual_object_get_private(VISUAL_OBJECT(plugin));
     //visual_object_ref(VISUAL_OBJECT(priv->proxy));
