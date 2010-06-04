@@ -65,9 +65,14 @@ void * get_context(VisPluginData *plugin)
 	JS_SetVersion(ctx, JSVERSION_LATEST);
 	//JS_SetError(ctx, reportError);
 
-	global = JS_NewObject(ctx, &global_class, NULL, NULL);
 
-	JS_DefineFunctions(ctx, global, global_functions);
+        global = JS_NewObject(ctx, &global_class, NULL, NULL);;
+
+        visual_log_return_val_if_fail(global != NULL, NULL);
+
+        visual_log_return_val_if_fail(JS_InitStandardClasses(ctx, global), NULL);
+
+	visual_log_return_val_if_fail(JS_DefineFunctions(ctx, global, global_functions), NULL);
 
 	return ctx;
 }
