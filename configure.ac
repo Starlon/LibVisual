@@ -316,7 +316,6 @@ AC_SUBST(DATADIR, "$datadir")
 AC_CONFIG_FILES([
 	Makefile
 	common/Makefile
-	visscript/Makefile
 	src/Makefile
 	plugins/Makefile
 	plugins/actor/Makefile
