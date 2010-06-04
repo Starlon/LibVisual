@@ -40,7 +40,7 @@ void * get_data(VisPluginData *plugin)
 	VisscriptPrivate *priv = (VisscriptPrivate *)visual_object_get_private(VISUAL_OBJECT(plugin));
         PrivateDataOut *data = (PrivateDataOut *)visual_mem_new0(PrivateDataOut, 1);
         Handle<ObjectTemplate> global;
-        Persistent<Context> *context;
+        Persistent<Context> context;
 
         visual_log_return_val_if_fail(priv != NULL, NULL);
 
@@ -48,8 +48,11 @@ void * get_data(VisPluginData *plugin)
         visual_object_set_allocated (VISUAL_OBJECT(data), TRUE);
 
         global = ObjectTemplate::New();
-        context = &Context::New(NULL, global);
-        data->context = (void *)context;
+        context = Context::New(NULL, global);
+
+        data->global = global;
+        data->context = context;
+
         global->Set(String::New("log"), FunctionTemplate::New(function_log));
         global->Set(String::New("sin"), FunctionTemplate::New(function_sin));
         global->Set(String::New("cos"), FunctionTemplate::New(function_cos));
@@ -60,7 +63,7 @@ void * get_data(VisPluginData *plugin)
         global->Set(String::New("if"), FunctionTemplate::New(function_if));
         global->Set(String::New("div"), FunctionTemplate::New(function_div));
         global->Set(String::New("rand"), FunctionTemplate::New(function_rand));
-        //data->global = (void *)global;
+
 	return data;
 }
 

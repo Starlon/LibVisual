@@ -3,10 +3,12 @@
 
 #include <libvisual/libvisual.h>
 
+#include <v8.h>
+
 typedef struct {
     VisObject object;
-    void *context;
-    void *global;
+    v8::Handle<v8::ObjectTemplate> global;
+    v8::Persistent<v8::Context> context;
 } PrivateDataOut;
 
 #define PRIVATE_DATA(obj)   (VISUAL_CHECK_CAST ((obj), PrivateDataOut))
