@@ -121,7 +121,6 @@ const VisPluginInfo *get_plugin_info(int *count)
 
 	*count = sizeof(info) / sizeof(*info);
 
-        printf("bleh --------- %p\n", info[0].plugin);
 	return info;
 }
 
