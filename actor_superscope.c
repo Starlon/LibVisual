@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include "jsscript.h"
 #include "jscntxt.h"
 #include "jsapi.h"
 #include "script_visscript.h"
@@ -47,6 +48,10 @@ enum scope_runnable {
     SCOPE_RUNNABLE_FRAME,
     SCOPE_RUNNABLE_BEAT,
     SCOPE_RUNNABLE_POINT,
+};
+
+static char *scope_fields[] = {
+    "INIT", "FRAME", "BEAT", "POINT"
 };
 
 JSBool prop_getter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp);
@@ -261,12 +266,12 @@ JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 }
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
-{extern JS_PUBLIC_API(JSScript *)
-JS_CompileScript(JSContext *cx, JSObject *obj,
-                 const char *bytes, size_t length,
-                 const char *filename, uintN lineno);
+{
+    JSScript *script = JS_CompileScript(priv->ctx, priv->global, buf, strlen(buf), scope_fields[runnable], 0); 
 
-    JSScript *script = JS_CompileScript(priv->ctx, priv->global, buf, len(buf), "script", 0); 
+    //JSObject *scrobj = JS_NewScriptObject(priv->ctx, script);
+    //JS_AddNamedRoot(priv->ctx, &scrobj, "scrobj");
+
     priv->runnable[runnable] = script;
 
     return 0;
@@ -274,24 +279,19 @@ JS_CompileScript(JSContext *cx, JSObject *obj,
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
-    //JS_EvaluateScript(priv->ctx, priv->global, priv->runnable[runnable]);
-    /*priv->runnable[runnable]->audio = priv->audio;
-    avs_runnable_execute(priv->runnable[runnable]);
-    */
+    jsval result;
+    JS_ExecuteScript(priv->ctx, priv->global, priv->runnable[runnable], &result);
+
     return 0;
 }
 
 
 int lv_superscope_init (VisPluginData *plugin)
 {
-    SuperScopePrivate *priv;
     VisScript *script;
-    JSContext *ctx;
-
-    VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     int i;
-
-    visual_log_return_val_if_fail(priv != NULL, -VISUAL_ERROR_GENERAL); // Allow only one script plugin
+    VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
+    SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
 
     static VisParamEntry params[] = {
         VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4; x = cos(r)*d; y = sin(r) * d;"),
@@ -312,11 +312,13 @@ int lv_superscope_init (VisPluginData *plugin)
     
     priv->data = VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
 
-    visual_log_return_val_if_fail(ctx != NULL, -VISUAL_ERROR_GENERAL);
+    visual_log_return_val_if_fail((priv->data && priv->data->ctx != NULL), -VISUAL_ERROR_GENERAL);
 
     priv = visual_mem_new0 (SuperScopePrivate, 1);
 
-    ctx->data = (void *)priv;
+    priv->data->ctx->data = (void *)priv;
+
+    JS_DefineProperties(priv->data->ctx, priv->data->global, my_props);
 
     //priv->proxy = visual_object_get_private(VISUAL_OBJECT(plugin));
     //visual_object_ref(VISUAL_OBJECT(priv->proxy));
@@ -511,7 +513,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     //AvsGlobalProxy *proxy = priv->proxy;
     uint32_t *buf = visual_video_get_pixels (video);
     int isBeat;
-    int i;
 
     VisBuffer pcm;
     float pcmbuf[1024];
@@ -542,9 +543,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     int a, l, lx = 0, ly = 0, x = 0, y = 0;
     int32_t current_color;
-    int ws=(priv->channel_source&4)?1:0;
-    int xorv=(ws*128)^128;
-    uint16_t fa_data[576];
+    //int ws=(priv->channel_source&4)?1:0;
+    //int xorv=(ws*128)^128;
+    //uint16_t fa_data[576];
 
     priv->color_pos++;
 
@@ -583,7 +584,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if (isBeat)
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
 
-    int candraw=0;
+    //int candraw=0;
     l = priv->n;
     if (l > 128*1024)
         l = 128*1024;
@@ -591,8 +592,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     for (a=0; a < l; a++) 
     {
-        double r=(a*576.0)/l;
-        double s1=r-(int)r;
+        //double r=(a*576.0)/l;
+        //double s1=r-(int)r;
         //double yr=(fa_data[(int)r]^xorv)*(1.0f-s1)+(fa_data[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
         priv->v = pcmbuf[a * 288 / l];
