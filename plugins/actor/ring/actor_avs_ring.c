@@ -99,12 +99,12 @@ int lv_ring_init (VisPluginData *plugin)
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 	int i;
 
-	static VisParamEntryProxy params[] = {
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("source", 1, VISUAL_PARAM_LIMIT_NONE, ""),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("place", 2, VISUAL_PARAM_LIMIT_NONE, ""),
+	static VisParamEntry params[] = {
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("source", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("place", 2),
 		VISUAL_PARAM_LIST_ENTRY ("palette"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("size", 0x10, VISUAL_PARAM_LIMIT_NONE, ""),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("type", 0, VISUAL_PARAM_LIMIT_NONE, ""),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("size", 0x10),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("type", 0),
 		VISUAL_PARAM_LIST_END
 	};
 
@@ -119,7 +119,7 @@ int lv_ring_init (VisPluginData *plugin)
 		priv->pal.colors[i].b = 0xff;
 	}
 
-	visual_param_container_add_many_proxy (paramcontainer, params);
+	visual_param_container_add_many (paramcontainer, params);
 
 	visual_param_entry_set_palette (visual_param_container_get (paramcontainer, "palette"), &priv->pal);
 

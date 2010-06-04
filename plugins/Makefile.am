@@ -1,3 +1,3 @@
 
-SUBDIRS = actor transform
+SUBDIRS = actor
 

@@ -308,11 +308,17 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
     
+    printf("plugin x 2 %p\n", script->plugin->info);
     priv->data = VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
 
-    visual_log_return_val_if_fail((priv->data && priv->data->ctx != NULL), -VISUAL_ERROR_GENERAL);
+    printf("data %p\n", priv->data);
 
-    priv = visual_mem_new0 (SuperScopePrivate, 1);
+    priv->ctx = priv->data->ctx;
+
+    printf("priv->ctx %p\n", priv->ctx);
+    priv->global = priv->data->global;
+
+    visual_log_return_val_if_fail((priv->data && priv->data->ctx != NULL), -VISUAL_ERROR_GENERAL);
 
     priv->proxy = visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->proxy));
@@ -527,7 +533,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
             1.0);
 
 
-    isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, pcmbuf, 1024);
+    isBeat = 1; //visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, pcmbuf, 1024);
 
     /* Provide audio for AvsRunnable */
     priv->audio = audio;

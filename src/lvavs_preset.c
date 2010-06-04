@@ -255,13 +255,13 @@ LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem)
 	VisParamContainer *pcont;
 	VisParamContainer *pcontw;
 
-	static VisParamEntryProxy params[] = {
+	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY ("clear screen"),
 		VISUAL_PARAM_LIST_END
 	};
 
 	pcont = visual_param_container_new ();
-	visual_param_container_add_many_proxy (pcont, params);
+	visual_param_container_add_many (pcont, params);
 
 	pcontw = avselem->pcont;
 
@@ -281,7 +281,7 @@ LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem)
 	VisParamContainer *pcontw;
 	int sourceplace;
 
-	static VisParamEntryProxy params[] = {
+	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY ("source"),
 		VISUAL_PARAM_LIST_ENTRY ("place"),
 		VISUAL_PARAM_LIST_ENTRY ("palette"),
@@ -291,7 +291,7 @@ LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem)
 	};
 
 	pcont = visual_param_container_new ();
-	visual_param_container_add_many_proxy (pcont, params);
+	visual_param_container_add_many (pcont, params);
 
 	pcontw = avselem->pcont;
 
@@ -316,14 +316,14 @@ LVAVSPresetElement *wavs_convert_channelshift_new (AVSElement *avselem)
 	VisParamContainer *pcontw;
 	int shift;
 
-	static VisParamEntryProxy params[] = {
+	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY ("shift"),
 		VISUAL_PARAM_LIST_ENTRY ("onbeat"),
 		VISUAL_PARAM_LIST_END
 	};
 
 	pcont = visual_param_container_new ();
-	visual_param_container_add_many_proxy (pcont, params);
+	visual_param_container_add_many (pcont, params);
 
 	pcontw = avselem->pcont;
 

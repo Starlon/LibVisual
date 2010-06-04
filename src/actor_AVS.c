@@ -85,20 +85,23 @@ const VisPluginInfo *get_plugin_info (int *count)
 int act_avs_init (VisPluginData *plugin)
 {
 	AVSPrivate *priv;
+        VisScript *script;
 
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 
-	static VisParamEntryProxy params[] = {
+	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
-				"/home/starlon/Projects/libvisual-svn/trunk/libvisual-avs/testpresets/bump3d.avs", ""),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("winamp avs", 1, VISUAL_PARAM_LIMIT_NONE, ""),
+				"/home/scott/Projects/libvisual/branches/libvisual-avs/testpresets/superscope.avs"),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("winamp avs", 1),
 		VISUAL_PARAM_LIST_END
 	};
 
-	visual_param_container_add_many_proxy (paramcontainer, params);
+	visual_param_container_add_many (paramcontainer, params);
 
 	priv = visual_mem_new0 (AVSPrivate, 1);
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
+
+        script = visual_script_new("visscript");
 
 	return 0;
 }
@@ -168,7 +171,7 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 			case VISUAL_EVENT_MOUSEMOTION:
 			case VISUAL_EVENT_MOUSEBUTTONDOWN:
 			case VISUAL_EVENT_MOUSEBUTTONUP:
-			case VISUAL_EVENT_TOUCH:
+			//case VISUAL_EVENT_TOUCH:
 			case VISUAL_EVENT_NEWSONG:
 			case VISUAL_EVENT_QUIT:
 			case VISUAL_EVENT_GENERIC:
@@ -215,11 +218,11 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 
 						visual_list_add (preset->main->members,
 								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,
-									"touch"));
+									"superscope"));
 
-						visual_list_add (preset->main->members,
-								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,
-									"avs_movement"));
+//						visual_list_add (preset->main->members,
+//								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,
+//									"avs_movement"));
 
 //						visual_list_add (preset->main->members,
 //								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,

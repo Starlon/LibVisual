@@ -34,7 +34,7 @@ typedef struct _AvsGlobalProxy {
 
     AvsMultidelayGlobals *multidelay;
 
-    char path[];
+    char *path;
 };
 
 struct _AvsMultidelayGlobals {
