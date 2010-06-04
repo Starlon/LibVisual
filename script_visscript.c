@@ -3,8 +3,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include "jstypes.h"
 #include "jsapi.h"
+#include "script_visscript.h"
 
 typedef struct {
 	JSRuntime *rt;
@@ -54,9 +54,23 @@ static JSFunctionSpec global_functions[] = {
 	JS_FS_END
 };
 
-void * get_context(VisPluginData *plugin)
+static int data_dtor(VisObject *object)
+{
+    PrivateDataOut *data = PRIVATE_DATA(object);
+
+    JS_DestroyContext(data->ctx);
+
+    return VISUAL_OK;
+}
+
+void * get_data(VisPluginData *plugin)
 {
 	VisscriptPrivate *priv = visual_object_get_private(VISUAL_OBJECT(plugin));
+        PrivateDataOut *data = visual_mem_new0(PrivateDataOut, 1);
+
+        visual_object_set_dtor (VISUAL_OBJECT(data), data_dtor);
+        visual_object_set_allocated (VISUAL_OBJECT(data), TRUE);
+
 	JSObject *global;
 
 	JSContext *ctx = JS_NewContext(priv->rt, 8192);
@@ -74,14 +88,17 @@ void * get_context(VisPluginData *plugin)
 
 	visual_log_return_val_if_fail(JS_DefineFunctions(ctx, global, global_functions), NULL);
 
-	return ctx;
+        data->ctx = ctx;
+        data->global = global;
+
+	return data;
 }
 
 const VisPluginInfo *get_plugin_info(int *count)
 {
 
 	static VisScriptPlugin script[] = {{
-		.get_context = get_context
+		.get_data = get_data
 	}};
 
 	static VisPluginInfo info[] = {{
