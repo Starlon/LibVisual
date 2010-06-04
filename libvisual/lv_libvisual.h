@@ -26,6 +26,7 @@
 
 #include <libvisual/lv_param.h>
 #include <libvisual/lv_ui.h>
+#include <libvisual/lv_script.h>
 
 VISUAL_BEGIN_DECLS
 
