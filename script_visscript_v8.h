@@ -7,8 +7,9 @@
 
 typedef struct {
     VisObject object;
-    v8::Handle<v8::ObjectTemplate> global;
+    v8::Persistent<v8::ObjectTemplate> global;
     v8::Persistent<v8::Context> context;
+    v8::Local<v8::Object> obj;
 } PrivateDataOut;
 
 #define PRIVATE_DATA(obj)   (VISUAL_CHECK_CAST ((obj), PrivateDataOut))
