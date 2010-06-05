@@ -1,0 +1,24 @@
+import subprocess
+import sys
+
+visualCflags, visualCflagse = subprocess.Popen(["pkg-config", "--cflags", "libvisual-0.5"],
+    stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+
+output = visualCflags + " -I ../../../../visscript-v8/ -I ../../../../visscript-v8/v8/include/ -I ../../../common/ -I ../../../"
+
+env = Environment(CCFLAGS = Split("-g -Wall " + output))
+
+visualLdflags, visualLdflagse = subprocess.Popen(["pkg-config", "--libs", "libvisual-0.5"],
+    stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+
+output = visualLdflags + " ../../../../visscript-v8/v8/libv8.a"
+
+libs = env.ParseFlags(Split(output));
+env.MergeFlags(libs)
+
+plugin = env.SharedLibrary(["actor_avs_superscope.cpp"]);
+
+env.Install("/usr/lib/libvisual-0.5/actor/", plugin);
+env.Alias('install', '/usr/lib/libvisual-0.5/actor')
+
+
