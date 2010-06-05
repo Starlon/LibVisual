@@ -24,6 +24,7 @@ typedef struct _AvsMultidelayGlobals AvsMultidelayGlobals;
 
 typedef struct _AvsGlobalProxy {
     VisObject obj;
+    VisScript *script;
     unsigned char   blendtable[256][256];
     int reset_vars_on_recompile;
     int line_blend_mode;

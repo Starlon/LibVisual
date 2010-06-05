@@ -32,14 +32,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include "jsscript.h"
-#include "jscntxt.h"
-#include "jsapi.h"
-#include "avs_common.h"
-#include "script_visscript.h"
-
 #include <libvisual/libvisual.h>
+#include <script_visscript_v8.h>
+#include <v8.h>
 
+#include "avs_common.h"
+
+using namespace 
 double PI = M_PI;
 
 typedef enum scope_runnable ScopeRunnable;
@@ -58,34 +57,17 @@ static char *scope_fields[] = {
 JSBool prop_getter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp);
 JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp);
 
-enum my_tinyid {
-    MY_N, MY_B, MY_X, MY_Y, MY_I, MY_V, MY_W, MY_H, MY_RED, MY_GREEN, MY_BLUE, MY_LINESIZE, MY_SKIP, MY_DRAWMODE
-};
-
-JSPropertySpec my_props[] = {
-    {"n", MY_N, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"b", MY_B, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"x", MY_X, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"y", MY_Y, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"i", MY_I, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"v", MY_V, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"w", MY_W, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"h", MY_H, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"red", MY_RED, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"green", MY_GREEN, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"blue", MY_BLUE, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"linesize", MY_LINESIZE, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"skip", MY_SKIP, JSPROP_ENUMERATE, prop_getter, prop_setter},
-    {"drawmode", MY_DRAWMODE, JSPROP_ENUMERATE, prop_getter, prop_setter}
-    
-};
-
 typedef struct {
     AvsGlobalProxy      *proxy;
 
+    v8::Persistent<v8::Context> context;
+    v8::Handle<v8::ObjectTemplate> global;
+    v8::Handle<v8::Script> runnable[4];
+    /*
     JSContext *ctx;
     JSObject *global;
     JSScript *runnable[4];
+    */
 
     double n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode; 
 
@@ -103,7 +85,7 @@ typedef struct {
     VisAudio    *audio;
     PrivateDataOut *data;
 
-    //AVSGfxColorCycler   *cycler;
+    AVSGfxColorCycler   *cycler;
 } SuperScopePrivate;
 
 int lv_superscope_init (VisPluginData *plugin);
@@ -265,11 +247,10 @@ JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
-    JSScript *script = JS_CompileScript(priv->ctx, priv->global, buf, strlen(buf), scope_fields[runnable], 0); 
-
-    //JSObject *scrobj = JS_NewScriptObject(priv->ctx, script);
-    //JS_AddNamedRoot(priv->ctx, &scrobj, "scrobj");
-
+    Context::Scope context_scope(priv->context);
+    HandleScope handle_scope;
+    Handle<String> source_obj = String::New(buf);
+    Handle<Script> script = Script::Compile(source_obj);
     priv->runnable[runnable] = script;
 
     return 0;
@@ -277,8 +258,7 @@ int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *b
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
-    jsval result;
-    JS_ExecuteScript(priv->ctx, priv->global, priv->runnable[runnable], &result);
+    priv->runnable[runnable]->Run();
 
     return 0;
 }
@@ -291,6 +271,7 @@ int lv_superscope_init (VisPluginData *plugin)
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
 
+    priv->context = Context::New();
     static VisParamEntry params[] = {
         VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4; x = cos(r)*d; y = sin(r) * d;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
@@ -303,25 +284,21 @@ int lv_superscope_init (VisPluginData *plugin)
     };
 
     visual_param_container_add_many (paramcontainer, params);
-    
-    script = visual_script_get_script(0);
-
-    visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
-    
-    printf("plugin x 2 %p\n", script->plugin->info);
-    priv->data = VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
-
-    printf("data %p\n", priv->data);
-
-    priv->ctx = priv->data->ctx;
-
-    printf("priv->ctx %p\n", priv->ctx);
-    priv->global = priv->data->global;
-
-    visual_log_return_val_if_fail((priv->data && priv->data->ctx != NULL), -VISUAL_ERROR_GENERAL);
 
     priv->proxy = visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->proxy));
+
+    script = priv->proxy->script
+
+    visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
+    
+    priv->data = VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
+
+    priv->ctx = priv->data->ctx;
+
+    priv->global = priv->data->global;
+
+    visual_log_return_val_if_fail((priv->data && priv->data->ctx != NULL), -VISUAL_ERROR_GENERAL);
 
     priv->data->ctx->data = (void *)priv;
 
@@ -384,6 +361,8 @@ int lv_superscope_cleanup (VisPluginData *plugin)
 
     if(priv->proxy != NULL)
         visual_object_unref(VISUAL_OBJECT(priv->proxy));
+
+    priv->context.Dispose();
 
     visual_mem_free (priv);
 

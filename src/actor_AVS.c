@@ -101,8 +101,6 @@ int act_avs_init (VisPluginData *plugin)
 	priv = visual_mem_new0 (AVSPrivate, 1);
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-        priv->script = visual_script_new("visscript-v8");
-
 	return 0;
 }
 

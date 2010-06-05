@@ -8,16 +8,17 @@ libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
 LIBS += -L. -L$(prefix)/lib @LIBVISUAL_LIBS@
 
-AM_CFLAGS = @LIBVISUAL_CFLAGS@ -DXP_UNIX
+AM_CFLAGS = @LIBVISUAL_CFLAGS@
 
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
-	-I$(top_srcdir)/../libvisual-avs/common/ \
-	-Ijs/src/
+	-I$(top_srcdir)/common \
+	-I$(top_srcdir)/../visscript-v8/ \
+	-I$(top_srcdir)/../visscript-v8/v8/include
 
 actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
 
-actor_avs_superscope_la_SOURCES = actor_avs_superscope.c
+actor_avs_superscope_la_SOURCES = actor_avs_superscope.cpp
 
-actor_avs_superscope_la_LIBADD = libjs.a
+actor_avs_superscope_la_LIBADD = ../../../common/libavs.la
 
