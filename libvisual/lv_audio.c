@@ -63,7 +63,11 @@ static int audio_dtor (VisObject *object)
 	if (audio->samplepool != NULL)
 		visual_object_unref (VISUAL_OBJECT (audio->samplepool));
 
+        if (audio->beat != NULL)
+            visual_object_unref(VISUAL_OBJECT (audio->beat));
+
 	audio->samplepool = NULL;
+        audio->beat = NULL;
 
 	return VISUAL_OK;
 }
@@ -189,6 +193,8 @@ int visual_audio_init (VisAudio *audio)
 
 	/* Reset the VisAudio data */
 	audio->samplepool = visual_audio_samplepool_new ();
+
+        audio->beat = visual_beat_new();
 
 	return VISUAL_OK;
 }
