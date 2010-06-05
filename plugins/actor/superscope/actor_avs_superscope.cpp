@@ -59,10 +59,9 @@ static char *scope_fields[] = {
 
 typedef struct {
     AvsGlobalProxy      *proxy;
-
-    v8::Persistent<v8::Context> context;
-    v8::Handle<v8::ObjectTemplate> global;
-    v8::Handle<v8::Script> runnable[4];
+    Handle<Script> runnable[4];
+    Persistent<ObjectTemplate> global;
+    Persistent<Context> context;
     
     /*
     JSContext *ctx;
@@ -89,28 +88,26 @@ typedef struct {
     AVSGfxColorCycler   *cycler;
 } SuperScopePrivate;
 
-int lv_superscope_init (VisPluginData *plugin);
-int lv_superscope_cleanup (VisPluginData *plugin);
-int lv_superscope_requisition (VisPluginData *plugin, int *width, int *height);
-int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, int height);
-int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events);
-VisPalette *lv_superscope_palette (VisPluginData *plugin);
-int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
+extern "C" int lv_superscope_init (VisPluginData *plugin);
+extern "C" int lv_superscope_cleanup (VisPluginData *plugin);
+extern "C" int lv_superscope_requisition (VisPluginData *plugin, int *width, int *height);
+extern "C" int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, int height);
+extern "C" int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events);
+extern "C" VisPalette *lv_superscope_palette (VisPluginData *plugin);
+extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-//VISUAL_PLUGIN_AM_PI_VERSION_VALIDATOR
+VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
-VisPluginInfo *get_plugin_info (int *count)
+extern "C" const VisPluginInfo *get_plugin_info (int *count)
 {
-    static VisActorPlugin actor[] = {{
-    }};
+    static VisActorPlugin actor[1];
 
     actor[0].requisition = lv_superscope_requisition;
     actor[0].palette = lv_superscope_palette;
     actor[0].render = lv_superscope_render;
     actor[0].vidoptions.depth = VISUAL_VIDEO_DEPTH_8BIT | VISUAL_VIDEO_DEPTH_32BIT;
 
-    static VisPluginInfo info[] = {{
-    }};
+    static VisPluginInfo info[1];
 
     info[0].type = VISUAL_PLUGIN_TYPE_ACTOR, //".[avs]",
 
@@ -132,155 +129,57 @@ VisPluginInfo *get_plugin_info (int *count)
     return info;
 }
 
-Handle<Value> prop_getter_n(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->n); 
-    return val; 
-}
-Handle<Value> prop_getter_b(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->b); 
-    return val; 
-}
-Handle<Value> prop_getter_x(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->x); 
-    return val; 
-}
-Handle<Value> prop_getter_y(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->y); 
-    return val; 
-}
-Handle<Value> prop_getter_i(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->i); 
-    return val; 
-}
-Handle<Value> prop_getter_v(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->v); 
-    return val; 
-}
-Handle<Value> prop_getter_w(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->w); 
-    return val; 
-}
-Handle<Value> prop_getter_h(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->h); 
-    return val; 
-}
-Handle<Value> prop_getter_red(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->red); 
-    return val; 
-}
-Handle<Value> prop_getter_green(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->green); 
-    return val; 
-}
-Handle<Value> prop_getter_blue(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->blue); 
-    return val; 
-}
-Handle<Value> prop_getter_linesize(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->linesize); 
-    return val; 
-}
-Handle<Value> prop_getter_skip(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->skip); 
-    return val; 
-}
-Handle<Value> prop_getter_drawmode(Local<String> property, const AccessorInfo &info) { 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    Handle<Value> val = Number::New(priv->drawmode); 
-    return val; 
-}
+#define GETTER(name) \
+    static Handle<Value> prop_getter_##name(Local<String> property, const AccessorInfo &info) { \
+        SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); \
+        return Number::New(priv->name); \
+    }
 
-void prop_setter_n(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->n = val->ToNumber()->Value(); 
-}
-void prop_setter_b(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->b = val->ToNumber()->Value(); 
-}
-void prop_setter_x(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->x = val->ToNumber()->Value(); 
-}
+#define SETTER(name) \
+    static void prop_setter_##name(Local<String> property, Local<Value> val, const AccessorInfo &info) { \
+        SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); \
+        priv->name = val->ToNumber()->Value(); \
+    }
 
-void prop_setter_y(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->y = val->ToNumber()->Value(); 
-}
-void prop_setter_i(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->i = val->ToNumber()->Value(); 
-}
-void prop_setter_v(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->v = val->ToNumber()->Value(); 
-}
-void prop_setter_w(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->w = val->ToNumber()->Value(); 
-}
-void prop_setter_h(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->h = val->ToNumber()->Value(); 
-}
-void prop_setter_red(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->red = val->ToNumber()->Value(); 
-}
-void prop_setter_green(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->green = val->ToNumber()->Value(); 
-}
-void prop_setter_blue(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->blue = val->ToNumber()->Value(); 
-}
-void prop_setter_linesize(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->linesize = val->ToNumber()->Value(); 
-}
-void prop_setter_skip(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->skip = val->ToNumber()->Value(); 
-}
-void prop_setter_drawmode(Local<String> property, Local<Value> val, const AccessorInfo &info) 
-{ 
-    SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); 
-    priv->drawmode = val->ToNumber()->Value(); 
-}
+GETTER(n)
+GETTER(b)
+GETTER(x)
+GETTER(y)
+GETTER(i)
+GETTER(v)
+GETTER(w)
+GETTER(h)
+GETTER(red)
+GETTER(green)
+GETTER(blue)
+GETTER(linesize)
+GETTER(skip)
+GETTER(drawmode)
+
+SETTER(n)
+SETTER(b)
+SETTER(x)
+SETTER(y)
+SETTER(i)
+SETTER(v)
+SETTER(w)
+SETTER(h)
+SETTER(red)
+SETTER(green)
+SETTER(blue)
+SETTER(linesize)
+SETTER(skip)
+SETTER(drawmode)
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
-    Context::Scope context_scope(priv->context);
+    printf("buf ------- %s %d\n", buf, (int)runnable);
     HandleScope handle_scope;
+
+    //Handle<Context> context = Context::New(NULL, priv->global);
+    Context::Scope context_scope(priv->context);
     Handle<String> source_obj = String::New(buf);
-    Handle<Script> script = Script::Compile(source_obj);
+    Persistent<Script> script = Persistent<Script>::New(Script::Compile(source_obj));
     priv->runnable[runnable] = script;
 
     return 0;
@@ -288,41 +187,28 @@ int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *b
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
+    HandleScope handle_scope;
+
+    //Handle<Context> context = Context::New(NULL, priv->global);
+    Context::Scope context_scope(priv->context);
     priv->runnable[runnable]->Run();
 
     return 0;
 }
 
 
-int lv_superscope_init (VisPluginData *plugin)
+extern "C"int lv_superscope_init (VisPluginData *plugin)
 {
     VisScript *script;
     int i;
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
-
-    priv->global = ObjectTemplate::New();
-    priv->context = Context::New(NULL, priv->global);
-    Handle<String> p = String::New((char *)priv);
-    priv->global->SetAccessor(String::New("n"), prop_getter_n, prop_setter_n, p);
-    priv->global->SetAccessor(String::New("b"), prop_getter_b, prop_setter_b, p);
-    priv->global->SetAccessor(String::New("x"), prop_getter_x, prop_setter_x, p);
-    priv->global->SetAccessor(String::New("y"), prop_getter_y, prop_setter_y, p);
-    priv->global->SetAccessor(String::New("i"), prop_getter_i, prop_setter_i, p);
-    priv->global->SetAccessor(String::New("v"), prop_getter_v, prop_setter_v, p);
-    priv->global->SetAccessor(String::New("w"), prop_getter_w, prop_setter_w, p);
-    priv->global->SetAccessor(String::New("h"), prop_getter_h, prop_setter_h, p);
-    priv->global->SetAccessor(String::New("red"), prop_getter_red, prop_setter_red, p);
-    priv->global->SetAccessor(String::New("green"), prop_getter_green, prop_setter_green, p);
-    priv->global->SetAccessor(String::New("blue"), prop_getter_blue, prop_setter_blue, p);
-    priv->global->SetAccessor(String::New("linesize"), prop_getter_linesize, prop_setter_linesize, p);
-    priv->global->SetAccessor(String::New("skip"), prop_getter_skip, prop_setter_skip, p);
-    priv->global->SetAccessor(String::New("drawmode"), prop_getter_drawmode, prop_setter_drawmode, p);
+    HandleScope handle_scope;
 
     static VisParamEntry params[] = {
         VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$M_PI*4; x = cos(r)*d; y = sin(r) * d;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "bleh=1"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
@@ -339,17 +225,35 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
     
-    priv->data = (PrivateDataOut *)VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
+    priv->global = Persistent<ObjectTemplate>::New(ObjectTemplate::New());
+    priv->context = Persistent<Context>::New(Context::New(NULL, priv->global));
 
-    priv->context = priv->data->context;
+    //priv->context = Persistent<Context>::New(Context::New(NULL, priv->global);
 
-    priv->global = priv->data->global;
+    /*priv->data = (PrivateDataOut *)VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
+    printf("data --------------- %p\n", priv->data);
 
-    Handle<String> data = String::New((char *)priv);
-    priv->data->context->SetData(data);
+    Handle<Context> context = Context::New(NULL, priv->data->global);
 
-    //JS_DefineProperties(priv->data->ctx, priv->data->global, my_props);
+    Context::Scope context_scope(context);
 
+    */
+    Handle<Value> p = External::Wrap((void *)priv);
+
+    priv->global->SetAccessor(String::New("n"), prop_getter_n, prop_setter_n, p);
+    priv->global->SetAccessor(String::New("b"), prop_getter_b, prop_setter_b, p);
+    priv->global->SetAccessor(String::New("x"), prop_getter_x, prop_setter_x, p);
+    priv->global->SetAccessor(String::New("y"), prop_getter_y, prop_setter_y, p);
+    priv->global->SetAccessor(String::New("i"), prop_getter_i, prop_setter_i, p);
+    priv->global->SetAccessor(String::New("v"), prop_getter_v, prop_setter_v, p);
+    priv->global->SetAccessor(String::New("w"), prop_getter_w, prop_setter_w, p);
+    priv->global->SetAccessor(String::New("h"), prop_getter_h, prop_setter_h, p);
+    priv->global->SetAccessor(String::New("red"), prop_getter_red, prop_setter_red, p);
+    priv->global->SetAccessor(String::New("green"), prop_getter_green, prop_setter_green, p);
+    priv->global->SetAccessor(String::New("blue"), prop_getter_blue, prop_setter_blue, p);
+    priv->global->SetAccessor(String::New("linesize"), prop_getter_linesize, prop_setter_linesize, p);
+    priv->global->SetAccessor(String::New("skip"), prop_getter_skip, prop_setter_skip, p);
+    priv->global->SetAccessor(String::New("drawmode"), prop_getter_drawmode, prop_setter_drawmode, p);
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
     visual_palette_allocate_colors (&priv->pal, 1);
@@ -364,32 +268,10 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_palette_free_colors (&priv->pal);
 
-
-    /* Init super scope */
-//    priv->ctx = avs_runnable_context_new();
-//    priv->vm = avs_runnable_variable_manager_new();
-
-    /* Bind variables to context */
-/*    avs_runnable_variable_bind(priv->vm, "n", &priv->n);
-    avs_runnable_variable_bind(priv->vm, "b", &priv->b);
-    avs_runnable_variable_bind(priv->vm, "x", &priv->x);
-    avs_runnable_variable_bind(priv->vm, "y", &priv->y);
-    avs_runnable_variable_bind(priv->vm, "i", &priv->i);
-    avs_runnable_variable_bind(priv->vm, "v", &priv->v);
-    avs_runnable_variable_bind(priv->vm, "w", &priv->w);
-    avs_runnable_variable_bind(priv->vm, "h", &priv->h);
-    avs_runnable_variable_bind(priv->vm, "$M_PI", &PI);
-    avs_runnable_variable_bind(priv->vm, "red", &priv->red);
-    avs_runnable_variable_bind(priv->vm, "green", &priv->green);
-    avs_runnable_variable_bind(priv->vm, "blue", &priv->blue);
-    avs_runnable_variable_bind(priv->vm, "linesize", &priv->linesize);
-    avs_runnable_variable_bind(priv->vm, "skip", &priv->skip);
-    avs_runnable_variable_bind(priv->vm, "drawmode", &priv->drawmode);
-*/
     return 0;
 }
 
-int lv_superscope_cleanup (VisPluginData *plugin)
+extern "C" int lv_superscope_cleanup (VisPluginData *plugin)
 {
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
 
@@ -408,26 +290,24 @@ int lv_superscope_cleanup (VisPluginData *plugin)
     if(priv->proxy != NULL)
         visual_object_unref(VISUAL_OBJECT(priv->proxy));
 
-    priv->context.Dispose();
-
     visual_mem_free (priv);
 
     return 0;
 }
 
-int lv_superscope_requisition (VisPluginData *plugin, int *width, int *height)
+extern "C" int lv_superscope_requisition (VisPluginData *plugin, int *width, int *height)
 {
     return 0;
 }
 
-int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, int height)
+extern "C" int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, int height)
 {
     visual_video_set_dimension (video, width, height);
 
     return 0;
 }
 
-int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
+extern "C" int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
 {
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
     VisParamEntry *param;
@@ -523,7 +403,7 @@ static int makeint(AvsNumber t)
     return (int)(t*255.0);
 }
 */
-VisPalette *lv_superscope_palette (VisPluginData *plugin)
+extern "C" VisPalette *lv_superscope_palette (VisPluginData *plugin)
 {
     //SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
@@ -537,7 +417,7 @@ static __inline int makeint(double t)
   return (int)(t*255.0);
 }
 
-int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
+extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
     AvsGlobalProxy *proxy = priv->proxy;

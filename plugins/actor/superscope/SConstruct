@@ -11,7 +11,7 @@ env = Environment(CCFLAGS = Split("-g -Wall " + output))
 visualLdflags, visualLdflagse = subprocess.Popen(["pkg-config", "--libs", "libvisual-0.5"],
     stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 
-output = visualLdflags + " ../../../../visscript-v8/v8/libv8.a"
+output = visualLdflags + " ../../../../visscript-v8/v8/libv8_g.a"
 
 libs = env.ParseFlags(Split(output));
 env.MergeFlags(libs)
