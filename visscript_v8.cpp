@@ -1,20 +1,11 @@
 
-#include <libvisual/libvisual.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
 #include <v8.h>
-#include "script_visscript_v8.h"
-
-VISUAL_PLUGIN_API_VERSION_VALIDATOR
+#include "visscript_v8.h"
 
 using namespace v8;
-
-typedef struct {
-} VisscriptPrivate;
-
-extern "C" int script_visscript_init (VisPluginData *plugin);
-extern "C" int script_visscript_cleanup (VisPluginData *plugin);
 
 static Handle<Value> function_log(const Arguments &args);
 static Handle<Value> function_sin(const Arguments &args);
@@ -27,88 +18,29 @@ static Handle<Value> function_if(const Arguments &args);
 static Handle<Value> function_div(const Arguments &args);
 static Handle<Value> function_rand(const Arguments &args);
 
-static int data_dtor(VisObject *object)
-{
-    PrivateDataOut *data = PRIVATE_DATA(object);
-
-    return VISUAL_OK;
-}
-
-extern "C" void * get_data(VisPluginData *plugin)
+v8Script::v8Script()
 {
         HandleScope handle_scope;
-	VisscriptPrivate *priv = (VisscriptPrivate *)visual_object_get_private(VISUAL_OBJECT(plugin));
-        PrivateDataOut *data = (PrivateDataOut *)visual_mem_new0(PrivateDataOut, 1);
 
-        visual_log_return_val_if_fail(priv != NULL, NULL);
+        global_ = Persistent<ObjectTemplate>::New(ObjectTemplate::New());
+        context_ = Persistent<Context>::New(Context::New(NULL, global_));
+        Context::Scope context_scope(context_);
 
-        visual_object_set_dtor (VISUAL_OBJECT(data), data_dtor);
-        visual_object_set_allocated (VISUAL_OBJECT(data), TRUE);
-
-        data->global = Persistent<ObjectTemplate>::New(ObjectTemplate::New());
-        //data->context = Persistent<Context>::New(Context::New());
-        //Context::Scope context_scope(data->context);
-
-        //data->obj = data->context->Global();
-
-        data->global->Set(String::New("log"), FunctionTemplate::New(function_log));
-        data->global->Set(String::New("sin"), FunctionTemplate::New(function_sin));
-        data->global->Set(String::New("cos"), FunctionTemplate::New(function_cos));
-        data->global->Set(String::New("tan"), FunctionTemplate::New(function_tan));
-        data->global->Set(String::New("asin"), FunctionTemplate::New(function_asin));
-        data->global->Set(String::New("acos"), FunctionTemplate::New(function_acos));
-        data->global->Set(String::New("atan"), FunctionTemplate::New(function_atan));
-        data->global->Set(String::New("if"), FunctionTemplate::New(function_if));
-        data->global->Set(String::New("div"), FunctionTemplate::New(function_div));
-        data->global->Set(String::New("rand"), FunctionTemplate::New(function_rand));
-
-	return data;
+        global_->Set(String::New("log"), FunctionTemplate::New(function_log));
+        global_->Set(String::New("sin"), FunctionTemplate::New(function_sin));
+        global_->Set(String::New("cos"), FunctionTemplate::New(function_cos));
+        global_->Set(String::New("tan"), FunctionTemplate::New(function_tan));
+        global_->Set(String::New("asin"), FunctionTemplate::New(function_asin));
+        global_->Set(String::New("acos"), FunctionTemplate::New(function_acos));
+        global_->Set(String::New("atan"), FunctionTemplate::New(function_atan));
+        global_->Set(String::New("if"), FunctionTemplate::New(function_if));
+        global_->Set(String::New("div"), FunctionTemplate::New(function_div));
+        global_->Set(String::New("rand"), FunctionTemplate::New(function_rand));
 }
 
-extern "C" const VisPluginInfo *get_plugin_info(int *count)
+v8Script::~v8Script() 
 {
-
-	static VisScriptPlugin script[] = {{
-	}};
-
-        script[0].get_data = get_data;
-
-	static VisPluginInfo info[] = {{
-        }};
-	info[0].type = VISUAL_PLUGIN_TYPE_SCRIPT;
-        info[0].plugname = "visscript-v8";
-	info[0].name = "VisScript v8 plugin";
-	info[0].author = "Scott Sibley <starlon@sf.net>";
-	info[0].version = "0.1";
-	info[0].about = "Libvisual javascript plugin";
-        info[0].help = "v8 Javascript plugin";
-	info[0].license = VISUAL_PLUGIN_LICENSE_GPL;
-	info[0].init = script_visscript_init;
-	info[0].cleanup = script_visscript_cleanup;
-	info[0].plugin = VISUAL_OBJECT (&script[0]);
-
-	*count = sizeof(info) / sizeof(*info);
-
-	return info;
-}
-
-int script_visscript_init (VisPluginData *plugin)
-{
-	VisscriptPrivate *priv = visual_mem_new0(VisscriptPrivate, 1);
-
-	visual_object_set_private(VISUAL_OBJECT(plugin), priv);
-
-	return VISUAL_OK;
-}
-
-int script_visscript_cleanup (VisPluginData *plugin)
-{
-	VisscriptPrivate *priv = (VisscriptPrivate *)visual_object_get_private(VISUAL_OBJECT(plugin));
-
-	if( priv ) 
-		visual_mem_free(priv);
-
-	return VISUAL_OK;
+    context_.Dispose();
 }
 
 static Handle<Value> function_log(const Arguments &args)
