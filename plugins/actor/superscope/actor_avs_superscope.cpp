@@ -35,7 +35,7 @@
 #include <libvisual/libvisual.h>
 #include <v8.h>
 
-#include "script_visscript_v8.h"
+#include "visscript_v8.h"
 
 #include "avs_common.h"
 
@@ -50,26 +50,12 @@ enum scope_runnable {
 
 typedef enum scope_runnable ScopeRunnable;
 
-static char *scope_fields[] = {
-    "INIT", "FRAME", "BEAT", "POINT"
-};
-
-//JSBool prop_getter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp);
-//JSBool prop_setter(JSContext *cx, JSObject *obj, jsval idval, jsval *vp);
-
 typedef struct {
     AvsGlobalProxy      *proxy;
     Handle<Script> runnable[4];
     Persistent<ObjectTemplate> global;
-    Persistent<Context> context;
-    
-    /*
-    JSContext *ctx;
-    JSObject *global;
-    JSScript *runnable[4];
-    */
 
-    double n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode; 
+    double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
 
     char            *point;
     char            *frame;
@@ -83,7 +69,6 @@ typedef struct {
     int             needs_init;
 
     VisAudio    *audio;
-    PrivateDataOut *data;
 
     AVSGfxColorCycler   *cycler;
 } SuperScopePrivate;
@@ -131,13 +116,15 @@ extern "C" const VisPluginInfo *get_plugin_info (int *count)
 
 #define GETTER(name) \
     static Handle<Value> prop_getter_##name(Local<String> property, const AccessorInfo &info) { \
-        SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); \
+        Handle<Value> obj(*info.Data()); \
+        SuperScopePrivate *priv = (SuperScopePrivate *)External::Unwrap(obj); \
         return Number::New(priv->name); \
     }
 
 #define SETTER(name) \
     static void prop_setter_##name(Local<String> property, Local<Value> val, const AccessorInfo &info) { \
-        SuperScopePrivate *priv = (SuperScopePrivate *)(*info.Data()); \
+        Handle<Value> obj(*info.Data()); \
+        SuperScopePrivate *priv = (SuperScopePrivate *)External::Unwrap(obj); \
         priv->name = val->ToNumber()->Value(); \
     }
 
@@ -149,6 +136,8 @@ GETTER(i)
 GETTER(v)
 GETTER(w)
 GETTER(h)
+GETTER(t)
+GETTER(d)
 GETTER(red)
 GETTER(green)
 GETTER(blue)
@@ -164,6 +153,8 @@ SETTER(i)
 SETTER(v)
 SETTER(w)
 SETTER(h)
+SETTER(t)
+SETTER(d)
 SETTER(red)
 SETTER(green)
 SETTER(blue)
@@ -173,14 +164,15 @@ SETTER(drawmode)
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
-    printf("buf ------- %s %d\n", buf, (int)runnable);
     HandleScope handle_scope;
 
-    //Handle<Context> context = Context::New(NULL, priv->global);
-    Context::Scope context_scope(priv->context);
+    Handle<Context> context = Context::New(NULL, priv->global);
+    Context::Scope context_scope(context);
     Handle<String> source_obj = String::New(buf);
     Persistent<Script> script = Persistent<Script>::New(Script::Compile(source_obj));
     priv->runnable[runnable] = script;
+
+    context->DetachGlobal();
 
     return 0;
 }
@@ -189,9 +181,11 @@ int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
     HandleScope handle_scope;
 
-    //Handle<Context> context = Context::New(NULL, priv->global);
-    Context::Scope context_scope(priv->context);
+    Handle<Context> context = Context::New(NULL, priv->global);
+    Context::Scope context_scope(context);
     priv->runnable[runnable]->Run();
+
+    context->DetachGlobal();
 
     return 0;
 }
@@ -199,16 +193,16 @@ int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 
 extern "C"int lv_superscope_init (VisPluginData *plugin)
 {
-    VisScript *script;
     int i;
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
     HandleScope handle_scope;
+    v8Script *v8 = new v8Script();
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$M_PI*4; x = cos(r)*d; y = sin(r) * d;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "bleh=1"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*PI*4; x = cos(r)*d; y = sin(r) * d;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=0;t=t-0.01;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
         VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
@@ -221,23 +215,10 @@ extern "C"int lv_superscope_init (VisPluginData *plugin)
     priv->proxy = (AvsGlobalProxy *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->proxy));
 
-    script = priv->proxy->script;
+    visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-    visual_log_return_val_if_fail(script != NULL, -VISUAL_ERROR_GENERAL);
+    priv->global = v8->GetGlobal();
     
-    priv->global = Persistent<ObjectTemplate>::New(ObjectTemplate::New());
-    priv->context = Persistent<Context>::New(Context::New(NULL, priv->global));
-
-    //priv->context = Persistent<Context>::New(Context::New(NULL, priv->global);
-
-    /*priv->data = (PrivateDataOut *)VISUAL_SCRIPT_PLUGIN(script->plugin->info->plugin)->get_data(script->plugin);
-    printf("data --------------- %p\n", priv->data);
-
-    Handle<Context> context = Context::New(NULL, priv->data->global);
-
-    Context::Scope context_scope(context);
-
-    */
     Handle<Value> p = External::Wrap((void *)priv);
 
     priv->global->SetAccessor(String::New("n"), prop_getter_n, prop_setter_n, p);
@@ -248,13 +229,14 @@ extern "C"int lv_superscope_init (VisPluginData *plugin)
     priv->global->SetAccessor(String::New("v"), prop_getter_v, prop_setter_v, p);
     priv->global->SetAccessor(String::New("w"), prop_getter_w, prop_setter_w, p);
     priv->global->SetAccessor(String::New("h"), prop_getter_h, prop_setter_h, p);
+    priv->global->SetAccessor(String::New("t"), prop_getter_t, prop_setter_t, p);
+    priv->global->SetAccessor(String::New("d"), prop_getter_d, prop_setter_d, p);
     priv->global->SetAccessor(String::New("red"), prop_getter_red, prop_setter_red, p);
     priv->global->SetAccessor(String::New("green"), prop_getter_green, prop_setter_green, p);
     priv->global->SetAccessor(String::New("blue"), prop_getter_blue, prop_setter_blue, p);
     priv->global->SetAccessor(String::New("linesize"), prop_getter_linesize, prop_setter_linesize, p);
     priv->global->SetAccessor(String::New("skip"), prop_getter_skip, prop_setter_skip, p);
     priv->global->SetAccessor(String::New("drawmode"), prop_getter_drawmode, prop_setter_drawmode, p);
-    visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
     visual_palette_allocate_colors (&priv->pal, 1);
 
@@ -427,8 +409,6 @@ extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, Vis
     VisBuffer pcm;
     float pcmbuf[1024];
 
-    printf("lv_superscope_render %p\n", video);
-
     visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
 
     visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
@@ -438,10 +418,7 @@ extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, Vis
             1.0);
 
 
-    isBeat = 1; //visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, pcmbuf, 1024);
-
-    /* Provide audio for AvsRunnable */
-    priv->audio = audio;
+    isBeat = priv->proxy->isBeat;
 
     if(priv->needs_init) {
         priv->needs_init = FALSE;
@@ -491,8 +468,9 @@ extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, Vis
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
 
-    if (isBeat)
+    if (isBeat) {
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
+    }
 
     //int candraw=0;
     l = priv->n;
@@ -504,7 +482,7 @@ extern "C" int lv_superscope_render (VisPluginData *plugin, VisVideo *video, Vis
     {
         //double r=(a*576.0)/l;
         //double s1=r-(int)r;
-        //double yr=(fa_data[(int)r]^xorv)*(1.0f-s1)+(fa_data[(int)r+1]^xorv)*(s1);
+        //double yr=(pcmbuf[(int)r]^xorv)*(1.0f-s1)+(pcmbuf[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
         priv->v = pcmbuf[a * 288 / l];
         priv->i = a/(l-1);
