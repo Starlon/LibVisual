@@ -4,14 +4,14 @@ import sys
 visualCflags, visualCflagse = subprocess.Popen(["pkg-config", "--cflags", "libvisual-0.5"],
     stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 
-output = visualCflags + " -I ../../../../visscript-v8/ -I ../../../../visscript-v8/v8/include/ -I ../../../common/ -I ../../../"
+output = visualCflags + " -I ../../../../evaluator/ -I ../../../common/ -I ../../../"
 
 env = Environment(CCFLAGS = Split("-g -Wall " + output))
 
 visualLdflags, visualLdflagse = subprocess.Popen(["pkg-config", "--libs", "libvisual-0.5"],
     stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 
-output = visualLdflags + " ../../../../visscript-v8/v8/libv8_g.a ../../../../visscript-v8/libvisscript_v8.a"
+output = visualLdflags + " ../../../../evaluator/libvisscript.a"
 
 libs = env.ParseFlags(Split(output));
 env.MergeFlags(libs)
