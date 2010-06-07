@@ -28,7 +28,7 @@
 /* 
  * exported functions:
  *
- * int SetVariable (char *name, RESULT *value, void *data)
+ * int SetVariable (char *name, RESULT *value)
  *   adds a generic variable to the evaluator
  *
  * int SetVariableNumeric (char *name, double value)
@@ -133,14 +133,6 @@ struct _PATTERN {
 
 typedef struct _PATTERN PATTERN;
 
-struct _VARIABLE {
-    char *name;
-    RESULT *value;
-    void *data;
-};
-
-typedef struct _VARIABLE VARIABLE;
-
 struct _FUNCTION {
     char *name;
     int argc;
@@ -160,8 +152,6 @@ struct _NODE {
 };
 
 typedef struct _NODE NODE;
-
-
 
 /* operators */
 /* IMPORTANT! list must be sorted by length! */
@@ -229,14 +219,13 @@ static void FreeResult(RESULT * result)
 static RESULT *NewResult(void)
 {
     RESULT *result = malloc(sizeof(RESULT));
+
     if (result == NULL) {
-	error("Evaluator: cannot allocate result: out of memory!");
+	printf("Evaluator: cannot allocate result: out of memory!");
 	return NULL;
     }
-    result->type = 0;
-    result->size = 0;
-    result->number = 0.0;
-    result->string = NULL;
+
+    memset(result, 0, sizeof(RESULT));
 
     return result;
 }
@@ -256,7 +245,6 @@ RESULT *SetResult(RESULT ** result, const int type, const void *value)
 	(*result)->size = 0;
 	(*result)->number = *(double *) value;
 	(*result)->string = NULL;
-        (*result)->data = value;
     }
 
     else if (type == R_STRING) {
@@ -272,11 +260,12 @@ RESULT *SetResult(RESULT ** result, const int type, const void *value)
 	    (*result)->string = malloc((*result)->size);
 	}
 	strcpy((*result)->string, value);
-        (*result)->data = value;
     } else {
-	error("Evaluator: internal error: invalid result type %d", type);
+	printf("Evaluator: internal error: invalid result type %d", type);
 	return NULL;
     }
+
+
 
     return *result;
 }
@@ -291,7 +280,6 @@ RESULT *CopyResult(RESULT ** result, RESULT * value)
 
     (*result)->type = value->type;
     (*result)->number = value->number;
-    (*result)->data = value->data;
 
     if (value->string == NULL) {
 	(*result)->size = 0;
@@ -315,7 +303,7 @@ RESULT *CopyResult(RESULT ** result, RESULT * value)
 double R2N(RESULT * result)
 {
     if (result == NULL) {
-	error("Evaluator: internal error: NULL result");
+	printf("Evaluator: internal error: NULL result");
 	return 0.0;
     }
 
@@ -333,7 +321,7 @@ double R2N(RESULT * result)
 	return result->number;
     }
 
-    error("Evaluator: internal error: invalid result type %d", result->type);
+    printf("Evaluator: internal error: invalid result type %d", result->type);
     return 0.0;
 }
 
@@ -341,7 +329,7 @@ double R2N(RESULT * result)
 char *R2S(RESULT * result)
 {
     if (result == NULL) {
-	error("Evaluator: internal error: NULL result");
+	printf("Evaluator: internal error: NULL result");
 	return NULL;
     }
 
@@ -363,13 +351,13 @@ char *R2S(RESULT * result)
 	return result->string;
     }
 
-    error("Evaluator: internal error: invalid result type %d", result->type);
+    printf("Evaluator: internal error: invalid result type %d", result->type);
     return NULL;
 
 }
 
 
-static VARIABLE *FindVariable(const char *name)
+VARIABLE *FindVariable(const char *name)
 {
     unsigned int i;
 
@@ -382,7 +370,7 @@ static VARIABLE *FindVariable(const char *name)
 }
 
 
-int SetVariable(const char *name, RESULT * value, void *data)
+int SetVariable(const char *name, RESULT * value)
 {
     VARIABLE *V;
 
@@ -393,16 +381,16 @@ int SetVariable(const char *name, RESULT * value, void *data)
     }
 
     if (nVariable >= sizeof(Variable) / sizeof(Variable[0])) {
-	error("Evaluator: cannot set variable <%s>: out of slots", name);
+	printf("Evaluator: cannot set variable <%s>: out of slots", name);
 	return -1;
     }
 
     nVariable++;
     Variable[nVariable - 1].name = strdup(name);
     Variable[nVariable - 1].value = NULL;
-    Variable[nVariable - 1].data = data;
     CopyResult(&Variable[nVariable - 1].value, value);
 
+    printf("set variable\n");
     return 0;
 }
 
@@ -418,25 +406,25 @@ RESULT *GetVariable(const char *name)
     return V->value;
 }
 
-int SetVariableNumeric(const char *name, const double value, void *data)
+int SetVariableNumeric(const char *name, const double value)
 {
     RESULT result = { 0, 0, 0, NULL };
     RESULT *rp = &result;
 
     SetResult(&rp, R_NUMBER, &value);
 
-    return SetVariable(name, rp, data);
+    return SetVariable(name, rp);
 }
 
 
-int SetVariableString(const char *name, const char *value, void *data)
+int SetVariableString(const char *name, const char *value)
 {
     RESULT result = { 0, 0, 0, NULL };
     RESULT *rp = &result;
 
     SetResult(&rp, R_STRING, value);
 
-    return SetVariable(name, rp, data);
+    return SetVariable(name, rp);
 }
 
 
@@ -586,7 +574,7 @@ static void Parse(void)
 
     /* syntax check */
     if (Token == T_UNDEF && *ExprPtr != '\0') {
-	error("Evaluator: parse error in <%s>: garbage <%s>", Expression, ExprPtr);
+	printf("Evaluator: parse error in <%s>: garbage <%s>", Expression, ExprPtr);
     }
 
     /* skip trailing whitespace */
@@ -661,7 +649,7 @@ static NODE *Level12(void)
 	Parse();
 	Root = Level01();
 	if (Token != T_OPERATOR || Operator != O_BRC) {
-	    error("Evaluator: unbalanced parentheses in <%s>", Expression);
+	    printf("Evaluator: unbalanced parentheses in <%s>", Expression);
 	    LinkNode(Root, JunkNode());
 	}
     }
@@ -687,7 +675,7 @@ static NODE *Level12(void)
 	    Root->Result = NewResult();
 	    Root->Function = FindFunction(Word);
 	    if (Root->Function == NULL) {
-		error("Evaluator: unknown function '%s' in <%s>", Word, Expression);
+		printf("Evaluator: unknown function '%s' in <%s>", Word, Expression);
 		Root->Token = T_STRING;
 		SetResult(&Root->Result, R_STRING, "");
 	    }
@@ -699,7 +687,7 @@ static NODE *Level12(void)
 		if (Token == T_OPERATOR && Operator == O_BRC) {
 		    break;
 		} else if (Token == T_OPERATOR && Operator == O_COM) {
-		    error("Evaluator: empty argument in <%s>", Expression);
+		    printf("Evaluator: empty argument in <%s>", Expression);
 		    LinkNode(Root, JunkNode());
 		} else {
 		    LinkNode(Root, Level01());
@@ -709,12 +697,12 @@ static NODE *Level12(void)
 
 	    /* check for closing brace */
 	    if (Token != T_OPERATOR || Operator != O_BRC) {
-		error("Evaluator: missing closing brace in <%s>", Expression);
+		printf("Evaluator: missing closing brace in <%s>", Expression);
 	    }
 
 	    /* check number of arguments */
 	    if (Root->Function != NULL && Root->Function->argc >= 0 && Root->Function->argc != argc) {
-		error("Evaluator: wrong number of arguments in <%s>", Expression);
+		printf("Evaluator: wrong number of arguments in <%s>", Expression);
 		while (argc < Root->Function->argc) {
 		    LinkNode(Root, JunkNode());
 		    argc++;
@@ -727,14 +715,14 @@ static NODE *Level12(void)
 	    Root->Result = NewResult();
 	    Root->Variable = FindVariable(Word);
 	    if (Root->Variable == NULL) {
-		SetVariableString(Word, "", NULL);
+		SetVariableString(Word, "");
 		Root->Variable = FindVariable(Word);
 	    }
 	}
     }
 
     else {
-	error("Evaluator: syntax error in <%s>: <%s>", Expression, Word);
+	printf("Evaluator: syntax error in <%s>: <%s>", Expression, Word);
 	Root = NewNode(NULL);
 	Root->Token = T_STRING;
 	SetResult(&Root->Result, R_STRING, "");
@@ -904,7 +892,7 @@ static NODE *Level03(void)
 	    Parse();
 	    LinkNode(Root, Level04());
 	} else {
-	    error("Evaluator: syntax error in <%s>: expecting ':' got '%s'", Expression, Word);
+	    printf("Evaluator: syntax error in <%s>: expecting ':' got '%s'", Expression, Word);
 	    LinkNode(Root, JunkNode());
 	}
     }
@@ -923,7 +911,7 @@ static NODE *Level02(void)
 	char *name = strdup(Word);
 	VARIABLE *V = FindVariable(name);
 	if (V == NULL) {
-	    SetVariableString(name, "", NULL);
+	    SetVariableString(name, "");
 	    V = FindVariable(name);
 	}
 	Parse();
@@ -1101,7 +1089,7 @@ static int EvalTree(NODE * Root)
 	    type = R_NUMBER;
 	    dummy = R2N(Root->Child[1]->Result);
 	    if (dummy == 0) {
-		error("Evaluator: warning: division by zero");
+		printf("Evaluator: warning: division by zero");
 		number = 0.0;
 	    } else {
 		number = R2N(Root->Child[0]->Result) / R2N(Root->Child[1]->Result);
@@ -1112,7 +1100,7 @@ static int EvalTree(NODE * Root)
 	    type = R_NUMBER;
 	    dummy = R2N(Root->Child[1]->Result);
 	    if (dummy == 0) {
-		error("Evaluator: warning: division by zero");
+		printf("Evaluator: warning: division by zero");
 		number = 0.0;
 	    } else {
 		number = fmod(R2N(Root->Child[0]->Result), R2N(Root->Child[1]->Result));
@@ -1130,7 +1118,7 @@ static int EvalTree(NODE * Root)
 	    break;
 
 	default:
-	    error("Evaluator: internal error: unhandled operator <%d>", Root->Operator);
+	    printf("Evaluator: internal error: unhandled operator <%d>", Root->Operator);
 	    SetResult(&Root->Result, R_STRING, "");
 	    return -1;
 	}
@@ -1145,12 +1133,12 @@ static int EvalTree(NODE * Root)
 		free(string);
 	    return 0;
 	}
-	error("Evaluator: internal error: unhandled type <%d>", type);
+	printf("Evaluator: internal error: unhandled type <%d>", type);
 	SetResult(&Root->Result, R_STRING, "");
 	return -1;
 
     default:
-	error("Evaluator: internal error: unhandled token <%d>", Root->Token);
+	printf("Evaluator: internal error: unhandled token <%d>", Root->Token);
 	SetResult(&Root->Result, R_STRING, "");
 	return -1;
 
@@ -1180,7 +1168,7 @@ int Compile(const char *expression, void **tree)
     Root = Level01();
 
     if (*Word != '\0') {
-	error("Evaluator: syntax error in <%s>: garbage <%s>", Expression, Word);
+	printf("Evaluator: syntax error in <%s>: garbage <%s>", Expression, Word);
 	free(Word);
 	Word = NULL;
 	return -1;

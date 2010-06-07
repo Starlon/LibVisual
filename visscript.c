@@ -1,6 +1,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 
 #include "evaluator.h"
@@ -36,13 +37,13 @@ void init_evaluator()
         AddFunction("rand", 1, function_rand);
 
         SetResult(&result, R_NUMBER, &PI);
-        SetVariable ("$PI", result, NULL);
+        SetVariable ("PI", result);
 
         SetResult(&result, R_NUMBER, &E);
-        SetVariable ("$E", result, NULL);
+        SetVariable ("E", result);
 
         SetResult(&result, R_NUMBER, &PHI);
-        SetVariable("$PHI", result, NULL);
+        SetVariable ("PHI", result);
 
         free(result);
 }

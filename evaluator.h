@@ -38,12 +38,17 @@ typedef struct {
     int size;
     double number;
     char *string;
-    void *data;
 } RESULT;
 
-int SetVariable(const char *name, RESULT * value, void *data);
-int SetVariableNumeric(const char *name, const double value, void *data);
-int SetVariableString(const char *name, const char *value, void *data);
+typedef struct {
+    char *name;
+    RESULT *value;
+} VARIABLE;
+
+VARIABLE *FindVariable(const char *name);
+int SetVariable(const char *name, RESULT * value);
+int SetVariableNumeric(const char *name, const double value);
+int SetVariableString(const char *name, const char *value);
 RESULT *GetVariable(const char *name);
 
 int AddFunction(const char *name, const int argc, void (*func) ());
