@@ -497,6 +497,7 @@ void DeleteFunctions(void)
 #define is_digit(c)  ((c) >= '0' && (c) <= '9')
 #define is_alpha(c) (((c) >= 'A' && (c) <= 'Z') || ((c) >= 'a' && (c) <= 'z') || ((c) == '_'))
 #define is_alnum(c) (is_alpha(c) || is_digit(c))
+#define is_nl(c) ((c) == '\n')
 
 static void Parse(void)
 {
@@ -517,6 +518,9 @@ static void Parse(void)
     /* skip leading whitespace */
     while (is_space(*ExprPtr))
 	ExprPtr++;
+
+    while (is_nl(*ExprPtr))
+        ExprPtr++;
 
     /* names */
     if (is_alpha(*ExprPtr)) {
@@ -580,6 +584,9 @@ static void Parse(void)
     /* skip trailing whitespace */
     while (is_space(*ExprPtr))
 	ExprPtr++;
+
+    while (is_nl(*ExprPtr))
+        ExprPtr++;
 
     /* empty token */
     if (Word == NULL)
