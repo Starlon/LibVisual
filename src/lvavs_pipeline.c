@@ -174,8 +174,6 @@ LVAVSPipeline *lvavs_pipeline_new_from_preset (LVAVSPreset *preset)
 
         pipeline->proxy = avs_global_proxy_new();
 
-        pipeline->proxy->script = visual_script_new("visscript-v8");
-
 	pipeline->container = lvavs_pipeline_container_new ();
 	LVAVS_PIPELINE_ELEMENT (pipeline->container)->pipeline = pipeline;
 

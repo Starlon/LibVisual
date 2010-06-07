@@ -85,7 +85,6 @@ const VisPluginInfo *get_plugin_info (int *count)
 int act_avs_init (VisPluginData *plugin)
 {
 	AVSPrivate *priv;
-        VisScript *script;
 
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 

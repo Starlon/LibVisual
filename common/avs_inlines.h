@@ -34,17 +34,17 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "avs_globals.h"
 
 // inlines
-static int __inline max(x, y)
+static int max(int x, int y)
 {
     return x > y ? x : y;
 }
 
-static int __inline min(x, y)
+static int  min(int x, int y)
 {
     return x < y ? x : y;
 }
 
-static unsigned int __inline BLEND(unsigned int a, unsigned int b)
+static unsigned int  BLEND(unsigned int a, unsigned int b)
 {
 	register unsigned int r,t;
 	r=(a&0xff)+(b&0xff);
@@ -65,7 +65,7 @@ static unsigned int __inline BLEND(unsigned int a, unsigned int b)
 #else
 #pragma warning( push, 1 )
 
-static __inline int FASTMAX(int x, int y)
+static  int FASTMAX(int x, int y)
 {
   __asm
   {
@@ -77,7 +77,7 @@ static __inline int FASTMAX(int x, int y)
   	add	eax, ecx
   }
 }
-static __inline int FASTMIN(int x, int y)
+static  int FASTMIN(int x, int y)
 {
   __asm
   {
@@ -93,7 +93,7 @@ static __inline int FASTMIN(int x, int y)
 
 #endif
 
-static unsigned int __inline BLEND_MAX(unsigned int a, unsigned int b)
+static unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
 {
 	register unsigned int t;
   int _a=a&0xff;
@@ -106,7 +106,7 @@ static unsigned int __inline BLEND_MAX(unsigned int a, unsigned int b)
 	return t;
 }
 
-static unsigned int __inline BLEND_MIN(unsigned int a, unsigned int b)
+static unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
 {
 #if 1
 	register unsigned int t;
@@ -170,13 +170,13 @@ static unsigned int __inline BLEND_MIN(unsigned int a, unsigned int b)
 #endif
 
 
-static unsigned int __inline BLEND_AVG(unsigned int a, unsigned int b)
+static unsigned int  BLEND_AVG(unsigned int a, unsigned int b)
 {
 	return ((a>>1)&~((1<<7)|(1<<15)|(1<<23)))+((b>>1)&~((1<<7)|(1<<15)|(1<<23)));
 }
 
 
-static unsigned int __inline BLEND_SUB(unsigned int a, unsigned int b)
+static unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
 {
 	register int r,t;
 	r=(a&0xff)-(b&0xff);
@@ -193,7 +193,7 @@ static unsigned int __inline BLEND_SUB(unsigned int a, unsigned int b)
 #define BLEND_ADJ BLEND_ADJ_NOMMX
 #endif
 
-static unsigned int __inline BLEND_ADJ_NOMMX(AvsGlobalProxy *obj, unsigned int a, unsigned int b, int v)
+static unsigned int  BLEND_ADJ_NOMMX(AvsGlobalProxy *obj, unsigned int a, unsigned int b, int v)
 {
 	register int t;
 	t=obj->blendtable[a&0xFF][v]+obj->blendtable[b&0xFF][0xFF-v];
@@ -202,7 +202,7 @@ static unsigned int __inline BLEND_ADJ_NOMMX(AvsGlobalProxy *obj, unsigned int a
 	return t;
 }
 
-static unsigned int __inline BLEND_MUL(AvsGlobalProxy *obj, unsigned int a, unsigned int b)
+static unsigned int  BLEND_MUL(AvsGlobalProxy *obj, unsigned int a, unsigned int b)
 {
 	register int t;
 	t=obj->blendtable[a&0xFF][b&0xFF];
@@ -211,7 +211,7 @@ static unsigned int __inline BLEND_MUL(AvsGlobalProxy *obj, unsigned int a, unsi
 	return t;
 }
 
-static __inline void BLEND_LINE(AvsGlobalProxy *obj, uint32_t *fb, int color)
+static  void BLEND_LINE(AvsGlobalProxy *obj, uint32_t *fb, int color)
 {
   register int bm=obj->line_blend_mode&0xff;
   switch (obj->line_blend_mode&0xff)
@@ -233,7 +233,7 @@ static __inline void BLEND_LINE(AvsGlobalProxy *obj, uint32_t *fb, int color)
 #pragma warning( push, 1 )
 
 #ifndef NO_MMX
-static unsigned int __inline BLEND_ADJ(unsigned int a, unsigned int b, int v)
+static unsigned int  BLEND_ADJ(unsigned int a, unsigned int b, int v)
 {
   __asm
   {
@@ -269,7 +269,7 @@ static unsigned int __inline BLEND_ADJ(unsigned int a, unsigned int b, int v)
 #endif
 
 
-static __inline unsigned int BLEND4(AvsGlobalProxy *obj, unsigned int *p1, unsigned int w, int xp, int yp)
+static  unsigned int BLEND4(AvsGlobalProxy *obj, unsigned int *p1, unsigned int w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -353,7 +353,7 @@ static __inline unsigned int BLEND4(AvsGlobalProxy *obj, unsigned int *p1, unsig
 }
 
 
-static __inline unsigned int BLEND4_16(AvsGlobalProxy *obj, unsigned int *p1, unsigned int w, int xp, int yp)
+static  unsigned int BLEND4_16(AvsGlobalProxy *obj, unsigned int *p1, unsigned int w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -445,7 +445,7 @@ static __inline unsigned int BLEND4_16(AvsGlobalProxy *obj, unsigned int *p1, un
 #pragma warning( pop ) 
 
 
-static __inline void mmx_avgblend_block(int *output, int *input, int l)
+static  void mmx_avgblend_block(int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -496,7 +496,7 @@ mmx_avgblend_loop:
 }
 
 
-static __inline void mmx_addblend_block(int *output, int *input, int l)
+static  void mmx_addblend_block(int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -533,7 +533,7 @@ mmx_addblend_loop:
 #endif
 }
 
-static __inline void mmx_mulblend_block(AvsGlobalProxy *obj, int *output, int *input, int l)
+static  void mmx_mulblend_block(AvsGlobalProxy *obj, int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -578,7 +578,7 @@ mmx_mulblend_loop:
 #endif
 }
 
-static void __inline mmx_adjblend_block(int *o, int *in1, int *in2, int len, int v)
+static void  mmx_adjblend_block(int *o, int *in1, int *in2, int len, int v)
 {
 #ifdef NO_MMX
   while (len--)
