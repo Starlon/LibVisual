@@ -63,7 +63,6 @@ static Handle<Value> function_log(const Arguments &args)
 
 static Handle<Value> function_sin(const Arguments &args)
 {
-        printf("function_sin\n");
         HandleScope handle_scope;
 
         if (args.Length() != 1) 
@@ -76,7 +75,6 @@ static Handle<Value> function_sin(const Arguments &args)
 
 static Handle<Value> function_cos(const Arguments &args)
 {
-        printf("function_cos\n");
         HandleScope handle_scope;
 
         if (args.Length() != 1) 
@@ -191,18 +189,15 @@ static Handle<Value> function_rand(const Arguments &args)
 
 static Handle<Value> prop_getter_pi(Local<String> property, const AccessorInfo &info)
 {
-    printf("getter PI\n");
     return Number::New(PI);
 }
 
 static Handle<Value> prop_getter_e(Local<String> property, const AccessorInfo &info)
 {
-    printf("getter E\n");
     return Number::New(E);
 }
 
 static Handle<Value> prop_getter_phi(Local<String> property, const AccessorInfo &info)
 {
-    printf("getter PHI\n");
     return Number::New(PHI);
 }
