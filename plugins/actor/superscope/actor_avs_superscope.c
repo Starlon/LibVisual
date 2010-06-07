@@ -157,10 +157,11 @@ int lv_superscope_init (VisPluginData *plugin)
     init_evaluator();
 
     RESULT *result = visual_mem_new0(RESULT, 1);
-    double val = 1;
+    double val = 100;
     SetResult(&result, R_NUMBER, &val);
-
     SetVariable("n", result);
+    val = 0;
+    SetResult(&result, R_NUMBER, &val);
     SetVariable("b", result);
     SetVariable("x", result);
     SetVariable("y", result);
@@ -383,8 +384,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     int isBeat;
 
     VisBuffer pcm;
-    float pcmbuf[1024];
+    float pcmbuf[576];
 
+    /*
     visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
 
     visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
@@ -392,7 +394,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
             VISUAL_AUDIO_CHANNEL_RIGHT,
             1.0,
             1.0);
-
+    */
 
     isBeat = priv->proxy->isBeat;
 
@@ -411,6 +413,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     int xorv=(ws*128)^128;
     uint16_t fa_data[576];
 
+    
     if((priv->channel_source&3) >= 2)
     {
         for(x = 0; x < 576; x++) {
@@ -446,7 +449,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         r3 = ((((c1>>16)&255)*(63-r))+(((c2>>16)&255)*r))/64;
 
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
-        printf("r1 %d, r2 %d, r3 %d, current_color %x\n", r1, r2, r3, current_color);
     }
 
     priv->h = video->height;
@@ -483,6 +485,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if (l > 128*1024)
         l = 128*1024;
 
+    if( l == 0 || l == 1 )
+        l = 2;
 
     for (a=0; a < l; a++) 
     {
@@ -492,7 +496,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         //double yr=((int)pcmbuf[(int)r]^xorv)*(1.0f-s1)+((int)pcmbuf[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
         priv->v = pcmbuf[a * 288 / l];
-        priv->i = a/(l-1);
+        priv->i = a/(double)(l-1);
         priv->skip = 0.0;
         SetVariableNumeric("v", priv->v);
         SetVariableNumeric("i", priv->i);
@@ -508,7 +512,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         int this_color = makeint(priv->blue) | (makeint(priv->green) << 8) | (makeint(priv->red) << 16);
 
-        if (priv->drawmode < 0.00001) {
+        if (1) {//priv->drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)
                     BLEND_LINE(proxy, buf+x+y*video->width, this_color);
         } else {
