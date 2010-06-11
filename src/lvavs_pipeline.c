@@ -478,7 +478,6 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-    printf("pipeline_container_run\n");
 	while ((element = visual_list_next (container->members, &le)) != NULL) {
 
         AvsGlobalProxy *proxy = element->pipeline->proxy;
