@@ -27,7 +27,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-#include <windows.h>
+#include <stdlib.h>
 #include "../ns-eel/ns-eel.h"
 #include "../ns-eel/ns-eel-int.h"
 #include "megabuf.h"
@@ -51,10 +51,10 @@ void megabuf_cleanup(NSEEL_VMCTX ctx)
       int x;
       for (x = 0; x < MEGABUF_BLOCKS; x ++)
       {
-        if (blocks[x]) GlobalFree(blocks[x]);
+        if (blocks[x]) free(blocks[x]);
         blocks[x]=0;
       }
-      GlobalFree((HGLOBAL)blocks);
+      free(blocks);
       c->userfunc_data[0]=0;
     }
   }
@@ -68,7 +68,7 @@ static double * NSEEL_CGEN_CALL megabuf_(double ***blocks, double *which)
 
   if (!*blocks)
   {
-    *blocks = (double **)GlobalAlloc(GPTR,sizeof(double *)*MEGABUF_BLOCKS);
+    *blocks = (double **)malloc(sizeof(double *)*MEGABUF_BLOCKS);
   }
   if (!*blocks) return &error;
 
@@ -77,7 +77,7 @@ static double * NSEEL_CGEN_CALL megabuf_(double ***blocks, double *which)
     int whichentry = w%MEGABUF_ITEMSPERBLOCK;
     if (!(*blocks)[whichblock])
     {
-      (*blocks)[whichblock]=(double *)GlobalAlloc(GPTR,sizeof(double)*MEGABUF_ITEMSPERBLOCK);
+      (*blocks)[whichblock]=(double *)malloc(sizeof(double)*MEGABUF_ITEMSPERBLOCK);
     }
     if ((*blocks)[whichblock])
       return &(*blocks)[whichblock][whichentry];
@@ -87,8 +87,9 @@ static double * NSEEL_CGEN_CALL megabuf_(double ***blocks, double *which)
 }
 
 static double * (NSEEL_CGEN_CALL *__megabuf)(double ***,double *) = &megabuf_;
-__declspec ( naked ) void _asm_megabuf(void)
+void _asm_megabuf(void)
 {
+    /*
   double ***my_ctx;
   double *parm_a, *__nextBlock;
   __asm { mov edx, 0xFFFFFFFF }
@@ -101,5 +102,6 @@ __declspec ( naked ) void _asm_megabuf(void)
 
   __asm { mov eax, __nextBlock } // this is custom, returning pointer
   __asm { mov esp, ebp }
+  */
 }
-__declspec ( naked ) void _asm_megabuf_end(void) {}
+void _asm_megabuf_end(void) {}

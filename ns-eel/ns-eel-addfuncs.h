@@ -91,7 +91,7 @@ be sure to preserve edi, too.
   __asm { add esi, 8 }  \
   __asm { mov esp, ebp }
 
-#define NSEEL_CGEN_CALL __fastcall
+#define NSEEL_CGEN_CALL inline
 
 
 #endif//__NS_EEL_ADDFUNCS_H__
