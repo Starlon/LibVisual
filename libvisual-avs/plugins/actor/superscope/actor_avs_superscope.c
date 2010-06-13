@@ -53,7 +53,7 @@ typedef struct {
     AvsRunnableContext      *ctx;
     AvsRunnableVariableManager  *vm;
     AvsRunnable         *runnable[4];
-    AvsNumber           n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode; 
+    AvsNumber           n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode, t, d; 
     AvsGlobalProxy      *proxy;
 
 
@@ -183,6 +183,8 @@ int lv_superscope_init (VisPluginData *plugin)
     avs_runnable_variable_bind(priv->vm, "v", &priv->v);
     avs_runnable_variable_bind(priv->vm, "w", &priv->w);
     avs_runnable_variable_bind(priv->vm, "h", &priv->h);
+    avs_runnable_variable_bind(priv->vm, "t", &priv->t);
+    avs_runnable_variable_bind(priv->vm, "d", &priv->d);
     avs_runnable_variable_bind(priv->vm, "$PI", &PI);
     avs_runnable_variable_bind(priv->vm, "red", &priv->red);
     avs_runnable_variable_bind(priv->vm, "green", &priv->green);
@@ -451,6 +453,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         x = (int)((priv->x + 1.0) * (AvsNumber)video->width * 0.5);
         y = (int)((priv->y + 1.0) * (AvsNumber)video->height * 0.5);
+
+        printf("x = %d, y = %d, t = %f v = %f\n", x, y, priv->t, priv->v);
 
         if (priv->skip >= 0.00001)
             continue;

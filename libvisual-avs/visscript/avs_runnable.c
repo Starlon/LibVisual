@@ -23,9 +23,9 @@ AvsRunnableVariableManager * avs_runnable_variable_manager_new()
 	memset(manager, 0, sizeof(AvsRunnableVariableManager));
 
     // Every manager should have these variables
-    avs_runnable_variable_create(manager, "$PI", PI);
-    avs_runnable_variable_create(manager, "$E", E);
-    avs_runnable_variable_create(manager, "$PHI", PHI);
+    avs_runnable_variable_create(manager, "PI", PI);
+    avs_runnable_variable_create(manager, "E", E);
+    avs_runnable_variable_create(manager, "PHI", PHI);
 
 	return manager;
 }
