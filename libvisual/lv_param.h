@@ -66,6 +66,7 @@ typedef enum {
 typedef struct _VisParamContainer VisParamContainer;
 typedef struct _VisParamEntryCallback VisParamEntryCallback;
 typedef struct _VisParamEntry VisParamEntry;
+typedef struct _VisParamEntryMinMax VisParamEntryMinMax;
 
 /**
  * The param changed callback is used to be able to notify of changes within parameters. This should
@@ -127,7 +128,21 @@ struct _VisParamEntry {
 
 	VisCollection		*collection;	/**< VisCollection data. */
 
-	char 			*annotation     /**< Parameter annotation. */
+	char 			*annotation;     /**< Parameter annotation. */
+
+	/**< Fields for  configuring minimum and maximum thresholds. */
+
+	struct {
+		int 	integer;
+		float	floating;
+		double 	doubleflt;
+	} min; /**< ParamEntry's minimum threshold. */
+
+	struct {
+		int 	integer;
+		float	floating;
+		double 	doubleflt;
+	} max; /**< ParemEntry's maximum threshold. */
 };
 
 /* prototypes */
@@ -173,7 +188,23 @@ VisColor *visual_param_entry_get_color (VisParamEntry *param);
 VisPalette *visual_param_entry_get_palette (VisParamEntry *param);
 VisObject *visual_param_entry_get_object (VisParamEntry *param);
 VisCollection *visual_param_entry_get_collection (VisParamEntry *param);
-char *visual_param_entry_get_annotation (char *anno);
+char *visual_param_entry_get_annotation (VisParamEntry *param);
+
+int visual_param_min_set_integer (VisParamEntry *param, int integer);
+int visual_param_min_set_float (VisParamEntry *param, float floating);
+int visual_param_min_set_double (VisParamEntry *param, double doubleflt);
+
+int visual_param_min_get_integer (VisParamEntry *param);
+float visual_param_min_get_float(VisParamEntry *param);
+double visual_param_min_get_double (VisParamEntry *param);
+
+int visual_param_max_set_integer (VisParamEntry *param, int integer);
+int visual_param_max_set_float (VisParamEntry *param, float floating);
+int visual_param_max_set_double (VisParamEntry *param, double doubleflt);
+
+int visual_param_max_get_integer (VisParamEntry *param);
+float visual_param_max_get_float(VisParamEntry *param);
+double visual_param_max_get_double (VisParamEntry *param);
 
 VISUAL_END_DECLS
 
