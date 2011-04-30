@@ -237,7 +237,7 @@ RESULT *SetResult(RESULT ** result, const int type, const void *value)
 	if ((*result = NewResult()) == NULL)
 	    return NULL;
     } else if (type == R_NUMBER) {
-	DelResult(*result);
+	//DelResult(*result);
     }
 
     if (type == R_NUMBER) {
