@@ -90,7 +90,7 @@ int act_avs_init (VisPluginData *plugin)
 
 	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
-				"/home/scott/Projects/libvisual/branches/libvisual-avs/testpresets/superscope.avs"),
+				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/superscope.avs"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("winamp avs", 1),
 		VISUAL_PARAM_LIST_END
 	};
