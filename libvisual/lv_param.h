@@ -126,6 +126,8 @@ struct _VisParamEntry {
 	VisList			 callbacks;	/**< The change notify callbacks. */
 
 	VisCollection		*collection;	/**< VisCollection data. */
+
+	char 			*annotation     /**< Parameter annotation. */
 };
 
 /* prototypes */
@@ -160,6 +162,7 @@ int visual_param_entry_set_color_by_color (VisParamEntry *param, VisColor *color
 int visual_param_entry_set_palette (VisParamEntry *param, VisPalette *pal);
 int visual_param_entry_set_object (VisParamEntry *param, VisObject *object);
 int visual_param_entry_set_collection (VisParamEntry *param, VisCollection *collection);
+int visual_param_entry_set_annotation (VisParamEntry *param, char *anno);
 
 char *visual_param_entry_get_name (VisParamEntry *param);
 char *visual_param_entry_get_string (VisParamEntry *param);
@@ -170,6 +173,7 @@ VisColor *visual_param_entry_get_color (VisParamEntry *param);
 VisPalette *visual_param_entry_get_palette (VisParamEntry *param);
 VisObject *visual_param_entry_get_object (VisParamEntry *param);
 VisCollection *visual_param_entry_get_collection (VisParamEntry *param);
+char *visual_param_entry_get_annotation (char *anno);
 
 VISUAL_END_DECLS
 

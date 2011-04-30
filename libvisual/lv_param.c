@@ -59,6 +59,9 @@ static int param_entry_dtor (VisObject *object)
 	if (param->objdata != NULL)
 		visual_object_unref (param->objdata);
 
+	if (param->annotation != NULL)
+		visual_mem_free (param->annotation);
+
 	visual_palette_free_colors (&param->pal);
 
 	visual_collection_destroy (VISUAL_COLLECTION (&param->callbacks));
@@ -66,6 +69,7 @@ static int param_entry_dtor (VisObject *object)
 	param->string = NULL;
 	param->name = NULL;
 	param->objdata = NULL;
+	param->annotation = NULL;
 
 	return VISUAL_OK;
 }
@@ -901,6 +905,27 @@ int visual_param_entry_set_collection (VisParamEntry *param, VisCollection *coll
 }
 
 /**
+ * Sets the annotation field of the VisParamEntry to the provided null terminated string.
+ *
+ * @param param Pointer to the VisParamEntry to which a parameter is set.
+ * @param anno A null terminated string which to assign to the VisParamEntry's annotation field.
+ *
+ * @return VISUAL_OK on success, -VISUAL_ERROR_PARAM_NULL or -VISUAL_ERROR_PARAM_ANNO_NULL on failure.
+ */
+int visual_param_entry_set_collection (VisParamEntry *param, char *anno)
+{
+	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+	visual_log_return_val_if_fail(anno != NULL, -VISUAL_ERROR_PARAM_ANNO_NULL);
+
+	if (param->annotation != NULL)
+		visual_mem_free(param->annotation);
+
+	param->annotation = strdup(anno);
+
+	return VISUAL_OK;
+}
+
+/**
  * Get the name of the VisParamEntry.
  *
  * @param param Pointer to the VisParamEntry from which the name is requested.
@@ -1066,6 +1091,20 @@ VisCollection *visual_param_entry_get_collection (VisParamEntry *param)
 	}
 
 	return param->collection;
+}
+
+/**
+ * Get the annotation parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the annotation parameter is requested.
+ *
+ * @return Pointer to the annotation string parameter from the VisParamEntry.
+ */
+char *visual_param_entry_get_annotation (VisParamEntry *param)
+{
+	visual_log_return_val_if_fail(param != NULL, NULL)
+
+	return param->annotation;
 }
 
 /**
