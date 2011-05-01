@@ -39,7 +39,7 @@ int main (int argc, char **argv)
 	if (argc > 1)
 		actor = visual_actor_new (argv[1]);
 	else
-		actor = visual_actor_new ("blursk");
+		actor = visual_actor_new ("avs");
 
 
 	if (argc > 3) {
