@@ -10,7 +10,8 @@ libavs_la_SOURCES = avs_gfx.c \
 		    avs_config.c \
 		    avs_config.h \
 		    avs_blend.h \
-			avs_inlines.h \
+			avs_blend.h \
+			avs_blend.c \
 			avs_globals.c \
 			avs_globals.h \
 			avs_matrix.c \
