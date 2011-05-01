@@ -78,11 +78,21 @@ struct _LVAVSPipeline {
 
 	VisVideo			*target;
 
-//	VisVideo			*buffers[16];
+	VisVideo			*buffers[16];
+
+	VisVideo *dummy_vid;
+
+	float audiodata[2][2][1024];
+
+	int *fbout;
+
+	int *framebuffer;
+
+	int invert; // whether to invert buffers -- fbout<->framebuffer
+
+	int isBeat;
 
 	LVAVSPipelineContainer		*container;
-
-    AvsGlobalProxy      *proxy;
 };
 
 struct _LVAVSPipelineRenderState {

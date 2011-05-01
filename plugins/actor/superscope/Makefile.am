@@ -13,7 +13,7 @@ AM_CFLAGS = @LIBVISUAL_CFLAGS@
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
-	-I$(top_srcdir)/../visscript-evaluator/ 
+	-I$(top_srcdir)/libcalc 
 
 actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
 

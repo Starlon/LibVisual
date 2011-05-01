@@ -34,10 +34,12 @@
 #include <string.h>
 #include <libvisual/libvisual.h>
 
-#include "evaluator.h"
-#include "visscript.h"
+#include "calc.h"
+//#include "evaluator.h"
+//#include "visscript.h"
 
 #include "avs_common.h"
+#include "lvavs_pipeline.h"
 
 enum scope_runnable {
     SCOPE_RUNNABLE_INIT,
@@ -48,15 +50,25 @@ enum scope_runnable {
 
 typedef enum scope_runnable ScopeRunnable;
 
+/*
 typedef struct {
     void *data;
 } VoidP;
+*/
+
+/*
+typedef struct {
+   expression_t *expression;
+   symbol_dict_t *dict;
+} AvsRunnable;
+*/
 
 typedef struct {
-    AvsGlobalProxy      *proxy;
-    VoidP runnable[4];
+    LVAVSPipeline *pipeline;
+    expression_t *runnable[4];
+    symbol_dict_t *environment;
 
-    double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
+    double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
 
     char            *point;
     char            *frame;
@@ -117,15 +129,14 @@ const VisPluginInfo *get_plugin_info (int *count)
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
-    Compile(buf, &priv->runnable[runnable].data);
+    priv->runnable[runnable] = expr_compile_string(buf, priv->environment);
     return 0;
 }
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
-    RESULT *result = visual_mem_new0(RESULT, 1);
-    Eval(priv->runnable[runnable].data, result);
-    visual_mem_free(result);
+    expr_execute(priv->runnable[runnable], priv->environment);
+
     return 0;
 }
 
@@ -149,35 +160,29 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_param_container_add_many (paramcontainer, params);
 
-    priv->proxy = (AvsGlobalProxy *)visual_object_get_private(VISUAL_OBJECT(plugin));
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    priv->pipeline = (AvsGlobalProxy *)visual_object_get_private(VISUAL_OBJECT(plugin));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-    init_evaluator();
+    priv->n = dict_variable(priv->environment, "n");
+    priv->b = dict_variable(priv->environment, "b");
+    priv->x = dict_variable(priv->environment, "x");
+    priv->y = dict_variable(priv->environment, "y");
+    priv->i = dict_variable(priv->environment, "i");
+    priv->v = dict_variable(priv->environment, "v");
+    priv->w = dict_variable(priv->environment, "w");
+    priv->h = dict_variable(priv->environment, "h");
+    priv->t = dict_variable(priv->environment, "t");
+    priv->d = dict_variable(priv->environment, "d");
 
-    RESULT *result = visual_mem_new0(RESULT, 1);
-    double val = 100;
-    SetResult(&result, R_NUMBER, &val);
-    SetVariable("n", result);
-    val = 0;
-    SetResult(&result, R_NUMBER, &val);
-    SetVariable("b", result);
-    SetVariable("x", result);
-    SetVariable("y", result);
-    SetVariable("i", result);
-    SetVariable("v", result);
-    SetVariable("w", result);
-    SetVariable("h", result);
-    SetVariable("t", result);
-    SetVariable("d", result);
-    SetVariable("red", result);
-    SetVariable("green", result);
-    SetVariable("blue", result);
-    SetVariable("linesize", result);
-    SetVariable("skip", result);
-    SetVariable("drawmode", result);
-    visual_mem_free(result);
+    priv->red = dict_variable(priv->environment, "red");
+    priv->red = dict_variable(priv->environment, "red");
+    priv->green = dict_variable(priv->environment, "green");
+    priv->blue = dict_variable(priv->environment, "blue");
+    priv->linesize = dict_variable(priv->environment, "linesize");
+    priv->skip = dict_variable(priv->environment, "skip");
+    priv->drawmode = dict_variable(priv->environment, "drawmode");
 
     visual_palette_allocate_colors (&priv->pal, 1);
 
@@ -210,8 +215,17 @@ int lv_superscope_cleanup (VisPluginData *plugin)
     if(priv->init != NULL)
         visual_mem_free(priv->init);
 
-    if(priv->proxy != NULL)
-        visual_object_unref(VISUAL_OBJECT(priv->proxy));
+    if(priv->pipeline != NULL)
+        visual_object_unref(VISUAL_OBJECT(priv->pipeline));
+
+    int i;
+    for(i = 0; i < 4; i++) {
+	if(priv->runnable[i] != NULL)
+	        expr_free(priv->runnable[i]);
+    }
+
+    if(priv->environment != NULL)
+        dict_free(priv->environment);
 
     visual_mem_free (priv);
 
@@ -335,6 +349,7 @@ VisPalette *lv_superscope_palette (VisPluginData *plugin)
 
 void set_vars(SuperScopePrivate *priv)
 {   
+/*
     VARIABLE *var = FindVariable("n");
     priv->n = R2N(var->value);
     var = FindVariable("b");
@@ -367,6 +382,7 @@ void set_vars(SuperScopePrivate *priv)
     priv->skip = R2N(var->value);
     var = FindVariable("drawmode");
     priv->drawmode = R2N(var->value);
+*/
 }
 
 static __inline int makeint(double t)
@@ -379,7 +395,7 @@ static __inline int makeint(double t)
 int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
-    AvsGlobalProxy *proxy = priv->proxy;
+    LVAVSPipeline *pipeline = priv->pipeline;
     uint32_t *buf = (uint32_t *)visual_video_get_pixels (video);
     int isBeat;
 
@@ -396,12 +412,11 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
             1.0);
     */
 
-    isBeat = priv->proxy->isBeat;
+    isBeat = priv->pipeline->isBeat;
 
     if(priv->needs_init) {
         priv->needs_init = FALSE;
         scope_run(priv, SCOPE_RUNNABLE_INIT);
-        set_vars(priv);
     }
 
 //  visual_video_fill_color(video, visual_color_black()); 
@@ -417,16 +432,14 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if((priv->channel_source&3) >= 2)
     {
         for(x = 0; x < 576; x++) {
-            //fa_data[x] = proxy->audiodata[ws^1][0][x] * UINT8_MAX + proxy->audiodata[ws^1][1][x] * UINT8_MAX;
-            pcmbuf[x] = proxy->audiodata[ws^1][0][x] / 2 + proxy->audiodata[ws^1][1][x] / 2;
+            pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
         }
     }
     else
     {
         printf(" < 2\n");
         for(x = 0; x < 576; x++) {
-            //fa_data[x] = proxy->audiodata[ws^1][priv->channel_source&3][x] * UINT16_MAX;
-            pcmbuf[x] = proxy->audiodata[ws^1][priv->channel_source&3][x];
+            pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
         }
     }
 
@@ -451,17 +464,18 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
     }
 
-    priv->h = video->height;
-    priv->w = video->width;
-    priv->b = isBeat?1.0:0.0;
-    priv->blue = (current_color&0xff)/255.0;
-    priv->green = ((current_color>>8)&0xff)/255.0;
-    priv->red = ((current_color>>16)&0xff)/255.0;
-    priv->skip = 0.0;
-    priv->linesize = (double) ((priv->proxy->line_blend_mode&0xff0000)>>16);
-    priv->drawmode = priv->draw_type ? 1.0 : 0.0;
+    *priv->h = video->height;
+    *priv->w = video->width;
+    *priv->b = isBeat?1.0:0.0;
+    *priv->blue = (current_color&0xff)/255.0;
+    *priv->green = ((current_color>>8)&0xff)/255.0;
+    *priv->red = ((current_color>>16)&0xff)/255.0;
+    *priv->skip = 0.0;
+    *priv->linesize = (double) ((pipeline->renderstate->blendmode&0xff0000)>>16);
+    *priv->drawmode = priv->draw_type ? 1.0 : 0.0;
 
     
+/*
     SetVariableNumeric("h", priv->h);
     SetVariableNumeric("w", priv->w);
     SetVariableNumeric("b", priv->b);
@@ -471,17 +485,15 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     SetVariableNumeric("skip", priv->skip);
     SetVariableNumeric("linesize", priv->linesize);
     SetVariableNumeric("drawmode", priv->drawmode);
+*/
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
-
     if (isBeat) {
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
     }
 
-    set_vars(priv);
-
     //int candraw=0;
-    l = priv->n;
+    l = *priv->n;
     if (l > 128*1024)
         l = 128*1024;
 
@@ -495,26 +507,25 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         //double s1=r-(int)r;
         //double yr=((int)pcmbuf[(int)r]^xorv)*(1.0f-s1)+((int)pcmbuf[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
-        priv->v = pcmbuf[a * 288 / l];
-        priv->i = a/(double)(l-1);
-        priv->skip = 0.0;
-        SetVariableNumeric("v", priv->v);
+        *priv->v = pcmbuf[a * 288 / l];
+        *priv->i = a/(double)(l-1);
+        *priv->skip = 0.0;
+        /*SetVariableNumeric("v", priv->v);
         SetVariableNumeric("i", priv->i);
-        SetVariableNumeric("skip", priv->skip);
+        SetVariableNumeric("skip", priv->skip);*/
         scope_run(priv, SCOPE_RUNNABLE_POINT);
-        set_vars(priv);
 
-        x = (int)((priv->x + 1.0) * video->width * 0.5);
-        y = (int)((priv->y + 1.0) * video->height * 0.5);
+        x = (int)((*priv->x + 1.0) * video->width * 0.5);
+        y = (int)((*priv->y + 1.0) * video->height * 0.5);
 
-        if (priv->skip >= 0.00001)
+        if (*priv->skip >= 0.00001)
             continue;
 
-        int this_color = makeint(priv->blue) | (makeint(priv->green) << 8) | (makeint(priv->red) << 16);
+        int this_color = makeint(*priv->blue) | (makeint(*priv->green) << 8) | (makeint(*priv->red) << 16);
 
-        if (1) {//priv->drawmode < 0.00001) {
+        if (1) {//*priv->drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)
-                    BLEND_LINE(proxy, buf+x+y*video->width, this_color);
+                    BLEND_LINE(pipeline, buf+x+y*video->width, this_color);
         } else {
             if (a > 0) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width &&

@@ -11,8 +11,6 @@
 
 typedef struct {
     uint32_t *buffer;
-    int w;
-    int h;
 } AvsGlobalBuffer;
 
 typedef struct {
@@ -27,7 +25,12 @@ struct _AvsGlobalProxy {
     unsigned char   blendtable[256][256];
     int reset_vars_on_recompile;
     int line_blend_mode;
-    AvsGlobalBuffer *buffers;
+
+    AvsGlobalBuffer buffers[MAXBUF];
+
+    VisVideo *framebuffer;
+    VisVideo *fbout;
+
     int numbuffers;
     int isBeat;
     float audiodata[2][2][1024]; // Is in the format of [spectrum:0,wave:1][channel][band]
@@ -40,13 +43,13 @@ struct _AvsGlobalProxy {
 struct _AvsMultidelayGlobals {
     VisObject obj;
 
-    AvsLPVOID buffer[6];
-    AvsLPVOID inpos[6];
-    AvsLPVOID outpos[6];
-    unsigned long buffersize[6];
-    unsigned long virtualbuffersize[6];
-    unsigned long oldvirtualbuffersize[6];
-    unsigned long framedelay[6];
+    AvsLPVOID buffer[MAXBUF];
+    AvsLPVOID inpos[MAXBUF];
+    AvsLPVOID outpos[MAXBUF];
+    unsigned long buffersize[MAXBUF];
+    unsigned long virtualbuffersize[MAXBUF];
+    unsigned long oldvirtualbuffersize[MAXBUF];
+    unsigned long framedelay[MAXBUF];
     unsigned int numinstances;
     unsigned long framessincebeat;
     unsigned long framesperbeat;
@@ -57,7 +60,8 @@ struct _AvsMultidelayGlobals {
     int32_t delay[6];
 };
 
-AvsGlobalBuffer *avs_get_global_buffer(AvsGlobalProxy *obj, int w, int h, int n, int do_alloc);
-AvsGlobalProxy *avs_global_proxy_new();
+//AvsGlobalBuffer *avs_get_global_buffer(AvsGlobalProxy *obj, int w, int h, int n, int do_alloc);
+AvsGlobalProxy *avs_global_proxy_new(int w, int h, int depth);
+int avs_global_proxy_resize(AvsGlobalProxy *proxy, int w, int h, int depth);
 
 #endif

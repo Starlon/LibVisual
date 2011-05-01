@@ -47,146 +47,141 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 /* Object destructors */
 static int lvavs_pipeline_dtor (VisObject *object)
 {
-	LVAVSPipeline *pipeline = LVAVS_PIPELINE (object);
+    LVAVSPipeline *pipeline = LVAVS_PIPELINE (object);
 
-	if (pipeline->renderstate != NULL)
-		visual_object_unref (VISUAL_OBJECT (pipeline->renderstate));
+    if (pipeline->renderstate != NULL)
+        visual_object_unref (VISUAL_OBJECT (pipeline->renderstate));
 
-	if (pipeline->container != NULL)
-		visual_object_unref (VISUAL_OBJECT (pipeline->container));
+    if (pipeline->container != NULL)
+        visual_object_unref (VISUAL_OBJECT (pipeline->container));
 
-    //if (pipeline->proxy != NULL)
-    //    visual_object_unref (VISUAL_OBJECT (pipeline->proxy));
+    pipeline->renderstate = NULL;
+    pipeline->container = NULL;
 
-	pipeline->renderstate = NULL;
-	pipeline->container = NULL;
-
-	return TRUE;
+    return TRUE;
 }
 
 static int lvavs_pipeline_element_dtor (VisObject *object)
 {
-	LVAVSPipelineElement *element = LVAVS_PIPELINE_ELEMENT (object);
+    LVAVSPipelineElement *element = LVAVS_PIPELINE_ELEMENT (object);
 
-	if (element->params != NULL)
-		visual_object_unref (VISUAL_OBJECT (element->params));
+    if (element->params != NULL)
+        visual_object_unref (VISUAL_OBJECT (element->params));
 
-	switch (element->type) {
-		case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
-			visual_object_unref (VISUAL_OBJECT (element->data.actor));
-			element->data.actor = NULL;
+    switch (element->type) {
+        case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
+            visual_object_unref (VISUAL_OBJECT (element->data.actor));
+            element->data.actor = NULL;
 
-			break;
+            break;
 
-		case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
-			visual_object_unref (VISUAL_OBJECT (element->data.transform));
-			element->data.transform = NULL;
+        case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
+            visual_object_unref (VISUAL_OBJECT (element->data.transform));
+            element->data.transform = NULL;
 
-			break;
+            break;
 
 
-		case LVAVS_PIPELINE_ELEMENT_TYPE_MORPH:
-			visual_object_unref (VISUAL_OBJECT (element->data.morph));
-			element->data.morph = NULL;
+        case LVAVS_PIPELINE_ELEMENT_TYPE_MORPH:
+            visual_object_unref (VISUAL_OBJECT (element->data.morph));
+            element->data.morph = NULL;
 
-			break;
+            break;
 
-		case LVAVS_PIPELINE_ELEMENT_TYPE_RENDERSTATE:
-		case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
+        case LVAVS_PIPELINE_ELEMENT_TYPE_RENDERSTATE:
+        case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
 
-			break;
+            break;
 
-		default:
-			visual_log (VISUAL_LOG_WARNING, "Tried to destroy invalid LVAVSPipelineElement type");
+        default:
+            visual_log (VISUAL_LOG_WARNING, "Tried to destroy invalid LVAVSPipelineElement type");
 
-			break;
-	}
+            break;
+    }
 
-	element->pipeline = NULL;
-	element->params = NULL;
+    element->pipeline = NULL;
+    element->params = NULL;
 
-	return TRUE;
+    return TRUE;
 }
 
 static int lvavs_pipeline_container_dtor (VisObject *object)
 {
-	LVAVSPipelineContainer *container = LVAVS_PIPELINE_CONTAINER (object);
+    LVAVSPipelineContainer *container = LVAVS_PIPELINE_CONTAINER (object);
 
-	if (container->members != NULL)
-		visual_object_unref (VISUAL_OBJECT (container->members));
+    if (container->members != NULL)
+        visual_object_unref (VISUAL_OBJECT (container->members));
 
-	container->members = NULL;
+    container->members = NULL;
 
-	lvavs_pipeline_element_dtor (object);
+    lvavs_pipeline_element_dtor (object);
 
-	return TRUE;
+    return TRUE;
 }
 
 
 /* LVAVS Preset */
 LVAVSPipeline *lvavs_pipeline_new ()
 {
-	LVAVSPipeline *pipeline;
+    LVAVSPipeline *pipeline;
 
-	pipeline = visual_mem_new0 (LVAVSPipeline, 1);
+    pipeline = visual_mem_new0 (LVAVSPipeline, 1);
 
-	/* Do the VisObject initialization */
-	visual_object_initialize (VISUAL_OBJECT (pipeline), TRUE, lvavs_pipeline_dtor);
+    /* Do the VisObject initialization */
+    visual_object_initialize (VISUAL_OBJECT (pipeline), TRUE, lvavs_pipeline_dtor);
 
-	return pipeline;
+    return pipeline;
 }
 
 LVAVSPipelineElement *lvavs_pipeline_element_new (LVAVSPipelineElementType type)
 {
-	LVAVSPipelineElement *element;
+    LVAVSPipelineElement *element;
 
-	element = visual_mem_new0 (LVAVSPipelineElement, 1);
+    element = visual_mem_new0 (LVAVSPipelineElement, 1);
 
-	/* Do the VisObject initialization */
-	visual_object_initialize (VISUAL_OBJECT (element), TRUE, lvavs_pipeline_element_dtor);
+    /* Do the VisObject initialization */
+    visual_object_initialize (VISUAL_OBJECT (element), TRUE, lvavs_pipeline_element_dtor);
 
-	element->type = type;
+    element->type = type;
 
-	return element;
+    return element;
 }
 
 LVAVSPipelineContainer *lvavs_pipeline_container_new ()
 {
-	LVAVSPipelineContainer *container;
+    LVAVSPipelineContainer *container;
 
-	container = visual_mem_new0 (LVAVSPipelineContainer, 1);
+    container = visual_mem_new0 (LVAVSPipelineContainer, 1);
 
-	/* Do the VisObject initialization */
-	visual_object_initialize (VISUAL_OBJECT (container), TRUE, lvavs_pipeline_container_dtor);
+    /* Do the VisObject initialization */
+    visual_object_initialize (VISUAL_OBJECT (container), TRUE, lvavs_pipeline_container_dtor);
 
-	LVAVS_PIPELINE_ELEMENT (container)->type = LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER;
+    LVAVS_PIPELINE_ELEMENT (container)->type = LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER;
 
-	container->members = visual_list_new (visual_object_collection_destroyer);
+    container->members = visual_list_new (visual_object_collection_destroyer);
 
-	return container;
+    return container;
 }
 
 LVAVSPipeline *lvavs_pipeline_new_from_preset (LVAVSPreset *preset)
 {
-	LVAVSPipeline *pipeline;
+    LVAVSPipeline *pipeline;
 
-	pipeline = lvavs_pipeline_new ();
+    pipeline = lvavs_pipeline_new ();
 
-        pipeline->proxy = avs_global_proxy_new();
+    pipeline->container = lvavs_pipeline_container_new ();
+    LVAVS_PIPELINE_ELEMENT (pipeline->container)->pipeline = pipeline;
 
-	pipeline->container = lvavs_pipeline_container_new ();
-	LVAVS_PIPELINE_ELEMENT (pipeline->container)->pipeline = pipeline;
+    pipeline_from_preset (pipeline->container, preset->main);
 
-	pipeline_from_preset (pipeline->container, preset->main);
-
-	return pipeline;
+    return pipeline;
 }
 
 int lvavs_pipeline_realize (LVAVSPipeline *pipeline)
 {
-	pipeline_container_realize (LVAVS_PIPELINE_CONTAINER (pipeline->container));
+    pipeline_container_realize (LVAVS_PIPELINE_CONTAINER (pipeline->container));
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 /* The pipeline is currently depth unaware, and always runs in 32bits mode.
@@ -194,101 +189,101 @@ int lvavs_pipeline_realize (LVAVSPipeline *pipeline)
  */
 int lvavs_pipeline_negotiate (LVAVSPipeline *pipeline, VisVideo *video)
 {
-	pipeline_container_negotiate (LVAVS_PIPELINE_CONTAINER (pipeline->container), video);
+    pipeline_container_negotiate (LVAVS_PIPELINE_CONTAINER (pipeline->container), video);
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 int lvavs_pipeline_propagate_event (LVAVSPipeline *pipeline, VisEvent *event)
 {
-	return pipeline_container_propagate_event (pipeline->container, event);
+    return pipeline_container_propagate_event (pipeline->container, event);
 }
 
 int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audio)
 {
-	pipeline_container_run (LVAVS_PIPELINE_CONTAINER (pipeline->container), video, audio);
+    pipeline_container_run (LVAVS_PIPELINE_CONTAINER (pipeline->container), video, audio);
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 /* Internal functions */
 int pipeline_from_preset (LVAVSPipelineContainer *container, LVAVSPresetContainer *presetcont)
 {
-	VisListEntry *le = NULL;
-	LVAVSPresetElement *pelem;
-	LVAVSPipelineElement *element;
-	LVAVSPipelineContainer *cont;
-	VisPluginRef *ref;
+    VisListEntry *le = NULL;
+    LVAVSPresetElement *pelem;
+    LVAVSPipelineElement *element;
+    LVAVSPipelineContainer *cont;
+    VisPluginRef *ref;
     LVAVSPipeline *pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline; 
 
-	while ((pelem = visual_list_next (presetcont->members, &le)) != NULL) {
+    while ((pelem = visual_list_next (presetcont->members, &le)) != NULL) {
 
-		switch (pelem->type) {
-			case LVAVS_PRESET_ELEMENT_TYPE_PLUGIN:
-				ref = visual_plugin_find (visual_plugin_get_registry (), pelem->element_name);
+        switch (pelem->type) {
+            case LVAVS_PRESET_ELEMENT_TYPE_PLUGIN:
+                ref = visual_plugin_find (visual_plugin_get_registry (), pelem->element_name);
 
-				if (ref == NULL) {
-					visual_log (VISUAL_LOG_CRITICAL, "Requested plugin %s not in registry", pelem->element_name);
+                if (ref == NULL) {
+                    visual_log (VISUAL_LOG_CRITICAL, "Requested plugin %s not in registry", pelem->element_name);
 
-					break;
-				}
+                    break;
+                }
 
-				if (ref->info == NULL) {
-					visual_log (VISUAL_LOG_CRITICAL, "Could not get VisPluginInfo for %s", pelem->element_name);
+                if (ref->info == NULL) {
+                    visual_log (VISUAL_LOG_CRITICAL, "Could not get VisPluginInfo for %s", pelem->element_name);
 
-					break;
-				}
+                    break;
+                }
 
-				/* FIXME fix libvisual type lookup and use the functions here */
-				if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_ACTOR) == 0) {
+                /* FIXME fix libvisual type lookup and use the functions here */
+                if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_ACTOR) == 0) {
 
-					element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR);
-					element->data.actor = visual_actor_new (pelem->element_name);
-                    visual_object_set_private(VISUAL_OBJECT(element->data.actor->plugin), pipeline->proxy);
+                    element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR);
+                    element->data.actor = visual_actor_new (pelem->element_name);
+                    visual_object_set_private(VISUAL_OBJECT(element->data.actor->plugin), pipeline);
 
-				} else if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_MORPH) == 0) {
+                } else if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_MORPH) == 0) {
 
-					element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_MORPH);
-					element->data.morph = visual_morph_new (pelem->element_name);
-                    visual_object_set_private(VISUAL_OBJECT(element->data.morph->plugin), pipeline->proxy);
+                    element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_MORPH);
+                    element->data.morph = visual_morph_new (pelem->element_name);
+                    visual_object_set_private(VISUAL_OBJECT(element->data.morph->plugin), pipeline);
 
-				} else if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_TRANSFORM) == 0) {
+                } else if (strcmp (ref->info->type, VISUAL_PLUGIN_TYPE_TRANSFORM) == 0) {
 
-					element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM);
-					element->data.transform = visual_transform_new (pelem->element_name);
-                    visual_object_set_private(VISUAL_OBJECT(element->data.transform->plugin), pipeline->proxy);
+                    element = lvavs_pipeline_element_new (LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM);
+                    element->data.transform = visual_transform_new (pelem->element_name);
+                    visual_object_set_private(VISUAL_OBJECT(element->data.transform->plugin), pipeline);
 
-				} else {
+                } else {
                     printf("uknown type '%s' '%s'\n", ref->info->type, ref->info->name);
                 }
 
-				if (pelem->pcont != NULL) {
-					element->params = visual_param_container_new ();
-					visual_param_container_copy (element->params, pelem->pcont);
-				}
+                if (pelem->pcont != NULL) {
+                    element->params = visual_param_container_new ();
+                    visual_param_container_copy (element->params, pelem->pcont);
+                }
 
-				element->pipeline = LVAVS_PIPELINE_ELEMENT (container)->pipeline;
+                element->pipeline = LVAVS_PIPELINE_ELEMENT (container)->pipeline;
 
-				visual_list_add (container->members, element);
+                visual_list_add (container->members, element);
 
-				break;
+                break;
 
-			case LVAVS_PRESET_ELEMENT_TYPE_CONTAINER:
-				cont = lvavs_pipeline_container_new ();
+            case LVAVS_PRESET_ELEMENT_TYPE_CONTAINER:
+                cont = lvavs_pipeline_container_new ();
 
-				visual_list_add (container->members, cont);
+                visual_list_add (container->members, cont);
 
-				pipeline_from_preset (cont, LVAVS_PRESET_CONTAINER (pelem));
+                pipeline_from_preset (cont, LVAVS_PRESET_CONTAINER (pelem));
 
-				break;
+                break;
 
-			case LVAVS_PRESET_ELEMENT_TYPE_RENDERSTATE:
+            case LVAVS_PRESET_ELEMENT_TYPE_RENDERSTATE:
 
-				break;
+                break;
 
-			case LVAVS_PRESET_ELEMENT_TYPE_COMMENT:
+            case LVAVS_PRESET_ELEMENT_TYPE_COMMENT:
 
-				break;
+                break;
 
             case LVAVS_PRESET_ELEMENT_TYPE_BPM:
 
@@ -298,233 +293,228 @@ int pipeline_from_preset (LVAVSPipelineContainer *container, LVAVSPresetContaine
 
                 break;
             
-			default:
-				visual_log (VISUAL_LOG_CRITICAL, "Invalid LVAVSPresetElementType in LVAVSPresetElement");
+            default:
+                visual_log (VISUAL_LOG_CRITICAL, "Invalid LVAVSPresetElementType in LVAVSPresetElement");
 
-				break;
-		}
-	}
+                break;
+        }
+    }
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 int pipeline_container_realize (LVAVSPipelineContainer *container)
 {
-	VisListEntry *le = NULL;
-	LVAVSPipelineElement *element;
+    VisListEntry *le = NULL;
+    LVAVSPipelineElement *element;
 
-	while ((element = visual_list_next (container->members, &le)) != NULL) {
+    while ((element = visual_list_next (container->members, &le)) != NULL) {
 
-		switch (element->type) {
-			case LVAVS_PIPELINE_ELEMENT_TYPE_NULL:
+        switch (element->type) {
+            case LVAVS_PIPELINE_ELEMENT_TYPE_NULL:
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
 
-				visual_actor_realize (element->data.actor);
-				visual_param_container_copy_match (visual_plugin_get_params (
-							visual_actor_get_plugin (element->data.actor)), element->params);
+                visual_actor_realize (element->data.actor);
+                visual_param_container_copy_match (visual_plugin_get_params (
+                            visual_actor_get_plugin (element->data.actor)), element->params);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
 
-				visual_transform_realize (element->data.transform);
-				visual_param_container_copy_match (visual_plugin_get_params (
-							visual_transform_get_plugin (element->data.transform)), element->params);
+                visual_transform_realize (element->data.transform);
+                visual_param_container_copy_match (visual_plugin_get_params (
+                            visual_transform_get_plugin (element->data.transform)), element->params);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_MORPH:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_MORPH:
 
-				visual_morph_realize (element->data.morph);
+                visual_morph_realize (element->data.morph);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_RENDERSTATE:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_RENDERSTATE:
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
 
-				pipeline_container_realize (LVAVS_PIPELINE_CONTAINER (element));
+                pipeline_container_realize (LVAVS_PIPELINE_CONTAINER (element));
 
-				break;
+                break;
 
-			default:
-				visual_log (VISUAL_LOG_CRITICAL, "Invalid LVAVSPipelineElementType");
+            default:
+                visual_log (VISUAL_LOG_CRITICAL, "Invalid LVAVSPipelineElementType");
 
-				break;
-		}
-	}
+                break;
+        }
+    }
     return 0;
 }
 
 int pipeline_container_negotiate (LVAVSPipelineContainer *container, VisVideo *video)
 {
-	VisListEntry *le = NULL;
-	LVAVSPipelineElement *element;
+    VisListEntry *le = NULL;
+    LVAVSPipelineElement *element;
 
-	while ((element = visual_list_next (container->members, &le)) != NULL) {
+    while ((element = visual_list_next (container->members, &le)) != NULL) {
 
-		switch (element->type) {
-			case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
-				visual_actor_set_video (element->data.actor, video);
-				visual_actor_video_negotiate (element->data.actor, VISUAL_VIDEO_DEPTH_NONE, FALSE, FALSE);
+        switch (element->type) {
+            case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
+                visual_actor_set_video (element->data.actor, video);
+                visual_actor_video_negotiate (element->data.actor, VISUAL_VIDEO_DEPTH_NONE, FALSE, FALSE);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
-				visual_transform_set_video (element->data.transform, video);
-				visual_transform_video_negotiate (element->data.transform);
+            case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
+                visual_transform_set_video (element->data.transform, video);
+                visual_transform_video_negotiate (element->data.transform);
 
-				break;
+                break;
 
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
 
-				pipeline_container_negotiate (LVAVS_PIPELINE_CONTAINER (element), video);
+                pipeline_container_negotiate (LVAVS_PIPELINE_CONTAINER (element), video);
 
-				break;
+                break;
 
-			default:
+            default:
 
-				break;
-		}
-	}
+                break;
+        }
+    }
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 int pipeline_container_propagate_event (LVAVSPipelineContainer *container, VisEvent *event)
 {
-	VisListEntry *le = NULL;
-	VisEventQueue *pluginqueue;
-	LVAVSPipelineElement *element;
+    VisListEntry *le = NULL;
+    VisEventQueue *pluginqueue;
+    LVAVSPipelineElement *element;
 
-	while ((element = visual_list_next (container->members, &le)) != NULL) {
+    while ((element = visual_list_next (container->members, &le)) != NULL) {
 
-		switch (element->type) {
-			case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
+        switch (element->type) {
+            case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
 
-				pluginqueue = visual_plugin_get_eventqueue (visual_actor_get_plugin (element->data.actor));
+                pluginqueue = visual_plugin_get_eventqueue (visual_actor_get_plugin (element->data.actor));
 
-				visual_object_ref (VISUAL_OBJECT (event));
-				visual_event_queue_add (pluginqueue, event);
+                visual_object_ref (VISUAL_OBJECT (event));
+                visual_event_queue_add (pluginqueue, event);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
 
-				pluginqueue = visual_plugin_get_eventqueue (visual_actor_get_plugin (element->data.actor));
+                pluginqueue = visual_plugin_get_eventqueue (visual_actor_get_plugin (element->data.actor));
 
-				visual_object_ref (VISUAL_OBJECT (event));
-				visual_event_queue_add (pluginqueue, event);
+                visual_object_ref (VISUAL_OBJECT (event));
+                visual_event_queue_add (pluginqueue, event);
 
-				break;
+                break;
 
-			case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
+            case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
 
-				pipeline_container_propagate_event (LVAVS_PIPELINE_CONTAINER (element), event);
+                pipeline_container_propagate_event (LVAVS_PIPELINE_CONTAINER (element), event);
 
-				break;
+                break;
 
-			default:
+            default:
 
-				break;
-		}
-	}
+                break;
+        }
+    }
 
 
-	return VISUAL_OK;
+    return VISUAL_OK;
 }
 
 int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, VisAudio *audio)
 {
-	VisListEntry *le = NULL;
-	LVAVSPipelineElement *element;
+    int i;
+    VisListEntry *le = NULL;
+    LVAVSPipelineElement *element;
     VisBuffer pcmbuf1;
     VisBuffer pcmbuf2;
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
+    int *fbout;
+    int *framebuffer;
     float data[2][2][1024];
     
-    
-    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
+    avs_sound_get_from_source(audio, data);
 
-    /* Left audio */
-    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
+    for(i = 0; i < 1024; i++) {
+        container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
+        container->element.pipeline->audiodata[1][0][i] = data[1][0][i];
+        container->element.pipeline->audiodata[0][1][i] = data[0][1][i];
+        container->element.pipeline->audiodata[1][1][i] = data[1][1][i];
+    }
 
-    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
+    int s = 0;
+    while ((element = visual_list_next (container->members, &le)) != NULL) {
 
-        visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
-
-    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
-
-    visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
-
-    /* Right audio */
-    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
-
-    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
-
-        visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
-
-    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
-
-    visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
-
-    visual_object_unref(VISUAL_OBJECT(&tmp));
-
-	while ((element = visual_list_next (container->members, &le)) != NULL) {
-
-        AvsGlobalProxy *proxy = element->pipeline->proxy;
-        int i;
+	VisVideo *tmpvid;
+        LVAVSPipeline *pipeline = element->pipeline;
         float *beatdata = visual_mem_malloc0(2048 * sizeof(float));
-        
-        for(i = 0; i < 1024; i++) {
-            proxy->audiodata[0][0][i] = data[0][0][i];
-            proxy->audiodata[1][0][i] = data[1][0][i];
-            proxy->audiodata[0][1][i] = data[0][1][i];
-            proxy->audiodata[1][1][i] = data[1][1][i];
-        }
         
         beatdata = data[0][0];
         beatdata += 1024;
         beatdata = data[0][1];
         beatdata -= 1024;
 
-        proxy->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
-
-		switch (element->type) {
-			case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
-
-				visual_actor_set_video (element->data.actor, video);
-				visual_actor_run (element->data.actor, audio);
-
-				break;
-
-			case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
-
-				visual_transform_set_video (element->data.transform, video);
-				visual_transform_run (element->data.transform, audio);
-
-				break;
-
-			case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
-
-				pipeline_container_run (LVAVS_PIPELINE_CONTAINER (element), video, audio);
-
-				break;
-
-			default:
-
-				break;
-		}
+        pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
+	
+	if(s) {
+		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
+		pipeline->framebuffer = visual_video_get_pixels(video);
+	} else {
+		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+		pipeline->fbout = visual_video_get_pixels(video);
 	}
 
-	return VISUAL_OK;
+        switch (element->type) {
+            case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
+
+                visual_actor_set_video (element->data.actor, video);
+                visual_actor_run (element->data.actor, audio);
+
+                break;
+
+            case LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM:
+
+                visual_transform_set_video (element->data.transform, video);
+                visual_transform_run (element->data.transform, audio);
+
+                break;
+
+            case LVAVS_PIPELINE_ELEMENT_TYPE_CONTAINER:
+
+                pipeline_container_run (LVAVS_PIPELINE_CONTAINER (element), video, audio);
+
+                break;
+
+            default:
+
+                break;
+        }
+	
+	if(pipeline->invert) {
+		s^=1;
+	}
+
+	for(i = 0; i < video->width*video->height; i++) {
+		//BLEND_LINE(fbout, i, framebuffer[i]);
+	}
+    }
+
+    return VISUAL_OK;
 }
 
