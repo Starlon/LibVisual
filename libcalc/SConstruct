@@ -13,7 +13,7 @@ output = glibLdflags
 libs = env.ParseFlags(Split(output))
 env.MergeFlags(libs)
 
-plugin = env.StaticLibrary(Split("\
+plugin = env.StaticLibrary(target = "libcalc", source = Split("\
        dict.c\
        execute.c\
        function.c\
