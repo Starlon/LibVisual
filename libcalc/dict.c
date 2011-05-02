@@ -50,6 +50,8 @@ symbol_dict_t *dict_new (void) {
   dict->v_space = V_SPACE_INIT;
   dict->variables = (var_t *)g_malloc (dict->v_space * sizeof(var_t));
   
+  dict_new_variable(dict, "PI", 3.145);
+
   return dict;
 }
 
@@ -67,7 +69,7 @@ void dict_free (symbol_dict_t *dict) {
   g_free (dict);
 }
 
-static int dict_define_variable (symbol_dict_t *dict, const char *name) {
+static int dict_define_variable (symbol_dict_t *dict, const char *name, double defval) {
   var_t *var;
 
   if (dict->v_count >= dict->v_space)
@@ -75,13 +77,13 @@ static int dict_define_variable (symbol_dict_t *dict, const char *name) {
 
   var = &dict->variables[dict->v_count];
 
-  var->value = 0.0;
+  var->value = defval;
   var->name = g_strdup (name);
 
   return dict->v_count++;
 }
 
-int dict_lookup (symbol_dict_t *dict, const char *name) {
+int dict_lookup (symbol_dict_t *dict, const char *name, double defval) {
   int i;
 
   for (i = 0; i < dict->v_count; i++) {
@@ -90,10 +92,14 @@ int dict_lookup (symbol_dict_t *dict, const char *name) {
   }
   
   /* Not defined -- define a new variable. */
-  return dict_define_variable (dict, name);
+  return dict_define_variable (dict, name, defval);
 }
 
 double *dict_variable (symbol_dict_t *dict, const char *var_name) {
-  int id = dict_lookup (dict, var_name);
+  int id = dict_lookup (dict, var_name, -1.0);
+  return &dict->variables[id].value;
+}
+double *dict_new_variable (symbol_dict_t *dict, const char *var_name, double defval) {
+  int id = dict_lookup (dict, var_name, defval);
   return &dict->variables[id].value;
 }

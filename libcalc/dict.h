@@ -40,7 +40,8 @@ typedef struct {
 symbol_dict_t *dict_new (void);
 void dict_free (symbol_dict_t *dict);
 
-int dict_lookup (symbol_dict_t *calc, const char *name);
+int dict_lookup (symbol_dict_t *calc, const char *name, double defval);
 double* dict_variable (symbol_dict_t *calc, const char *var_name);
+double* dict_new_variable (symbol_dict_t *calc, const char *var_name, double defval);
 
 #endif /* Included_DICT_H */

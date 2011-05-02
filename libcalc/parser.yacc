@@ -258,7 +258,7 @@ static gboolean expr_add_compile (expression_t *expr, symbol_dict_t *dict,
     case 's':			/* Store a variable. */
       store_byte (expr, op);
       str += load_name (str, &name);
-      i = dict_lookup (dict, name);
+      i = dict_lookup (dict, name, 0);
       store_int (expr, i);
       g_free (name);
       str++;			/* Skip ';' */
