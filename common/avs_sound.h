@@ -43,7 +43,7 @@ typedef enum {
 
 /* Prototypes */
 //short avs_sound_get_from_source (VisAudio *audio, AVSSoundSourceType source, AVSSoundChannelType channel, int index);
-int avs_sound_get_from_source (VisAudio *audio, float ***data);
+int lvavs_sound_get_from_source (VisAudio *audio, float ***data);
 
 #ifdef __cplusplus
 }

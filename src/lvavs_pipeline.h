@@ -84,9 +84,19 @@ struct _LVAVSPipeline {
 
 	float audiodata[2][2][1024];
 
-	int *fbout;
+	unsigned char blendtable[256][256];
 
-	int *framebuffer;
+	int enabled;
+
+	unsigned char blendadjust;
+
+	LVAVSPipelineRenderStateBlendMode	blendmode;
+
+	int linewidth;
+
+	unsigned int *fbout;
+
+	unsigned int *framebuffer;
 
 	int invert; // whether to invert buffers -- fbout<->framebuffer
 
@@ -95,6 +105,7 @@ struct _LVAVSPipeline {
 	LVAVSPipelineContainer		*container;
 };
 
+// For removal. I don't see any reason to separatet these fields from the VisPipeline. Maybe there's a reason to exhcange RenderStates between pipelines? Leaving this here for now.
 struct _LVAVSPipelineRenderState {
 	VisObject				object;
 

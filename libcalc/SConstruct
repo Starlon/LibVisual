@@ -3,7 +3,7 @@ import subprocess, sys
 glibCflags, _ = subprocess.Popen(Split("pkg-config --cflags glib-2.0"),
 	stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 
-env = Environment(CCFLAGS = Split("-laudcore -g -Wall -O0" + glibCflags))
+env = Environment(CCFLAGS = Split("-laudcore -g -Wall -O0 " + glibCflags))
 
 glibLdflags, _ = subprocess.Popen(Split("pkg-config --libs glib-2.0"),
 	stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()

@@ -35,9 +35,10 @@
 #include "avs_sound.h"
 
 
-int avs_sound_get_from_source (VisAudio *audio, float ***data)
+int lvavs_sound_get_from_source (VisAudio *audio, float ***data)
 {
 
+	return;
     VisBuffer pcmbuf1;
     VisBuffer pcmbuf2;
     VisBuffer spmbuf1;

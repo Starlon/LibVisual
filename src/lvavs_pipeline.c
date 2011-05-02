@@ -32,6 +32,7 @@
 
 #include "lvavs_preset.h"
 #include "lvavs_pipeline.h"
+#include "avs_common.h"
 
 /* Prototypes */
 static int lvavs_pipeline_dtor (VisObject *object);
@@ -126,6 +127,8 @@ LVAVSPipeline *lvavs_pipeline_new ()
     LVAVSPipeline *pipeline;
 
     pipeline = visual_mem_new0 (LVAVSPipeline, 1);
+
+    pipeline->dummy_vid = visual_video_new_with_buffer(0, 0, 1);
 
     /* Do the VisObject initialization */
     visual_object_initialize (VISUAL_OBJECT (pipeline), TRUE, lvavs_pipeline_dtor);
@@ -448,8 +451,12 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     int *fbout;
     int *framebuffer;
     float data[2][2][1024];
+    VisVideo *dummy_vid = container->element.pipeline->dummy_vid;
     
-    avs_sound_get_from_source(audio, data);
+    if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
+	//container->element.pipeline->dummy_vid = visual_video_scale_depth_new(dummy_vid, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+    }
+    lvavs_sound_get_from_source(audio, (float ***)data);
 
     for(i = 0; i < 1024; i++) {
         container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
@@ -470,8 +477,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         beatdata = data[0][1];
         beatdata -= 1024;
 
-        pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
-	
+        pipeline->isBeat = 0;//visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
 	if(s) {
 		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->framebuffer = visual_video_get_pixels(video);
@@ -479,7 +485,6 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->fbout = visual_video_get_pixels(video);
 	}
-
         switch (element->type) {
             case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
 
@@ -508,11 +513,16 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	
 	if(pipeline->invert) {
 		s^=1;
+		pipeline->invert = 0;
 	}
 
 	for(i = 0; i < video->width*video->height; i++) {
 		//BLEND_LINE(fbout, i, framebuffer[i]);
 	}
+	/*visual_video_composite_set_type(video, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+	VisRectangle *rect = visual_rectangle_new(0, 0, video->width, video->height);
+	visual_video_blit_overlay_rectangle(video, rect, pipeline->dummy_vid, rect, 0.5);
+	*/
     }
 
     return VISUAL_OK;

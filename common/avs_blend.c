@@ -33,7 +33,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config.h"
 #include "avs_blend.h"
 
-// inlines
 static int max(int x, int y)
 {
     return x > y ? x : y;
@@ -44,7 +43,7 @@ static int  min(int x, int y)
     return x < y ? x : y;
 }
 
-static unsigned int  BLEND(unsigned int a, unsigned int b)
+unsigned int  BLEND(unsigned int a, unsigned int b)
 {
 	register unsigned int r,t;
 	r=(a&0xff)+(b&0xff);
@@ -65,7 +64,7 @@ static unsigned int  BLEND(unsigned int a, unsigned int b)
 #else
 #pragma warning( push, 1 )
 
-static  int FASTMAX(int x, int y)
+ int FASTMAX(int x, int y)
 {
   __asm
   {
@@ -77,7 +76,7 @@ static  int FASTMAX(int x, int y)
   	add	eax, ecx
   }
 }
-static  int FASTMIN(int x, int y)
+ int FASTMIN(int x, int y)
 {
   __asm
   {
@@ -93,7 +92,7 @@ static  int FASTMIN(int x, int y)
 
 #endif
 
-static unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
+unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
 {
 	register unsigned int t;
   int _a=a&0xff;
@@ -106,7 +105,7 @@ static unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
 	return t;
 }
 
-static unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
+unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
 {
 #if 1
 	register unsigned int t;
@@ -170,13 +169,13 @@ static unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
 #endif
 
 
-static unsigned int  BLEND_AVG(unsigned int a, unsigned int b)
+unsigned int  BLEND_AVG(unsigned int a, unsigned int b)
 {
 	return ((a>>1)&~((1<<7)|(1<<15)|(1<<23)))+((b>>1)&~((1<<7)|(1<<15)|(1<<23)));
 }
 
 
-static unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
+unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
 {
 	register int r,t;
 	r=(a&0xff)-(b&0xff);
@@ -193,7 +192,7 @@ static unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
 #define BLEND_ADJ BLEND_ADJ_NOMMX
 #endif
 
-static unsigned int  BLEND_ADJ_NOMMX(unsigned char  **blendtable, unsigned int a, unsigned int b, int v)
+unsigned int  BLEND_ADJ_NOMMX(unsigned char  **blendtable, unsigned int a, unsigned int b, int v)
 {
 	register int t;
 	t=blendtable[a&0xFF][v]+blendtable[b&0xFF][0xFF-v];
@@ -202,7 +201,7 @@ static unsigned int  BLEND_ADJ_NOMMX(unsigned char  **blendtable, unsigned int a
 	return t;
 }
 
-static unsigned int  BLEND_MUL(unsigned char **blendtable, unsigned int a, unsigned int b)
+unsigned int  BLEND_MUL(unsigned char **blendtable, unsigned int a, unsigned int b)
 {
 	register int t;
 	t=blendtable[a&0xFF][b&0xFF];
@@ -211,7 +210,7 @@ static unsigned int  BLEND_MUL(unsigned char **blendtable, unsigned int a, unsig
 	return t;
 }
 
-static  void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char **blendtable, int mode)
+void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char **blendtable, int mode)
 {
   switch (mode&0xff)
   {

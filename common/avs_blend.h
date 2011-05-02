@@ -27,19 +27,19 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-#ifndef _R_DEFS_H_
-#define _R_DEFS_H_
+#ifndef _R_BLEND_H_
+#define _R_BLEND_H_
 
 #include "config.h"
 #include "avs_globals.h"
 
-static unsigned int  BLEND(unsigned int a, unsigned int b);
-static unsigned int  BLEND_MAX(unsigned int a, unsigned int b);
-static unsigned int  BLEND_MIN(unsigned int a, unsigned int b);
-static unsigned int  BLEND_AVG(unsigned int a, unsigned int b);
-static unsigned int  BLEND_SUB(unsigned int a, unsigned int b);
-static unsigned int  BLEND_ADJ_NOMMX(unsigned char **blendtable, unsigned int a, unsigned int b, int v);
-static unsigned int  BLEND_MUL(unsigned char **blendtable, , unsigned int a, unsigned int b);
-static  void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char **blendtable, int mode)
+unsigned int  BLEND(unsigned int a, unsigned int b);
+unsigned int  BLEND_MAX(unsigned int a, unsigned int b);
+unsigned int  BLEND_MIN(unsigned int a, unsigned int b);
+unsigned int  BLEND_AVG(unsigned int a, unsigned int b);
+unsigned int  BLEND_SUB(unsigned int a, unsigned int b);
+unsigned int  BLEND_ADJ_NOMMX(unsigned char **blendtable, unsigned int a, unsigned int b, int v);
+unsigned int  BLEND_MUL(unsigned char **blendtable, unsigned int a, unsigned int b);
+void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char **blendtable, int mode);
 
 #endif

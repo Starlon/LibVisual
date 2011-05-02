@@ -160,11 +160,14 @@ int lv_superscope_init (VisPluginData *plugin)
 
     visual_param_container_add_many (paramcontainer, params);
 
-    priv->pipeline = (AvsGlobalProxy *)visual_object_get_private(VISUAL_OBJECT(plugin));
+    priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
+    priv->environment = dict_new();
+
+    /* initialize variables */
     priv->n = dict_variable(priv->environment, "n");
     priv->b = dict_variable(priv->environment, "b");
     priv->x = dict_variable(priv->environment, "x");
@@ -177,12 +180,46 @@ int lv_superscope_init (VisPluginData *plugin)
     priv->d = dict_variable(priv->environment, "d");
 
     priv->red = dict_variable(priv->environment, "red");
-    priv->red = dict_variable(priv->environment, "red");
     priv->green = dict_variable(priv->environment, "green");
     priv->blue = dict_variable(priv->environment, "blue");
     priv->linesize = dict_variable(priv->environment, "linesize");
     priv->skip = dict_variable(priv->environment, "skip");
     priv->drawmode = dict_variable(priv->environment, "drawmode");
+
+    /* instantiate variables -- as long as no other variables are included in the environment after these next steps, these pointers will point to valid data. */
+    priv->n = dict_variable(priv->environment, "n");
+    *priv->n = 0.0;
+    priv->b = dict_variable(priv->environment, "b");
+    *priv->b = 0.0;
+    priv->x = dict_variable(priv->environment, "x");
+    *priv->x = 0.0;
+    priv->y = dict_variable(priv->environment, "y");
+    *priv->y = 0.0;
+    priv->i = dict_variable(priv->environment, "i");
+    *priv->i = 0.0;
+    priv->v = dict_variable(priv->environment, "v");
+    *priv->v = 0.0;
+    priv->w = dict_variable(priv->environment, "w");
+    *priv->w = 0.0;
+    priv->h = dict_variable(priv->environment, "h");
+    *priv->h = 0.0;
+    priv->t = dict_variable(priv->environment, "t");
+    *priv->t = 0.0;
+    priv->d = dict_variable(priv->environment, "d");
+    *priv->d = 0.0;
+
+    priv->red = dict_variable(priv->environment, "red");
+    *priv->red = 1;
+    priv->green = dict_variable(priv->environment, "green");
+    *priv->green = 1;
+    priv->blue = dict_variable(priv->environment, "blue");
+    *priv->blue = 1;
+    priv->linesize = dict_variable(priv->environment, "linesize");
+    *priv->linesize = 1;
+    priv->skip = dict_variable(priv->environment, "skip");
+    *priv->skip = 0;
+    priv->drawmode = dict_variable(priv->environment, "drawmode");
+    *priv->drawmode = 0;
 
     visual_palette_allocate_colors (&priv->pal, 1);
 
@@ -349,40 +386,24 @@ VisPalette *lv_superscope_palette (VisPluginData *plugin)
 
 void set_vars(SuperScopePrivate *priv)
 {   
-/*
-    VARIABLE *var = FindVariable("n");
-    priv->n = R2N(var->value);
-    var = FindVariable("b");
-    priv->b = R2N(var->value);
-    var = FindVariable("x");
-    priv->x = R2N(var->value);
-    var = FindVariable("y");
-    priv->y = R2N(var->value);
-    var = FindVariable("i");
-    priv->i = R2N(var->value);
-    var = FindVariable("v");
-    priv->v = R2N(var->value);
-    var = FindVariable("w");
-    priv->w = R2N(var->value);
-    var = FindVariable("h");
-    priv->h = R2N(var->value);
-    var = FindVariable("t");
-    priv->t = R2N(var->value);
-    var = FindVariable("d");
-    priv->d = R2N(var->value);
-    var = FindVariable("red");
-    priv->red = R2N(var->value);
-    var = FindVariable("green");
-    priv->green = R2N(var->value);
-    var = FindVariable("blue");
-    priv->blue = R2N(var->value);
-    var = FindVariable("linesize");
-    priv->linesize = R2N(var->value);
-    var = FindVariable("skip");
-    priv->skip = R2N(var->value);
-    var = FindVariable("drawmode");
-    priv->drawmode = R2N(var->value);
-*/
+    /* instantiate variables -- as long as no other variables are included in the environment after these next steps, these pointers will point to valid data. */
+    priv->n = dict_variable(priv->environment, "n");
+    priv->b = dict_variable(priv->environment, "b");
+    priv->x = dict_variable(priv->environment, "x");
+    priv->y = dict_variable(priv->environment, "y");
+    priv->i = dict_variable(priv->environment, "i");
+    priv->v = dict_variable(priv->environment, "v");
+    priv->w = dict_variable(priv->environment, "w");
+    priv->h = dict_variable(priv->environment, "h");
+    priv->t = dict_variable(priv->environment, "t");
+    priv->d = dict_variable(priv->environment, "d");
+
+    priv->red = dict_variable(priv->environment, "red");
+    priv->green = dict_variable(priv->environment, "green");
+    priv->blue = dict_variable(priv->environment, "blue");
+    priv->linesize = dict_variable(priv->environment, "linesize");
+    priv->skip = dict_variable(priv->environment, "skip");
+    priv->drawmode = dict_variable(priv->environment, "drawmode");
 }
 
 static __inline int makeint(double t)
@@ -392,25 +413,22 @@ static __inline int makeint(double t)
   return (int)(t*255.0);
 }
 
+// We don't use VisAudio directly in pipeline sub-elements normally. LVAVSPipeline provides ->fbout and ->framebuffer. Superscope only uses ->framebuffer. Some elements, such as blur, will write to ->fbout. Internally the two buffers are blended together and swapped out for one another ass appropriate. set pipeline->inverted=1 if you're using ->fbout
 int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
+
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *buf = (uint32_t *)visual_video_get_pixels (video);
+    uint32_t *buf = pipeline->framebuffer;
     int isBeat;
 
     VisBuffer pcm;
     float pcmbuf[576];
 
-    /*
-    visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
-
-    visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
-            VISUAL_AUDIO_CHANNEL_LEFT,
-            VISUAL_AUDIO_CHANNEL_RIGHT,
-            1.0,
-            1.0);
-    */
+                        
+    VisColor color;
+    visual_color_from_uint32(&color, 0xffffffff);
+    avs_gfx_line_ints(video, 0, 0, video->width, video->height, &color);
 
     isBeat = priv->pipeline->isBeat;
 
@@ -420,7 +438,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     }
 
 //  visual_video_fill_color(video, visual_color_black()); 
-    buf = (uint32_t *)visual_video_get_pixels (video);
+    //buf = (uint32_t *)visual_video_get_pixels (video);
 
     int a, l, lx = 0, ly = 0, x = 0, y = 0;
     int32_t current_color;
@@ -464,6 +482,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
     }
 
+    set_vars(priv);
     *priv->h = video->height;
     *priv->w = video->width;
     *priv->b = isBeat?1.0:0.0;
@@ -471,25 +490,16 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     *priv->green = ((current_color>>8)&0xff)/255.0;
     *priv->red = ((current_color>>16)&0xff)/255.0;
     *priv->skip = 0.0;
-    *priv->linesize = (double) ((pipeline->renderstate->blendmode&0xff0000)>>16);
+    *priv->linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
     *priv->drawmode = priv->draw_type ? 1.0 : 0.0;
 
-    
-/*
-    SetVariableNumeric("h", priv->h);
-    SetVariableNumeric("w", priv->w);
-    SetVariableNumeric("b", priv->b);
-    SetVariableNumeric("blue", priv->blue);
-    SetVariableNumeric("green", priv->green);
-    SetVariableNumeric("red", priv->red);
-    SetVariableNumeric("skip", priv->skip);
-    SetVariableNumeric("linesize", priv->linesize);
-    SetVariableNumeric("drawmode", priv->drawmode);
-*/
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
+    set_vars(priv);
     if (isBeat) {
+	set_vars(priv);
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
+	set_vars(priv);
     }
 
     //int candraw=0;
@@ -507,16 +517,18 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         //double s1=r-(int)r;
         //double yr=((int)pcmbuf[(int)r]^xorv)*(1.0f-s1)+((int)pcmbuf[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
+
+	set_vars(priv);
         *priv->v = pcmbuf[a * 288 / l];
         *priv->i = a/(double)(l-1);
         *priv->skip = 0.0;
-        /*SetVariableNumeric("v", priv->v);
-        SetVariableNumeric("i", priv->i);
-        SetVariableNumeric("skip", priv->skip);*/
         scope_run(priv, SCOPE_RUNNABLE_POINT);
+	set_vars(priv);
 
         x = (int)((*priv->x + 1.0) * video->width * 0.5);
         y = (int)((*priv->y + 1.0) * video->height * 0.5);
+
+	printf("x = %f, y = %f\n", *priv->x, *priv->y);
 
         if (*priv->skip >= 0.00001)
             continue;
@@ -525,7 +537,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         if (1) {//*priv->drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)
-                    BLEND_LINE(pipeline, buf+x+y*video->width, this_color);
+                    BLEND_LINE(buf+x+y*video->width, this_color, (unsigned char**)pipeline->blendtable, (int)pipeline->blendmode);
         } else {
             if (a > 0) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width &&
