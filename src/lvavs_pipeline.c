@@ -451,19 +451,49 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     int *fbout;
     int *framebuffer;
     float data[2][2][1024];
+
+    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
+
+    /* Left audio */
+    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
+
+    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
+
+        visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
+
+    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
+
+    visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
+
+    /* Right audio */
+    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
+
+    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
+
+        visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
+
+    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
+
+    visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
+
+    visual_object_unref(VISUAL_OBJECT(&tmp));
+
+/*
     VisVideo *dummy_vid = container->element.pipeline->dummy_vid;
     
     if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
 	//container->element.pipeline->dummy_vid = visual_video_scale_depth_new(dummy_vid, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
     }
     lvavs_sound_get_from_source(audio, (float ***)data);
-
+*/
+/*
     for(i = 0; i < 1024; i++) {
         container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
         container->element.pipeline->audiodata[1][0][i] = data[1][0][i];
         container->element.pipeline->audiodata[0][1][i] = data[0][1][i];
         container->element.pipeline->audiodata[1][1][i] = data[1][1][i];
     }
+*/
 
     int s = 0;
     while ((element = visual_list_next (container->members, &le)) != NULL) {
@@ -471,7 +501,15 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	VisVideo *tmpvid;
         LVAVSPipeline *pipeline = element->pipeline;
         float *beatdata = visual_mem_malloc0(2048 * sizeof(float));
+
         
+        for(i = 0; i < 1024; i++) {
+            pipeline->audiodata[0][0][i] = data[0][0][i];
+            pipeline->audiodata[1][0][i] = data[1][0][i];
+            pipeline->audiodata[0][1][i] = data[0][1][i];
+            pipeline->audiodata[1][1][i] = data[1][1][i];
+        }
+
         beatdata = data[0][0];
         beatdata += 1024;
         beatdata = data[0][1];

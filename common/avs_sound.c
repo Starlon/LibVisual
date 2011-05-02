@@ -37,8 +37,6 @@
 
 int lvavs_sound_get_from_source (VisAudio *audio, float ***data)
 {
-
-	return;
     VisBuffer pcmbuf1;
     VisBuffer pcmbuf2;
     VisBuffer spmbuf1;

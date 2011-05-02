@@ -68,7 +68,9 @@ typedef struct {
     expression_t *runnable[4];
     symbol_dict_t *environment;
 
-    double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
+
+    //double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
+    double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
 
     char            *point;
     char            *frame;
@@ -93,6 +95,8 @@ int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, 
 int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events);
 VisPalette *lv_superscope_palette (VisPluginData *plugin);
 int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
+void set_vars(SuperScopePrivate *priv);
+void get_vars(SuperScopePrivate *priv);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -130,6 +134,7 @@ const VisPluginInfo *get_plugin_info (int *count)
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
     priv->runnable[runnable] = expr_compile_string(buf, priv->environment);
+    printf("buf %s\n", buf);
     return 0;
 }
 
@@ -168,58 +173,26 @@ int lv_superscope_init (VisPluginData *plugin)
     priv->environment = dict_new();
 
     /* initialize variables */
-    priv->n = dict_variable(priv->environment, "n");
-    priv->b = dict_variable(priv->environment, "b");
-    priv->x = dict_variable(priv->environment, "x");
-    priv->y = dict_variable(priv->environment, "y");
-    priv->i = dict_variable(priv->environment, "i");
-    priv->v = dict_variable(priv->environment, "v");
-    priv->w = dict_variable(priv->environment, "w");
-    priv->h = dict_variable(priv->environment, "h");
-    priv->t = dict_variable(priv->environment, "t");
-    priv->d = dict_variable(priv->environment, "d");
+    set_vars(priv);
 
-    priv->red = dict_variable(priv->environment, "red");
-    priv->green = dict_variable(priv->environment, "green");
-    priv->blue = dict_variable(priv->environment, "blue");
-    priv->linesize = dict_variable(priv->environment, "linesize");
-    priv->skip = dict_variable(priv->environment, "skip");
-    priv->drawmode = dict_variable(priv->environment, "drawmode");
+    /* store real values that will be translated in set_vars and get_vars */
+    priv->n = 0.0;
+    priv->b = 0.0;
+    priv->x = 0.0;
+    priv->y = 0.0;
+    priv->i = 0.0;
+    priv->v = 0.0;
+    priv->w = 0.0;
+    priv->h = 0.0;
+    priv->t = 0.0;
+    priv->d = 0.0;
 
-    /* instantiate variables -- as long as no other variables are included in the environment after these next steps, these pointers will point to valid data. */
-    priv->n = dict_variable(priv->environment, "n");
-    *priv->n = 0.0;
-    priv->b = dict_variable(priv->environment, "b");
-    *priv->b = 0.0;
-    priv->x = dict_variable(priv->environment, "x");
-    *priv->x = 0.0;
-    priv->y = dict_variable(priv->environment, "y");
-    *priv->y = 0.0;
-    priv->i = dict_variable(priv->environment, "i");
-    *priv->i = 0.0;
-    priv->v = dict_variable(priv->environment, "v");
-    *priv->v = 0.0;
-    priv->w = dict_variable(priv->environment, "w");
-    *priv->w = 0.0;
-    priv->h = dict_variable(priv->environment, "h");
-    *priv->h = 0.0;
-    priv->t = dict_variable(priv->environment, "t");
-    *priv->t = 0.0;
-    priv->d = dict_variable(priv->environment, "d");
-    *priv->d = 0.0;
-
-    priv->red = dict_variable(priv->environment, "red");
-    *priv->red = 1;
-    priv->green = dict_variable(priv->environment, "green");
-    *priv->green = 1;
-    priv->blue = dict_variable(priv->environment, "blue");
-    *priv->blue = 1;
-    priv->linesize = dict_variable(priv->environment, "linesize");
-    *priv->linesize = 1;
-    priv->skip = dict_variable(priv->environment, "skip");
-    *priv->skip = 0;
-    priv->drawmode = dict_variable(priv->environment, "drawmode");
-    *priv->drawmode = 0;
+    priv->red = 1;
+    priv->green = 1;
+    priv->blue = 1;
+    priv->linesize = 1;
+    priv->skip = 0;
+    priv->drawmode = 0;
 
     visual_palette_allocate_colors (&priv->pal, 1);
 
@@ -387,23 +360,23 @@ VisPalette *lv_superscope_palette (VisPluginData *plugin)
 void set_vars(SuperScopePrivate *priv)
 {   
     /* instantiate variables -- as long as no other variables are included in the environment after these next steps, these pointers will point to valid data. */
-    priv->n = dict_variable(priv->environment, "n");
-    priv->b = dict_variable(priv->environment, "b");
-    priv->x = dict_variable(priv->environment, "x");
-    priv->y = dict_variable(priv->environment, "y");
-    priv->i = dict_variable(priv->environment, "i");
-    priv->v = dict_variable(priv->environment, "v");
-    priv->w = dict_variable(priv->environment, "w");
-    priv->h = dict_variable(priv->environment, "h");
-    priv->t = dict_variable(priv->environment, "t");
-    priv->d = dict_variable(priv->environment, "d");
-
-    priv->red = dict_variable(priv->environment, "red");
-    priv->green = dict_variable(priv->environment, "green");
-    priv->blue = dict_variable(priv->environment, "blue");
-    priv->linesize = dict_variable(priv->environment, "linesize");
-    priv->skip = dict_variable(priv->environment, "skip");
-    priv->drawmode = dict_variable(priv->environment, "drawmode");
+    
+	dict_variable(priv->environment, "n");
+	dict_variable(priv->environment, "b");
+	dict_variable(priv->environment, "x");
+	dict_variable(priv->environment, "y");
+	dict_variable(priv->environment, "i");
+	dict_variable(priv->environment, "v");
+	dict_variable(priv->environment, "w");
+	dict_variable(priv->environment, "h");
+	dict_variable(priv->environment, "t");
+	dict_variable(priv->environment, "d");
+	dict_variable(priv->environment, "red");
+	dict_variable(priv->environment, "green");
+	dict_variable(priv->environment, "blue");
+	dict_variable(priv->environment, "linesize");
+	dict_variable(priv->environment, "skip");
+	dict_variable(priv->environment, "drawmode");
 }
 
 static __inline int makeint(double t)
@@ -419,12 +392,13 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *buf = pipeline->framebuffer;
+    uint32_t *buf = visual_video_get_pixels(video);//pipeline->framebuffer;
     int isBeat;
 
     VisBuffer pcm;
     float pcmbuf[576];
 
+    double *var_n, *var_b, *var_x, *var_y, *var_i, *var_v, *var_w, *var_h, *var_t, *var_d, *var_red, *var_green, *var_blue, *var_linesize, *var_skip, *var_drawmode; 
                         
     VisColor color;
     visual_color_from_uint32(&color, 0xffffffff);
@@ -482,28 +456,35 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
     }
 
-    set_vars(priv);
-    *priv->h = video->height;
-    *priv->w = video->width;
-    *priv->b = isBeat?1.0:0.0;
-    *priv->blue = (current_color&0xff)/255.0;
-    *priv->green = ((current_color>>8)&0xff)/255.0;
-    *priv->red = ((current_color>>16)&0xff)/255.0;
-    *priv->skip = 0.0;
-    *priv->linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
-    *priv->drawmode = priv->draw_type ? 1.0 : 0.0;
+    var_h = dict_variable(priv->environment, "h");
+    *var_h = video->height;
+    var_w = dict_variable(priv->environment, "w");
+    *var_w = video->width;
+    var_b = dict_variable(priv->environment, "b");
+    *var_b = isBeat?1.0:0.0;
+    var_blue = dict_variable(priv->environment, "blue");
+    *var_blue = (current_color&0xff)/255.0;
+    var_green = dict_variable(priv->environment, "green");
+    *var_green = ((current_color>>8)&0xff)/255.0;
+    var_red = dict_variable(priv->environment, "red");
+    *var_red = ((current_color>>16)&0xff)/255.0;
+    var_skip = dict_variable(priv->environment, "skip");
+    *var_skip = 0.0;
+    var_linesize = dict_variable(priv->environment, "linesize");
+    *var_linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
+    var_drawmode = dict_variable(priv->environment, "drawmode");
+    *var_drawmode = priv->draw_type ? 1.0 : 0.0;
 
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
-    set_vars(priv);
     if (isBeat) {
-	set_vars(priv);
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
-	set_vars(priv);
     }
 
+    var_n = dict_variable(priv->environment, "n");
+
     //int candraw=0;
-    l = *priv->n;
+    l = *var_n;
     if (l > 128*1024)
         l = 128*1024;
 
@@ -518,22 +499,27 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         //double yr=((int)pcmbuf[(int)r]^xorv)*(1.0f-s1)+((int)pcmbuf[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
 
-	set_vars(priv);
-        *priv->v = pcmbuf[a * 288 / l];
-        *priv->i = a/(double)(l-1);
-        *priv->skip = 0.0;
+	var_v = dict_variable(priv->environment, "v");
+        *var_v = 1;//pcmbuf[a * 288 / l];
+	var_i = dict_variable(priv->environment, "i");
+        *var_i = a/(double)(l-1);
+	var_skip = dict_variable(priv->environment, "skip");
+        *var_skip = 0.0;
+	var_x = dict_variable(priv->environment, "x");
+	var_y = dict_variable(priv->environment, "y");
+	var_red = dict_variable(priv->environment, "red");
+	var_green = dict_variable(priv->environment, "green");
+	var_blue = dict_variable(priv->environment, "blue");
+
         scope_run(priv, SCOPE_RUNNABLE_POINT);
-	set_vars(priv);
 
-        x = (int)((*priv->x + 1.0) * video->width * 0.5);
-        y = (int)((*priv->y + 1.0) * video->height * 0.5);
+        x = (int)((*var_x + 1.0) * video->width * 0.5);
+        y = (int)((*var_y + 1.0) * video->height * 0.5);
 
-	printf("x = %f, y = %f\n", *priv->x, *priv->y);
-
-        if (*priv->skip >= 0.00001)
+        if (*var_skip >= 0.00001)
             continue;
 
-        int this_color = makeint(*priv->blue) | (makeint(*priv->green) << 8) | (makeint(*priv->red) << 16);
+        int this_color = makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
 
         if (1) {//*priv->drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)

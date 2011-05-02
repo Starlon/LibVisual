@@ -206,6 +206,8 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 						}
 					} else {
 						LVAVSPreset *preset;
+						LVAVSPresetElement *sscope;
+						sscope = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
 						preset = lvavs_preset_new ();
 						preset->main = lvavs_preset_container_new ();
 
@@ -213,9 +215,7 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 //								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,
 //									"avs_superscope"));
 
-						visual_list_add (preset->main->members,
-								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,
-									"superscope"));
+						visual_list_add (preset->main->members, sscope);
 
 //						visual_list_add (preset->main->members,
 //								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,

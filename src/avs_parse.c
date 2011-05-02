@@ -580,7 +580,7 @@ int avs_parse_tree (AVSTree *avstree, AVSContainer *curcontainer)
                 }
 
 
-                //avstree->cur = next_section;
+                avstree->cur = next_section;
         }
 
         return 0;
