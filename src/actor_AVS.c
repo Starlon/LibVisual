@@ -183,6 +183,7 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 
 				if (visual_param_entry_is (param, "filename")) {
 					char *filename = visual_param_entry_get_string (param);
+					AVSTree *tree;
 
                     printf("event filename %s\n", filename);
 					if (priv->wtree != NULL)

@@ -6,11 +6,11 @@ EXTRA_LTLIBRARIES = actor_AVS.la
 
 libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
-LIBS += -L. -L$(prefix)/lib @LIBVISUAL_LIBS@
+LIBS += -L. -L$(prefix)/lib $(XML_LIBS) @LIBVISUAL_LIBS@ -lxml2
 
-AM_CFLAGS = @LIBVISUAL_CFLAGS@
+AM_CFLAGS = $(XML_CFLAGS) @LIBVISUAL_CFLAGS@ -I/usr/include/libxml2/
 
-INCLUDES = $(all_includes) -I$(top_srcdir) -I$(top_srcdir)/common -I$(top_srcdir)/../visscript-v8/
+INCLUDES = $(all_includes) -I$(top_srcdir) -I$(top_srcdir)/common
 
 actor_AVS_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
 
@@ -22,6 +22,8 @@ actor_AVS_la_SOURCES = actor_AVS.c \
 		       lvavs_preset.c \
 		       lvavs_preset.h \
 		       lvavs_pipeline.c \
-		       lvavs_pipeline.h
+		       lvavs_pipeline.h\
+                       avs_cfg.c \
+                       avs_cfg.h
 
 actor_AVS_la_LIBADD = ../common/libavs.la
