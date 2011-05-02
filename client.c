@@ -73,11 +73,10 @@ int main (int argc, char **argv)
         visual_param_entry_set_object(param, 
             VISUAL_OBJECT(visual_actor_get_songinfo(actor)));
 
-    //params = visual_plugin_get_params(actor->plugin);
+    params = visual_plugin_get_params(actor->plugin);
 
-    //string = visual_string_new_with_value("filename");
-    //param = visual_param_container_get(params, string);
-    //visual_param_entry_set_string(param, "/home/starlon/Projects/libvisual-svn/trunk/libvisual-avs/testpresets/ring10.avs");
+    param = visual_param_container_get(params, "filename");
+    visual_param_entry_set_string(param, "/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/superscope.avs");
 
 	localqueue = visual_event_queue_new ();
 
