@@ -340,16 +340,6 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
 
     return 0;
 }
-/*
-static int makeint(AvsNumber t)
-{
-    if (t <= 0.0)
-        return 0;
-    if (t >= 1.0)
-        return 255;
-    return (int)(t*255.0);
-}
-*/
 VisPalette *lv_superscope_palette (VisPluginData *plugin)
 {
     //SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));

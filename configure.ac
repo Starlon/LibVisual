@@ -39,6 +39,19 @@ else
   AC_MSG_ERROR([*** pkg-config too old; version 0.14 or better required.])
 fi
 
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.6.0],
+    [ADD_PC_REQUIRES([glib-2.0 >= 2.6.0])],
+    [AC_MSG_ERROR([Cannot find glib2 >= 2.6.0])]
+)
+
+
+AM_PATH_XML2(2.0.0, , 
+	[ADD_PC_REQUIRES([libxml2 >= 2.0.0]), XML_LIBS=`pkg-config --libs xml2`, XML_CFLAGS=`pkg-config --cflags xml2`],
+	[AC_MSG_ERROR([Cannot find xml2])]
+])
+AC_SUBST(XML_LIBS)
+AC_SUBST(XML_CFLAGS)
+
 # Checks for libraries.
 build_actor=""
 build_trans=""
@@ -328,6 +341,7 @@ AC_CONFIG_FILES([
 	plugins/transform/invert/Makefile
 	plugins/transform/onetone/Makefile
     plugins/transform/dmovement/Makefile
+        libcalc/Makefile
 ])
 
 
@@ -355,6 +369,5 @@ compiler:                             : ${CC}
 Other options:
 Debug support:                        : ${debug}
 Extra optimization                    : ${extra_opt}
-MMX support                           : ${with_mmx}
 "
 
