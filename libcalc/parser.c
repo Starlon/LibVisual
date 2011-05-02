@@ -66,7 +66,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 26 "parser.y"
+#line 26 "parser.yacc"
 
 #include <ctype.h>
 #include <glib.h>
@@ -106,7 +106,7 @@ static gboolean expr_add_compile (expression_t *expr, symbol_dict_t *dict,
 #endif
 
 #if ! defined (YYSTYPE) && ! defined (YYSTYPE_IS_DECLARED)
-#line 54 "parser.y"
+#line 54 "parser.yacc"
 typedef union YYSTYPE {
 char *s_value;
 char c_value;
@@ -1030,29 +1030,29 @@ yyreduce:
   switch (yyn)
     {
         case 5:
-#line 83 "parser.y"
+#line 83 "parser.yacc"
     { ;}
     break;
 
   case 7:
-#line 86 "parser.y"
+#line 86 "parser.yacc"
     { yyerrok; ;}
     break;
 
   case 8:
-#line 91 "parser.y"
+#line 91 "parser.yacc"
     {
                             ;}
     break;
 
   case 9:
-#line 94 "parser.y"
+#line 94 "parser.yacc"
     {
                             ;}
     break;
 
   case 10:
-#line 99 "parser.y"
+#line 99 "parser.yacc"
     { 
                               char *buf = g_strdup_printf ("c%f:", yyvsp[0].d_value);
                               GENERATE (buf); 
@@ -1061,7 +1061,7 @@ yyreduce:
     break;
 
   case 11:
-#line 105 "parser.y"
+#line 105 "parser.yacc"
     { 
                               char *buf = g_strdup_printf ("l%s:", yyvsp[0].s_value);
                               GENERATE (buf); 
@@ -1070,7 +1070,7 @@ yyreduce:
     break;
 
   case 12:
-#line 111 "parser.y"
+#line 111 "parser.yacc"
     { 
                               char *buf = g_strdup_printf ("s%s:", yyvsp[-2].s_value);
                               GENERATE (buf); 
@@ -1079,7 +1079,7 @@ yyreduce:
     break;
 
   case 13:
-#line 117 "parser.y"
+#line 117 "parser.yacc"
     {
                               char *buf = g_strdup_printf ("f%s:", yyvsp[-3].s_value);
                               GENERATE (buf); 
@@ -1088,47 +1088,47 @@ yyreduce:
     break;
 
   case 14:
-#line 124 "parser.y"
+#line 124 "parser.yacc"
     { GENERATE (">"); ;}
     break;
 
   case 15:
-#line 126 "parser.y"
+#line 126 "parser.yacc"
     { GENERATE ("<"); ;}
     break;
 
   case 16:
-#line 129 "parser.y"
+#line 129 "parser.yacc"
     { GENERATE ("+"); ;}
     break;
 
   case 17:
-#line 131 "parser.y"
+#line 131 "parser.yacc"
     { GENERATE ("-"); ;}
     break;
 
   case 18:
-#line 133 "parser.y"
+#line 133 "parser.yacc"
     { GENERATE ("*"); ;}
     break;
 
   case 19:
-#line 135 "parser.y"
+#line 135 "parser.yacc"
     { GENERATE ("/"); ;}
     break;
 
   case 20:
-#line 137 "parser.y"
+#line 137 "parser.yacc"
     { GENERATE ("n"); ;}
     break;
 
   case 21:
-#line 139 "parser.y"
+#line 139 "parser.yacc"
     { GENERATE ("^"); ;}
     break;
 
   case 22:
-#line 141 "parser.y"
+#line 141 "parser.yacc"
     { ;}
     break;
 
@@ -1361,7 +1361,7 @@ yyreturn:
 }
 
 
-#line 144 "parser.y"
+#line 144 "parser.yacc"
 
 /* End of grammar */
 
