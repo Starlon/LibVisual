@@ -6,7 +6,7 @@ EXTRA_LTLIBRARIES = actor_avs_superscope.la
 
 libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
-LIBS += -L. -L$(prefix)/lib $(GLIB_LIBS) @LIBVISUAL_LIBS@
+LIBS += -L. $(GLIB_LIBS) -L$(prefix)/lib @LIBVISUAL_LIBS@
 
 AM_CFLAGS = $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@
 
@@ -14,11 +14,12 @@ INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
 	-I$(top_srcdir)/libcalc \
-	-I$(top_srcdir)/src 
+	-I$(top_srcdir)/src
 
-actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
+actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version -laudcore
 
 actor_avs_superscope_la_SOURCES = actor_avs_superscope.c
 
-actor_avs_superscope_la_LIBADD = ../../../common/libavs.la
 
+#actor_avs_superscope_la_LIBADD = ../../../common/libavs.la
+actor_avs_superscope_la_LIBADD = ../../../common/libavs.la ../../../libcalc/libcalc.la

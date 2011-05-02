@@ -153,10 +153,10 @@ int lv_superscope_init (VisPluginData *plugin)
     SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*PI*4; x = cos(r)*d; y = sin(r) * d;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=0;t=t-0.01;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n = 50;count=12;PI=3.145"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t = t + 5;count=count+15"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "count=count+5;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i*v*1.2;r=t+i*PI*count*100;x=cos(r)*d*0.8;y=sin(r)*d*0.8;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("draw type", 0),
@@ -390,9 +390,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     double *var_n, *var_b, *var_x, *var_y, *var_i, *var_v, *var_w, *var_h, *var_t, *var_d, *var_red, *var_green, *var_blue, *var_linesize, *var_skip, *var_drawmode; 
                         
-    VisColor color;
+    /*VisColor color;
     visual_color_from_uint32(&color, 0xffffffff);
-    avs_gfx_line_ints(video, 0, 0, video->width, video->height, &color);
+    avs_gfx_line_ints(video, 0, 0, video->width, video->height, &color);*/
 
     isBeat = priv->pipeline->isBeat;
 
@@ -411,7 +411,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     uint16_t fa_data[576];
 
     
-    if((priv->channel_source&3) >= 2)
+    if((priv->channel_source&3) >= 2 || 1)
     {
         for(x = 0; x < 576; x++) {
             pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
@@ -464,14 +464,13 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     *var_linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
     var_drawmode = dict_variable(priv->environment, "drawmode");
     *var_drawmode = priv->draw_type ? 1.0 : 0.0;
-
+    var_n = dict_variable(priv->environment, "n");
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
     if (isBeat) {
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
     }
 
-    var_n = dict_variable(priv->environment, "n");
 
     //int candraw=0;
     l = *var_n;
@@ -495,23 +494,25 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         *var_i = a/(double)(l-1);
 	var_skip = dict_variable(priv->environment, "skip");
         *var_skip = 0.0;
+
+        scope_run(priv, SCOPE_RUNNABLE_POINT);
+
 	var_x = dict_variable(priv->environment, "x");
 	var_y = dict_variable(priv->environment, "y");
 	var_red = dict_variable(priv->environment, "red");
 	var_green = dict_variable(priv->environment, "green");
 	var_blue = dict_variable(priv->environment, "blue");
 
-        scope_run(priv, SCOPE_RUNNABLE_POINT);
-
         x = (int)((*var_x + 1.0) * video->width * 0.5);
         y = (int)((*var_y + 1.0) * video->height * 0.5);
 
+	printf("x = %f, y = %f\n", *var_x, *var_y);
         if (*var_skip >= 0.00001)
             continue;
 
-        int this_color = makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
+        int this_color = 0xffffffff;//  makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
 
-        if (1) {//*priv->drawmode < 0.00001) {
+        if (*var_drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)
                     BLEND_LINE(buf+x+y*video->width, this_color, (unsigned char**)pipeline->blendtable, (int)pipeline->blendmode);
         } else {
