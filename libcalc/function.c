@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
  */
  
 #include <glib.h>
@@ -73,10 +73,6 @@ static double f_div (ex_stack *stack) {
   return (y == 0) ? 0 : (x / y);
 }
 
-static double f_rand (ex_stack *stack) {
-  return g_random_double_range((double) pop(stack), (double) pop(stack));
-}
-
 /* */
 
 static const func_t init[] = {
@@ -88,8 +84,7 @@ static const func_t init[] = {
   { "atan", f_atan },
   { "log", f_log },
   { "if", f_if },
-  { "div", f_div },
-  { "rand", f_rand }
+  { "div", f_div }
 };
 
 int function_lookup (const char *name) {
