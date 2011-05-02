@@ -73,6 +73,11 @@ static double f_div (ex_stack *stack) {
   return (y == 0) ? 0 : (x / y);
 }
 
+static double f_print(ex_stack *stack) {
+	double val = pop(stack);
+	printf("val = %f\n");
+}
+
 /* */
 
 static const func_t init[] = {
@@ -84,7 +89,8 @@ static const func_t init[] = {
   { "atan", f_atan },
   { "log", f_log },
   { "if", f_if },
-  { "div", f_div }
+  { "div", f_div },
+  { "print", f_print }
 };
 
 int function_lookup (const char *name) {
