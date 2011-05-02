@@ -198,7 +198,7 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 					priv->wtree = NULL;
 
 					priv->wavs = TRUE;
-					if (filename != NULL) {
+					if (filename != NULL && 0) {
 						if (priv->wavs == TRUE) {
 							priv->wtree = avs_tree_new_from_preset (filename);
 							priv->lvtree = lvavs_preset_new_from_wavs (priv->wtree);
@@ -211,6 +211,15 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 						sscope = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
 						preset = lvavs_preset_new ();
 						preset->main = lvavs_preset_container_new ();
+
+						static VisParamEntry params[] = {
+							VISUAL_PARAM_LIST_ENTRY_INTEGER ("clear screen", 1),
+							VISUAL_PARAM_LIST_END
+						};
+
+						VisParamContainer *pcont = visual_param_container_new();
+						visual_param_container_add_many(pcont, params);
+						LVAVS_PRESET_ELEMENT(preset->main)->pcont = pcont;
 
 //						visual_list_add (preset->main->members,
 //								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,

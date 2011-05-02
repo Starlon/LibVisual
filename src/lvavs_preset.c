@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
 
 #include <libvisual/libvisual.h>
 
@@ -190,6 +192,7 @@ LVAVSPresetElement *lvavs_preset_element_new (LVAVSPresetElementType type, const
 
 	element->type = type;
 	element->element_name = name;
+	element->pcont = visual_param_container_new();
 
 	return element;
 }

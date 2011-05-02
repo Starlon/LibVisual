@@ -515,7 +515,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         beatdata = data[0][1];
         beatdata -= 1024;
 
-        pipeline->isBeat = 0;//visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
+        pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
 	if(s) {
 		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->framebuffer = visual_video_get_pixels(video);
