@@ -50,7 +50,7 @@ symbol_dict_t *dict_new (void) {
   dict->v_space = V_SPACE_INIT;
   dict->variables = (var_t *)g_malloc (dict->v_space * sizeof(var_t));
   
-  dict_new_variable(dict, "PI", 3.145);
+  dict_variable_new(dict, "PI", 3.145);
 
   return dict;
 }
@@ -96,10 +96,10 @@ int dict_lookup (symbol_dict_t *dict, const char *name, double defval) {
 }
 
 double *dict_variable (symbol_dict_t *dict, const char *var_name) {
-  int id = dict_lookup (dict, var_name, -1.0);
+  int id = dict_lookup (dict, var_name, 0.0);
   return &dict->variables[id].value;
 }
-double *dict_new_variable (symbol_dict_t *dict, const char *var_name, double defval) {
+double *dict_variable_new (symbol_dict_t *dict, const char *var_name, double defval) {
   int id = dict_lookup (dict, var_name, defval);
   return &dict->variables[id].value;
 }
