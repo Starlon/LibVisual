@@ -213,6 +213,7 @@ void smp_render(BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsign
   if (!this_thread) at_top=1;
   if (this_thread >= max_threads - 1) at_bottom=1;
 
+  enabled = 3;
   if (enabled == 2) 
   {
     // top line

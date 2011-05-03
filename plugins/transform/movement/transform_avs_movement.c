@@ -225,14 +225,14 @@ int lv_movement_init (VisPluginData *plugin)
     int i;
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 32767),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 3),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectangular", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("sourcemapped", 0),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0),
         VISUAL_PARAM_LIST_ENTRY_STRING ("code",
-                "d = cos(d)^2;"),
+                "r = r + (0.1 - (0.2 * d));d = d * 0.96;"),
         VISUAL_PARAM_LIST_END
     };
 	
