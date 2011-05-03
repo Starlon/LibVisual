@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
  */
  
+#include <stdio.h>
 #include <glib.h>
 #include <math.h>
 #include <string.h>
@@ -62,8 +63,8 @@ static double f_atan (ex_stack *stack) {
 }
 
 static double f_if (ex_stack *stack) {
-  double a = pop (stack);
   double b = pop (stack);
+  double a = pop (stack);
   return (pop (stack) != 0.0) ? a : b;
 }
 
