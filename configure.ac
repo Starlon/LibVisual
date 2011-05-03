@@ -229,6 +229,21 @@ else
     AC_MSG_RESULT([no])
 fi
 
+# The AVS elements
+AC_ARG_ENABLE([avs_blur],
+        AC_HELP_STRING([--disable-blur],
+            [Do not build the AVS blur plugin @<:@default=enabled@:>@]),
+        [avs_blur=$enableval],
+        [avs_blur=yes])
+AC_MSG_CHECKING([Whether to build AVS blur plugin])
+if test x$avs_blur = xyes; then
+    AC_MSG_RESULT([yes])
+    build_trans="$build_trans blur"
+    AC_SUBST([AVS_BLUR], ['transform_avs_blur.la'])
+else
+    AC_MSG_RESULT([no])
+fi
+
 #
 # Build paramaters
 #
@@ -340,7 +355,8 @@ AC_CONFIG_FILES([
 	plugins/transform/movement/Makefile
 	plugins/transform/invert/Makefile
 	plugins/transform/onetone/Makefile
-    plugins/transform/dmovement/Makefile
+	plugins/transform/dmovement/Makefile
+        plugins/transform/blur/Makefile
         libcalc/Makefile
 ])
 
