@@ -134,7 +134,6 @@ const VisPluginInfo *get_plugin_info (int *count)
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
     priv->runnable[runnable] = expr_compile_string(buf, priv->environment);
-    printf("buf %s\n", buf);
     return 0;
 }
 
@@ -397,8 +396,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     isBeat = priv->pipeline->isBeat;
 
-printf("isBeat %d\n", isBeat);
-
     if(priv->needs_init) {
         priv->needs_init = FALSE;
         scope_run(priv, SCOPE_RUNNABLE_INIT);
@@ -475,7 +472,6 @@ printf("isBeat %d\n", isBeat);
     //*var_drawmode = priv->draw_type ? 1.0 : 0.0;
     var_n = dict_variable(priv->environment, "n");
 
-printf("drawmode %f\n", *var_drawmode);
     //int candraw=0;
     l = *var_n;
     if (l > 128*1024)
