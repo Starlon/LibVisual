@@ -37,15 +37,14 @@
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
-#include "avs.h"
-#include "avs_inlines.h"
-
-AvsNumber PI = M_PI;
+#include "lvavs_pipeline.h"
+#include "calc.h"
 
 #define REFFECT_MIN 3
 #define REFFECT_MAX 23
 
-#define MAKE_REFFECT(n,x) void _ref##n(double *r, double *d, double max_d, int *xo, int *yo) { x }
+#define PI 3.14
+#define MAKE_REFFECT(n,x) static void _ref##n(double *r, double *d, double max_d, int *xo, int *yo) { x }
 
 void test(double *r);
 
@@ -74,7 +73,9 @@ static t_reffect *radial_effects[REFFECT_MAX-REFFECT_MIN+1]=
 };
 
 typedef struct {
-    AvsGlobalProxy *proxy;
+    LVAVSPipeline *pipeline;
+    symbol_dict_t *environment;
+    expression_t *runnable;
 
     uint8_t *swapbuf, *renderbuf;
 
@@ -146,6 +147,30 @@ static inline int effect_uses_eval(int t)
   return retval;
 }
 
+
+static int scope_load_runnable(MovementPrivate *priv, char *buf)
+{
+    priv->runnable = expr_compile_string(buf, priv->environment);
+    return 0;
+}
+
+static int scope_run(MovementPrivate *priv)
+{
+    expr_execute(priv->runnable, priv->environment);
+
+    return 0;
+}
+
+static int max(int x, int y)
+{
+    return x > y ? x : y;
+}
+
+static int  min(int x, int y)
+{
+    return x < y ? x : y;
+}
+
 int lv_movement_init (VisPluginData *plugin);
 int lv_movement_cleanup (VisPluginData *plugin);
 int lv_movement_events (VisPluginData *plugin, VisEventQueue *events);
@@ -199,23 +224,24 @@ int lv_movement_init (VisPluginData *plugin)
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     int i;
 
-    static VisParamEntryProxy params[] = {
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 32767, VISUAL_PARAM_LIMIT_INTEGER(0, 32767), ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectangular", 1, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 1, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("sourcemapped", 0, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1, VISUAL_PARAM_LIMIT_INTEGER(0, 1000), ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
+    static VisParamEntry params[] = {
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 32767),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectangular", 1),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 1),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("sourcemapped", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0),
         VISUAL_PARAM_LIST_ENTRY_STRING ("code",
-                "d = d * (1.01 + (cos((r-$PI*0.5) * 4) * 0.04)); r = r + (0.03 * sin(d * $PI * 4));"
-                , ""),
+                "d = d * (1.01 + (cos((r-$PI*0.5) * 4) * 0.04)); r = r + (0.03 * sin(d * $PI * 4));"),
         VISUAL_PARAM_LIST_END
     };
 
     priv = visual_mem_new0 (MovementPrivate, 1);
 
-    priv->proxy = AVS_GLOBAL_PROXY(visual_object_get_private(VISUAL_OBJECT (plugin)));
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
+
+    priv->environment = dict_new();
 
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
@@ -234,7 +260,7 @@ int lv_movement_cleanup (VisPluginData *plugin)
     if(priv->code != NULL)
         visual_mem_free (priv->code);
 
-    visual_object_unref(VISUAL_OBJECT(priv->proxy));
+    //visual_object_unref(VISUAL_OBJECT(priv->proxy));
 
     visual_mem_free (priv);
 
@@ -295,7 +321,7 @@ int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     MovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     uint8_t *pixels = visual_video_get_pixels (video);
     uint8_t *vidbuf, *vidoutbuf;
-    int isBeat = priv->proxy->isBeat;
+    int isBeat = priv->pipeline->isBeat;
     int i;
 
     printf("lv_movement_video %p\n", video);
@@ -447,7 +473,7 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
                             if(oh < 0) { xpartial=0; oh=0; }
                             if(oh > priv->height - 1) { xpartial=31; oh=priv->height-2; }
                         }
-                        *transp++ = ow+oh*priv->width | (ypartial<<22) | (xpartial<<27);
+                        *transp++ = (ow+oh*priv->width) | (ypartial<<22) | (xpartial<<27);
                     }
                     else
                     {
@@ -480,26 +506,19 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
             int is_rect = priv->trans_effect == 32767 ? priv->rectangular : __movement_descriptions[priv->trans_effect].uses_rect;
     
             {
-                AvsNumber d, r, px, py, pw, ph;
+                double *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
         
-                pw = priv->width;
-                ph = priv->height;
+		var_d = dict_variable(priv->environment, "d");
+		var_r = dict_variable(priv->environment, "r");
+		var_px = dict_variable(priv->environment, "x");
+		var_py = dict_variable(priv->environment, "y");
+		var_pw = dict_variable(priv->environment, "sw");
+		var_ph = dict_variable(priv->environment, "sh");
+                *var_pw = priv->width;
+                *var_ph = priv->height;
         
-                AvsRunnableContext *ctx = avs_runnable_context_new();
-                AvsRunnableVariableManager *vm = avs_runnable_variable_manager_new();
-                AvsRunnable *obj = avs_runnable_new(ctx);
-                avs_runnable_set_variable_manager(obj, vm);
-            
-                avs_runnable_variable_bind(vm, "d", &d);
-                avs_runnable_variable_bind(vm, "r", &r);
-                avs_runnable_variable_bind(vm, "x", &px);
-            
-                avs_runnable_variable_bind(vm, "y", &py);
-                avs_runnable_variable_bind(vm, "sw", &pw);
-                avs_runnable_variable_bind(vm, "sh", &ph);
-                avs_runnable_variable_bind(vm, "$PI", &PI);
-            
-                avs_runnable_compile(obj, (unsigned char *)effect, strlen(effect));
+		scope_load_runnable(priv, effect);
+                //avs_runnable_compile(obj, (unsigned char *)effect, strlen(effect));
     
                 {
                     double w2=priv->width/2;
@@ -514,25 +533,27 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
                             int ow, oh;
                             xd = x-w2;
                             yd = y-h2;
-                            px=xd*xsc;
-                            py=yd*ysc;
-                            d=sqrt(xd*xd+yd*yd)*divmax_d;
-                            r=atan2(yd, xd) + PI*0.5;
+                            *var_px=xd*xsc;
+                            *var_py=yd*ysc;
+                            *var_d=sqrt(xd*xd+yd*yd)*divmax_d;
+                            *var_r=atan2(yd, xd) + PI*0.5;
     
-                            avs_runnable_execute(obj);
+                            //avs_runnable_execute(obj);
     
+                            scope_run(priv);
+
                             double tmp1, tmp2;
                             if(!is_rect)
                             {
-                                d *= max_d;
-                                r -= PI/2.0;
-                                tmp1=((priv->height) + sin(r) * d);
-                                tmp2=((priv->height) + cos(r) * d);
+                                *var_d *= max_d;
+                                *var_r -= PI/2.0;
+                                tmp1=((priv->height) + sin(*var_r) * *var_d);
+                                tmp2=((priv->height) + cos(*var_r) * *var_d);
                             }
                             else
                             {
-                                tmp1=((py+1.0)*h2);
-                                tmp2=((px+1.0)*w2);
+                                tmp1=((*var_py+1.0)*h2);
+                                tmp2=((*var_px+1.0)*w2);
                             }
                             if(priv->subpixel)
                             {
@@ -603,7 +624,7 @@ static void trans_generate_blend_table(MovementPrivate *priv)
 
     for (j=0; j < 256; j++)
         for (i=0; i < 256; i++)
-            priv->proxy->blendtable[i][j] = (unsigned char)((i / 255.0) * (float)j);
+            priv->pipeline->blendtable[i][j] = (unsigned char)((i / 255.0) * (float)j);
 
 }
 
@@ -725,10 +746,11 @@ static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout)
             while(x--)
             {
                 int offs=transp[0]&OFFSET_MASK;
-                outp[0]=BLEND_AVG(inp[0],BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                outp[1]=BLEND_AVG(inp[1],BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[1]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                outp[2]=BLEND_AVG(inp[2],BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[2]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                outp[3]=BLEND_AVG(inp[3],BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[3]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+                outp[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+
+                outp[1]=BLEND_AVG(inp[1],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[1]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+                outp[2]=BLEND_AVG(inp[2],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[2]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+                outp[3]=BLEND_AVG(inp[3],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[3]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
                 transp+=4;
                 outp+=4;
                 inp+=4;
@@ -737,7 +759,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout)
             while (x--)
             {
                 int offs=transp[0]&OFFSET_MASK;
-                outp++[0]=BLEND_AVG(inp[0], BLEND4(priv->proxy, (unsigned int *)fbin+offs,priv->width, ((transp[0]>>24)&(31<<3)), ((transp[0]>>19)&(31<<3))));
+                outp++[0]=BLEND_AVG(inp[0], BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs,priv->width, ((transp[0]>>24)&(31<<3)), ((transp[0]>>19)&(31<<3))));
                 transp++;
                 inp++;
             }
@@ -746,10 +768,10 @@ static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout)
             while(x--)
             {
                 int offs=transp[0]&OFFSET_MASK;
-                outp[0]=BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[1]=BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[2]=BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[3]=BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+                outp[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+                outp[1]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+                outp[2]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+                outp[3]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
                 transp+=4;
                 outp+=4;
             }
@@ -757,7 +779,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout)
             while(x--)
             {
                 int offs=transp[0]&OFFSET_MASK;
-                outp++[0]=BLEND4(priv->proxy, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+                outp++[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
                 transp++;
             }
 
