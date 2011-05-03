@@ -486,14 +486,12 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     }
     lvavs_sound_get_from_source(audio, (float ***)data);
 */
-/*
     for(i = 0; i < 1024; i++) {
         container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
         container->element.pipeline->audiodata[1][0][i] = data[1][0][i];
         container->element.pipeline->audiodata[0][1][i] = data[0][1][i];
         container->element.pipeline->audiodata[1][1][i] = data[1][1][i];
     }
-*/
 
     int s = 0;
     while ((element = visual_list_next (container->members, &le)) != NULL) {
@@ -502,18 +500,8 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         LVAVSPipeline *pipeline = element->pipeline;
         float *beatdata = visual_mem_malloc0(2048 * sizeof(float));
 
-        
-        for(i = 0; i < 1024; i++) {
-            pipeline->audiodata[0][0][i] = data[0][0][i];
-            pipeline->audiodata[1][0][i] = data[1][0][i];
-            pipeline->audiodata[0][1][i] = data[0][1][i];
-            pipeline->audiodata[1][1][i] = data[1][1][i];
-        }
-
-        beatdata = data[0][0];
-        beatdata += 1024;
-        beatdata = data[0][1];
-        beatdata -= 1024;
+	memcpy(beatdata, data[1][0], 1024 * sizeof(float));
+	memcpy(beatdata + 1024, data[1][1], 1024 * sizeof(float));
 
         pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
 	if(s) {
