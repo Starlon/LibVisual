@@ -259,7 +259,7 @@ LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem)
 	VisParamContainer *pcontw;
 
 	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY ("clear screen"),
+		VISUAL_PARAM_LIST_ENTRY ("clearscreen"),
 		VISUAL_PARAM_LIST_END
 	};
 

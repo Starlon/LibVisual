@@ -641,7 +641,7 @@ AVSContainer *avs_parse_main (AVSTree *avstree)
         VisParamContainer *pcont;
 
         static VisParamEntry params[] = {
-                VISUAL_PARAM_LIST_ENTRY ("clear screen"),
+                VISUAL_PARAM_LIST_ENTRY ("clearscreen"),
                 VISUAL_PARAM_LIST_END
         };
 
@@ -660,7 +660,7 @@ AVSContainer *avs_parse_main (AVSTree *avstree)
         AVS_CONTAINER (avsmain)->members = visual_list_new (visual_object_collection_destroyer);
 
         scont = avs_serialize_container_new ();
-        avs_serialize_container_add_byte (scont, visual_param_container_get (pcont, "clear screen"));
+        avs_serialize_container_add_byte (scont, visual_param_container_get (pcont, "clearscreen"));
 
         avs_element_connect_serialize_container (AVS_ELEMENT (avsmain), scont);
 
