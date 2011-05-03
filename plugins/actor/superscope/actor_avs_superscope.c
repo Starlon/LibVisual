@@ -70,7 +70,7 @@ typedef struct {
 
 
     //double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
-    double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
+    //double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
 
     char            *point;
     char            *frame;
@@ -153,10 +153,10 @@ int lv_superscope_init (VisPluginData *plugin)
     SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n = 50;count=12;PI=3.145"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t = t + 5;count=count+15"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "count=count+5;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i*v*1.2;r=t+i*PI*count*100;x=cos(r)*d*0.8;y=sin(r)*d*0.8;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=50;count=12;siz=0.5;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t = t + 5;count=count+15;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "count=count+5; drawmode = if(drawmode, 0, 1);"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "siz=0.5;d=i*v*2;r=t+i*PI*count*100;x=cos(r)*d*siz;y=sin(r)*d*siz;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("draw type", 0),
@@ -176,6 +176,7 @@ int lv_superscope_init (VisPluginData *plugin)
     set_vars(priv);
 
     /* store real values that will be translated in set_vars and get_vars */
+/*
     priv->n = 0.0;
     priv->b = 0.0;
     priv->x = 0.0;
@@ -193,7 +194,7 @@ int lv_superscope_init (VisPluginData *plugin)
     priv->linesize = 1;
     priv->skip = 0;
     priv->drawmode = 0;
-
+*/
     visual_palette_allocate_colors (&priv->pal, 1);
 
     for (i = 0; i < priv->pal.ncolors; i++) {
@@ -396,6 +397,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     isBeat = priv->pipeline->isBeat;
 
+printf("isBeat %d\n", isBeat);
+
     if(priv->needs_init) {
         priv->needs_init = FALSE;
         scope_run(priv, SCOPE_RUNNABLE_INIT);
@@ -411,7 +414,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     uint16_t fa_data[576];
 
     
-    if((priv->channel_source&3) >= 2 || 1)
+    if((priv->channel_source&3) >= 2)
     {
         for(x = 0; x < 576; x++) {
             pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
@@ -419,9 +422,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     }
     else
     {
-        printf(" < 2\n");
         for(x = 0; x < 576; x++) {
             pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
+            //pcmbuf[x] = pipeline->audiodata[1][1][x];
         }
     }
 
@@ -462,16 +465,17 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     *var_skip = 0.0;
     var_linesize = dict_variable(priv->environment, "linesize");
     *var_linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
-    var_drawmode = dict_variable(priv->environment, "drawmode");
-    *var_drawmode = priv->draw_type ? 1.0 : 0.0;
-    var_n = dict_variable(priv->environment, "n");
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
     if (isBeat) {
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
     }
 
+    var_drawmode = dict_variable(priv->environment, "drawmode");
+    //*var_drawmode = priv->draw_type ? 1.0 : 0.0;
+    var_n = dict_variable(priv->environment, "n");
 
+printf("drawmode %f\n", *var_drawmode);
     //int candraw=0;
     l = *var_n;
     if (l > 128*1024)
@@ -489,7 +493,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         //priv->v = yr/128.0 - 1.0;
 
 	var_v = dict_variable(priv->environment, "v");
-        *var_v = 1;//pcmbuf[a * 288 / l];
+        *var_v = (pcmbuf[a * 288 / l] + 3) / 3 ;
 	var_i = dict_variable(priv->environment, "i");
         *var_i = a/(double)(l-1);
 	var_skip = dict_variable(priv->environment, "skip");
@@ -506,7 +510,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         x = (int)((*var_x + 1.0) * video->width * 0.5);
         y = (int)((*var_y + 1.0) * video->height * 0.5);
 
-	printf("x = %f, y = %f\n", *var_x, *var_y);
         if (*var_skip >= 0.00001)
             continue;
 
