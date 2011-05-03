@@ -92,6 +92,9 @@ int act_avs_init (VisPluginData *plugin)
 		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
 				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/superscope.avs"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("winamp avs", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
+		
 		VISUAL_PARAM_LIST_END
 	};
 
@@ -181,6 +184,10 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 			case VISUAL_EVENT_PARAM:
 				param = ev->event.param.param;
 
+				if(visual_param_entry_is (param, "blendmode")) {
+					
+					priv->pipeline->blendmode = visual_param_entry_get_integer(param);
+				}
 				if (visual_param_entry_is (param, "filename")) {
 					char *filename = visual_param_entry_get_string (param);
 					AVSTree *tree;
@@ -208,7 +215,14 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 					} else {
 						LVAVSPreset *preset;
 						LVAVSPresetElement *sscope;
+						LVAVSPresetElement *move;
+						LVAVSPresetElement *blur;
 						sscope = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
+						move = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_movement");
+						blur = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
+						//move->type = LVAVS_PIPELINE_ELEMENT_TYPE_TRANSFORM;
+						blur->type = LVAVS_PRESET_ELEMENT_TYPE_PLUGIN;
+
 						preset = lvavs_preset_new ();
 						preset->main = lvavs_preset_container_new ();
 
@@ -226,6 +240,8 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 //									"avs_superscope"));
 
 						visual_list_add (preset->main->members, sscope);
+						//visual_list_add (preset->main->members, move);
+						visual_list_add (preset->main->members, blur);
 
 //						visual_list_add (preset->main->members,
 //								lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN,

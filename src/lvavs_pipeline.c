@@ -448,8 +448,8 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
-    int *fbout;
-    int *framebuffer;
+    unsigned int *fbout;
+    unsigned int *framebuffer;
     float data[2][2][1024];
 
     visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
@@ -478,14 +478,21 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-/*
     VisVideo *dummy_vid = container->element.pipeline->dummy_vid;
     
     if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
-	//container->element.pipeline->dummy_vid = visual_video_scale_depth_new(dummy_vid, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+	container->element.pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
     }
-    lvavs_sound_get_from_source(audio, (float ***)data);
+
+/*
+    dummy_vid = container->element.pipeline->dummy_vid;
+    VisColor color;
+    visual_color_from_uint32(&color, 0xffff0000);
+    avs_gfx_line_ints (dummy_vid, 0, 0, dummy_vid->width, dummy_vid->height, &color);
+    visual_color_from_uint32(&color, 0xffff00ff);
+    avs_gfx_line_ints (video, 0, video->height / 2, video->width, video->height, &color);
 */
+
     for(i = 0; i < 1024; i++) {
         container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
         container->element.pipeline->audiodata[1][0][i] = data[1][0][i];
@@ -505,11 +512,11 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
         pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
 	if(s) {
-		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
-		pipeline->framebuffer = visual_video_get_pixels(video);
-	} else {
 		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->fbout = visual_video_get_pixels(video);
+	} else {
+		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
+		pipeline->framebuffer = visual_video_get_pixels(video);
 	}
         switch (element->type) {
             case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
@@ -536,20 +543,24 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
                 break;
         }
-	
-	if(pipeline->invert) {
+
+	if(pipeline->swap&1) {
 		s^=1;
-		pipeline->invert = 0;
+		pipeline->swap = 0;
 	}
 
-	for(i = 0; i < video->width*video->height; i++) {
-		//BLEND_LINE(fbout, i, framebuffer[i]);
-	}
-	/*visual_video_composite_set_type(video, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
-	VisRectangle *rect = visual_rectangle_new(0, 0, video->width, video->height);
-	visual_video_blit_overlay_rectangle(video, rect, pipeline->dummy_vid, rect, 0.5);
-	*/
     }
+        LVAVSPipeline *pipeline = container->element.pipeline;
+    	fbout = visual_video_get_pixels(video);
+	framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+	for(i = 0; i < video->width*video->height; i++) {
+		BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
+	}
+	/*visual_video_composite_set_type(video, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+	VisRectangle *drect = visual_rectangle_new(0, 0, video->width, video->height);
+	VisRectangle *srect = visual_rectangle_new(0, 0, video->width, video->height);
+	visual_video_blit_overlay_rectangle(video, drect, pipeline->dummy_vid, srect, 0.5);
+	*/
 
     return VISUAL_OK;
 }

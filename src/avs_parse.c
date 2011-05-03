@@ -383,8 +383,8 @@ int avs_parse_tree (AVSTree *avstree, AVSContainer *curcontainer)
 
                 case AVS_ELEMENT_TYPE_TRANS_BLUR:
                         element = avs_parse_element_non_complex (avstree, AVS_ELEMENT_TYPE_TRANS_BLUR,
-                                        "blur type", AVS_SERIALIZE_ENTRY_TYPE_INT,
-                                        "roundup",  AVS_SERIALIZE_ENTRY_TYPE_INT,
+                                        "enabled", AVS_SERIALIZE_ENTRY_TYPE_INT,
+                                        "roundmode",  AVS_SERIALIZE_ENTRY_TYPE_INT,
                                         NULL);
 
                         break;

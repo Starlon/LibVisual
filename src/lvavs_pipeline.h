@@ -98,7 +98,7 @@ struct _LVAVSPipeline {
 
 	unsigned int *framebuffer;
 
-	int invert; // whether to invert buffers -- fbout<->framebuffer
+	int swap; // whether to swap buffers -- fbout<->framebuffer
 
 	int isBeat;
 
