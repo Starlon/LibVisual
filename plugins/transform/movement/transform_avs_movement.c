@@ -232,20 +232,27 @@ int lv_movement_init (VisPluginData *plugin)
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0),
         VISUAL_PARAM_LIST_ENTRY_STRING ("code",
-                "d = d * (1.01 + (cos((r-$PI*0.5) * 4) * 0.04)); r = r + (0.03 * sin(d * $PI * 4));"),
+                "d = cos(d)^2;"),
         VISUAL_PARAM_LIST_END
     };
-
+	
     priv = visual_mem_new0 (MovementPrivate, 1);
+
+    priv->environment = dict_new();
+
+    dict_variable(priv->environment, "d");
+    dict_variable(priv->environment, "r");
+    dict_variable(priv->environment, "x");
+    dict_variable(priv->environment, "y");
+    dict_variable(priv->environment, "sw");
+    dict_variable(priv->environment, "sh");
 
     priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
-    priv->environment = dict_new();
-
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-    visual_param_container_add_many_proxy (paramcontainer, params);
+    visual_param_container_add_many (paramcontainer, params);
 
     return 0;
 }
