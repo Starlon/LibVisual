@@ -38,8 +38,10 @@ unsigned int  BLEND_MAX(unsigned int a, unsigned int b);
 unsigned int  BLEND_MIN(unsigned int a, unsigned int b);
 unsigned int  BLEND_AVG(unsigned int a, unsigned int b);
 unsigned int  BLEND_SUB(unsigned int a, unsigned int b);
-unsigned int  BLEND_ADJ_NOMMX(unsigned char **blendtable, unsigned int a, unsigned int b, int v);
-unsigned int  BLEND_MUL(unsigned char **blendtable, unsigned int a, unsigned int b);
-void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char **blendtable, int mode);
+unsigned int  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], unsigned int a, unsigned int b, int v);
+unsigned int  BLEND_MUL(unsigned char blendtable[256][256], unsigned int a, unsigned int b);
+void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char blendtable[256][256], int mode);
+unsigned int BLEND4(unsigned char blendtable[256][256], unsigned int *p1, unsigned int w, int xp, int yp);
+unsigned int BLEND4_16(unsigned char **blendtable, unsigned int *p1, unsigned int w, int xp, int yp);
 
 #endif

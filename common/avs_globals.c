@@ -130,4 +130,5 @@ int avs_global_proxy_resize(AvsGlobalProxy *proxy, int w, int h, int depth)
 	tmp = proxy->fbout;
 	proxy->fbout = visual_video_scale_depth_new(tmp, w, h, depth, VISUAL_VIDEO_SCALE_NEAREST);
 	visual_video_free_buffer(tmp);
+	return 0;
 }
