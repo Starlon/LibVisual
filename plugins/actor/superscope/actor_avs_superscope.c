@@ -68,7 +68,6 @@ typedef struct {
     expression_t *runnable[4];
     symbol_dict_t *environment;
 
-
     //double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
     //double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
 
@@ -174,34 +173,22 @@ int lv_superscope_init (VisPluginData *plugin)
     /* initialize variables */
     set_vars(priv);
 
-    /* store real values that will be translated in set_vars and get_vars */
+    visual_palette_allocate_colors (&priv->pal, 2);
+
+    priv->pal.colors[0].r = 0x00;
+    priv->pal.colors[0].g = 0xff;
+    priv->pal.colors[0].b = 0xff;
+    priv->pal.colors[1].r = 0xff;
+    priv->pal.colors[1].g = 0xff;
+    priv->pal.colors[1].b = 0x00;
+
 /*
-    priv->n = 0.0;
-    priv->b = 0.0;
-    priv->x = 0.0;
-    priv->y = 0.0;
-    priv->i = 0.0;
-    priv->v = 0.0;
-    priv->w = 0.0;
-    priv->h = 0.0;
-    priv->t = 0.0;
-    priv->d = 0.0;
-
-    priv->red = 1;
-    priv->green = 1;
-    priv->blue = 1;
-    priv->linesize = 1;
-    priv->skip = 0;
-    priv->drawmode = 0;
-*/
-    visual_palette_allocate_colors (&priv->pal, 1);
-
     for (i = 0; i < priv->pal.ncolors; i++) {
-        priv->pal.colors[i].r = 0xff;
-        priv->pal.colors[i].g = 0xff;
+        priv->pal.colors[i].r = (i%2) * 0xff;
+        priv->pal.colors[i].g = (i%2) * 0xff;
         priv->pal.colors[i].b = 0xff;
     }
-
+*/
     visual_param_entry_set_palette (visual_param_container_get (paramcontainer, "palette"), &priv->pal);
 
     visual_palette_free_colors (&priv->pal);
@@ -321,14 +308,12 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
                     visual_palette_allocate_colors (&priv->pal, pal->ncolors);
                     visual_palette_copy (&priv->pal, pal);
 
-                /*
                     if (priv->cycler != NULL)
                         visual_object_unref (VISUAL_OBJECT (priv->cycler));
 
                     priv->cycler = avs_gfx_color_cycler_new (&priv->pal);
                     avs_gfx_color_cycler_set_mode (priv->cycler, AVS_GFX_COLOR_CYCLER_TYPE_TIME);
                     avs_gfx_color_cycler_set_time (priv->cycler, avs_config_standard_color_cycler_time ());
-                */
                 }
 
                 break;
@@ -425,6 +410,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         }
     }
 
+/*
     priv->color_pos++;
 
     if(priv->color_pos >= priv->pal.ncolors * 64) priv->color_pos = 0;
@@ -445,7 +431,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
     }
-
+*/
+    current_color = visual_color_to_uint32(avs_gfx_color_cycler_run(priv->cycler));
+    
     var_h = dict_variable(priv->environment, "h");
     *var_h = video->height;
     var_w = dict_variable(priv->environment, "w");
@@ -509,11 +497,11 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         if (*var_skip >= 0.00001)
             continue;
 
-        int this_color = 0xffffffff;//  makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
+        int this_color = makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
 
         if (*var_drawmode < 0.00001) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width)
-                    BLEND_LINE(buf+x+y*video->width, this_color, (unsigned char**)pipeline->blendtable, (int)pipeline->blendmode);
+                    BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, (int)pipeline->blendmode);
         } else {
             if (a > 0) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width &&
