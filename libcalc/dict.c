@@ -50,7 +50,7 @@ symbol_dict_t *dict_new (void) {
   dict->v_space = V_SPACE_INIT;
   dict->variables = (var_t *)g_malloc (dict->v_space * sizeof(var_t));
   
-  dict_variable_new(dict, "PI", 3.145);
+  dict_variable_new(dict, "PI", 3.14159265358979323846);
 
   return dict;
 }
