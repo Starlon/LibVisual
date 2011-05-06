@@ -177,10 +177,10 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_movement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *fbin, uint32_t *fbout);
+static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout);
 static void trans_generate_blend_table(MovementPrivate *priv);
 static void trans_begin(MovementPrivate *priv, int width, int height, char *effect, int isBeat);
-static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout);
+static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -225,14 +225,14 @@ int lv_movement_init (VisPluginData *plugin)
     int i;
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 3),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 2),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectangular", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("sourcemapped", 0),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0),
         VISUAL_PARAM_LIST_ENTRY_STRING ("code",
-                "r = r + (0.1 - (0.2 * d));d = d * 0.96;"),
+                "r = r + (0.1 * sin(d * PI * 5));"),
         VISUAL_PARAM_LIST_END
     };
 	
@@ -240,12 +240,12 @@ int lv_movement_init (VisPluginData *plugin)
 
     priv->environment = dict_new();
 
-    dict_variable(priv->environment, "d");
-    dict_variable(priv->environment, "r");
-    dict_variable(priv->environment, "x");
-    dict_variable(priv->environment, "y");
-    dict_variable(priv->environment, "sw");
-    dict_variable(priv->environment, "sh");
+    dict_variable_new(priv->environment, "d", 0);
+    dict_variable_new(priv->environment, "r", 0);
+    dict_variable_new(priv->environment, "x", 0);
+    dict_variable_new(priv->environment, "y", 0);
+    dict_variable_new(priv->environment, "sw", 0);
+    dict_variable_new(priv->environment, "sh", 0);
 
     priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
@@ -367,264 +367,6 @@ int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     return VISUAL_OK;
 }
 
-static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *fbin, uint32_t *fbout)
-{
-    uint32_t *transp = priv->tab;
-
-    int x, p;
-    //double max_d = sqrt((double)(priv->width*priv->width + priv->height*priv->height)) / 2.0;
-    //double divmax_d = 1.0/max_d;
-
-    printf("trans_generate_table enter\n");
-
-    if (priv->tab_w != priv->width || priv->tab_h != priv->height || priv->trans_effect != priv->effect || priv->effect_exp_ch)
-    {
-
-        priv->tab_w = priv->width;
-        priv->tab_h = priv->height;
-        priv->trans_effect=priv->effect;
-        priv->tab_subpixel=(priv->subpixel && priv->tab_w*priv->tab_h < (1<<22) &&
-                  ((priv->trans_effect >= REFFECT_MIN && priv->trans_effect <= REFFECT_MAX
-                  && priv->trans_effect != 1 && priv->trans_effect != 2 && priv->trans_effect != 7
-                  )||priv->trans_effect ==32767));
-
-
-        printf("generate_table trans_effect %d\n", priv->trans_effect);
-
-        x = priv->width * priv->height;
-        p = 0;
-
-        if(priv->trans_effect == 1)
-        {
-            while(x--)
-            {
-                int r = (p++)+(rand()%3)-1 + ((rand()%3)-1)*priv->width;
-                *transp++ = min(priv->width*priv->height-1, max(r, 0));
-            }
-        }
-        else if (priv->trans_effect == 2)
-        {
-            int y = priv->height;
-            while(y--)
-            {
-                int x = priv->width;
-                int lp = priv->width/64;
-                while(x--)
-                {
-                    *transp++ = p+lp++;
-                    if(lp >= priv->width) lp-=priv->width;
-                }
-                p+=priv->width;
-            }
-        }
-        else if (priv->trans_effect == 7)
-        {
-            int y;
-            for(y = 0; y < priv->height; y++)
-            {
-                for(x = 0; x < priv->width; x++)
-                {
-                    if(x&2 || y&2)
-                    {
-                        *transp++ = x+y*priv->width;
-                    }
-                    else
-                    {
-                        int xp = priv->width/2+(((x&~1)-priv->width/2)*7)/8;
-                        int yp = priv->height/2+(((y&~1)-priv->width/2)*7)/8;
-                        *transp++=xp*yp*priv->width;
-                    }
-                }
-            }
-        }
-        else if(priv->trans_effect >= REFFECT_MIN && priv->trans_effect <= REFFECT_MAX && !effect_uses_eval(priv->trans_effect))
-        {
-            double max_d = sqrt((priv->width*priv->width+priv->height*priv->height)/4.0);
-            int y;
-            t_reffect *ref = radial_effects[priv->trans_effect-REFFECT_MIN];
-            printf("trans_effect generate_table level 1 %d\n", priv->trans_effect-REFFECT_MIN);
-            if(ref) for (y = 0; y < priv->height; y++)
-            {
-                for(x = 0; x < priv->width; x++)
-                {
-                    double r, d;
-                    double xd, yd;
-                    int ow, oh, xo=0, yo=0;
-                    xd = x-(priv->width/2);
-                    yd = y-(priv->height/2);
-                    d = sqrt(xd*xd + yd*yd);
-                    r = atan2(yd, xd);
-    
-                    ref(&r, &d, max_d, &xo, &yo);
-    
-                    double tmp1, tmp2;
-                    tmp1 = ((priv->height/2) + sin(r)*d + 0.5) + (yo*priv->height)*(1.0/256.0);
-                    tmp2 = ((priv->width/2) + cos(r)*d + 0.5) + (xo*priv->width)*(1.0/256.0);
-                    oh = (int)tmp1;
-                    ow = (int)tmp2;
-                    if(priv->subpixel)
-                    {
-                        int xpartial=(int)(32.0*(tmp2-ow));
-                        int ypartial=(int)(32.0*(tmp1-oh));
-                        if(priv->wrap)
-                        {
-                            ow%=(priv->width - 1);
-                            oh%=(priv->height - 1);
-                            if(ow<0)ow+=priv->width - 1;
-                            if(oh<0)oh+=priv->height - 1;
-                        }
-                        else
-                        {
-                            if(ow < 0) { xpartial=0; ow=0; }
-                            if(ow > priv->width-1) { xpartial=31; ow=priv->width-2; }
-                            if(oh < 0) { xpartial=0; oh=0; }
-                            if(oh > priv->height - 1) { xpartial=31; oh=priv->height-2; }
-                        }
-                        *transp++ = (ow+oh*priv->width) | (ypartial<<22) | (xpartial<<27);
-                    }
-                    else
-                    {
-                        if(priv->wrap)
-                        {
-                            ow%=(priv->width);
-                            oh%=(priv->height);
-                            if(ow < 0)ow+=priv->width;
-                            if(oh < 0)oh+=priv->height;
-                        }
-                        else
-                        {
-                            if(ow < 0) ow = 0;
-                            if(ow >= priv->width) ow=priv->width-1;
-                            if(oh < 0) oh = 0;
-                            if(oh >= priv->height) oh=priv->height-1;
-                        }
-                        *transp++ = ow+oh*priv->width;
-                    }
-                }
-            }
-        }
-        else if(priv->trans_effect == 32767 || effect_uses_eval(priv->trans_effect))
-        {
-            printf("trans effect level 2\n");
-            double max_d = sqrt((double)(priv->width*priv->width+priv->height*priv->height))/2.0;
-            double divmax_d=1.0/max_d;
-            int y;
-            int offs;
-            int is_rect = priv->trans_effect == 32767 ? priv->rectangular : __movement_descriptions[priv->trans_effect].uses_rect;
-    
-            {
-                double *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
-        
-		var_d = dict_variable(priv->environment, "d");
-		var_r = dict_variable(priv->environment, "r");
-		var_px = dict_variable(priv->environment, "x");
-		var_py = dict_variable(priv->environment, "y");
-		var_pw = dict_variable(priv->environment, "sw");
-		var_ph = dict_variable(priv->environment, "sh");
-                *var_pw = priv->width;
-                *var_ph = priv->height;
-        
-		scope_load_runnable(priv, effect);
-                //avs_runnable_compile(obj, (unsigned char *)effect, strlen(effect));
-    
-                {
-                    double w2=priv->width/2;
-                    double h2=priv->height/2;
-                    double xsc = 1.0/w2,ysc=1.0/h2;
-    
-                    for(y = 0; y < priv->height; y++)
-                    {
-                        for(x = 0; x < priv->width; x++)
-                        {
-                            double xd, yd;
-                            int ow, oh;
-                            xd = x-w2;
-                            yd = y-h2;
-                            *var_px=xd*xsc;
-                            *var_py=yd*ysc;
-                            *var_d=sqrt(xd*xd+yd*yd)*divmax_d;
-                            *var_r=atan2(yd, xd) + PI*0.5;
-    
-                            //avs_runnable_execute(obj);
-    
-                            scope_run(priv);
-
-                            double tmp1, tmp2;
-                            if(!is_rect)
-                            {
-                                *var_d *= max_d;
-                                *var_r -= PI/2.0;
-                                tmp1=((priv->height) + sin(*var_r) * *var_d);
-                                tmp2=((priv->height) + cos(*var_r) * *var_d);
-                            }
-                            else
-                            {
-                                tmp1=((*var_py+1.0)*h2);
-                                tmp2=((*var_px+1.0)*w2);
-                            }
-                            if(priv->subpixel)
-                            {
-                                oh=(int) tmp1;
-                                ow=(int) tmp2;
-                                int xpartial=(int)(32.0*(tmp2-ow));
-                                int ypartial=(int)(32.0*(tmp1-oh));
-                                if(priv->wrap)
-                                {
-                                    ow%=(priv->width-1);
-                                    oh%=(priv->height-1);
-                                    if(ow < 0) ow+=priv->width - 1;
-                                    if(oh < 0) oh+=priv->height - 1;
-                                }
-                                else
-                                {
-                                    if(ow < 0) { xpartial=0; ow=0; }
-                                    if(ow >= priv->width-1) { xpartial=31; ow=priv->width-2; }
-                                    if(oh < 0) { ypartial=0; oh=0; }
-                                    if(oh >= priv->height-1) { ypartial=31; oh=priv->height-2; }
-                                }
-                                *transp++ = (ow+oh*priv->width) | (ypartial<<22) | (xpartial<<27);
-                            }
-                            else
-                            {
-                                tmp1+=0.5;
-                                tmp2+=0.5;
-                                oh=(int) tmp1;
-                                ow=(int) tmp2;
-                                if(priv->wrap)
-                                {
-                                    ow%=(priv->width);
-                                    oh%=(priv->height);
-                                    if( ow < 0)ow+=priv->width;;
-                                    if( oh < 0)oh+=priv->height;
-                                }
-                                else
-                                {
-                                    if(ow < 0) ow=0;
-                                    if(ow >= priv->width) ow=priv->width-1;
-                                    if(oh < 0) oh=0;
-                                    if(oh >= priv->height) oh=priv->height-1;
-                                }
-                                *transp++ = ow+oh*priv->width;
-                            }
-                        }
-                    }
-                }
-                priv->effect_exp_ch=0;
-            }
-            if(!(isBeat & 0x80000000))
-            {
-                printf("copying fbin->fbout\n");
-                if((priv->sourcemapped&2)&&isBeat) priv->sourcemapped^=1;
-                if(priv->sourcemapped&1)
-                {
-                    if(!priv->blend) memset(fbout, 0, priv->width*priv->height*sizeof(int));
-                    else visual_mem_copy(fbout, fbin, priv->width*priv->height*sizeof(int));
-                }
-            }
-        }
-    }
-}
-
 static void trans_generate_blend_table(MovementPrivate *priv)
 {
     int i,j;
@@ -655,178 +397,449 @@ static void trans_begin(MovementPrivate *priv, int width, int height, char *effe
     if (1 /* !isBeat & 0x80000000 */) {
         /* ... */
     }
+    priv->pipeline->swap = 1;
+}
+
+static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout)
+{
+  if (!priv->effect) return;
+
+  int w = priv->width, h = priv->height;
+
+  if (!priv->tab || priv->tab_w != w || priv->tab_h != h || priv->effect != priv->trans_effect || 
+       priv->effect_exp_ch)
+  {
+    int p;
+    uint32_t *transp,x;
+    priv->tab_w=w; 
+    priv->tab_h=h;
+    priv->trans_effect=priv->effect;
+    priv->subpixel=(priv->subpixel && priv->tab_w*priv->tab_h < (1<<22) &&
+                  ((priv->trans_effect >= REFFECT_MIN && priv->trans_effect <= REFFECT_MAX
+                  && priv->trans_effect != 1 && priv->trans_effect != 2 && priv->trans_effect != 7
+                  )||priv->trans_effect ==32767));
+
+    /* generate priv->tab */
+    transp=priv->tab;
+    x=w*h;
+    p=0;
+
+	  if (priv->trans_effect == 1)
+	  {
+		  while (x--)
+		  {
+		    int r=(p++)+(rand()%3)-1 + ((rand()%3)-1)*w;
+		    *transp++ = min(w*h-1,max(r,0));
+		  }
+	  }
+	  else if (priv->trans_effect == 2)
+	  {
+		  int y=h;
+		  while (y--)
+		  {
+		    int x=w;
+		    int lp=w/64;
+		    while (x--)
+		    {
+			  *transp++ = p+lp++;
+			  if (lp >= w) lp-=w;
+		    }
+		    p+=w;
+		  }
+    }
+    else if (priv->trans_effect == 7)
+    {
+      int y;
+      for (y = 0; y < h; y ++)
+      {
+        for (x = 0; x < w; x ++)
+        {
+          if (x&2 || y&2)
+          {
+            *transp++ = x+y*w;
+          }
+          else
+          {
+            int xp=w/2+(((x&~1)-w/2)*7)/8;
+            int yp=h/2+(((y&~1)-h/2)*7)/8;
+            *transp++=xp+yp*w;
+          }
+        }
+      }
+    }
+    else if (priv->trans_effect >= REFFECT_MIN && priv->trans_effect <= REFFECT_MAX && !effect_uses_eval(priv->trans_effect))
+    {
+      double max_d=sqrt((w*w+h*h)/4.0);
+      int y;
+      t_reffect *ref=radial_effects[priv->trans_effect-REFFECT_MIN];
+      if (ref) for (y = 0; y < h; y ++)
+      {
+        for (x = 0; x < w; x ++)
+        {
+          double r,d;
+          double xd,yd;
+          int ow,oh,xo=0,yo=0;
+          xd=x-(w/2);
+          yd=y-(h/2);
+          d=sqrt(xd*xd+yd*yd);
+          r=atan2(yd,xd);
+
+          ref(&r,&d,max_d,&xo,&yo);
+
+          double tmp1,tmp2;
+          tmp1= ((h/2) + sin(r)*d + 0.5) + (yo*h)*(1.0/256.0);
+          tmp2= ((w/2) + cos(r)*d + 0.5) + (xo*w)*(1.0/256.0);
+          oh=(int)tmp1;
+          ow=(int)tmp2;
+          if (priv->subpixel)
+          {
+            int xpartial=(int)(32.0*(tmp2-ow));
+            int ypartial=(int)(32.0*(tmp1-oh));
+            if (wrap)
+            {
+              ow%=(w-1);
+              oh%=(h-1);
+              if (ow<0)ow+=w-1;
+              if (oh<0)oh+=h-1;
+            }
+            else
+            {
+              if (ow < 0) { xpartial=0; ow=0; }
+              if (ow >= w-1) { xpartial=31; ow=w-2; }
+              if (oh < 0) { ypartial=0; oh=0; }
+              if (oh >= h-1) {ypartial=31; oh=h-2; }
+            }
+            *transp++ = (ow+oh*w) | (ypartial<<22) | (xpartial<<27);
+          }
+          else 
+          {
+            if (wrap)
+            {
+              ow%=(w);
+              oh%=(h);
+              if (ow<0)ow+=w;
+              if (oh<0)oh+=h;
+            }
+            else
+            {
+              if (ow < 0) ow=0;
+              if (ow >= w) ow=w-1;
+              if (oh < 0) oh=0;
+              if (oh >= h) oh=h-1;
+            }
+            *transp++ = ow+oh*w;
+          }
+        }
+      }
+    }
+    else if (priv->trans_effect == 32767 || effect_uses_eval(priv->trans_effect))
+    {
+      double max_d=sqrt((double)(w*w+h*h))/2.0;
+      double divmax_d=1.0/max_d;
+      int y;
+      double *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
+        
+      var_d = dict_variable(priv->environment, "d");
+      var_r = dict_variable(priv->environment, "r");
+      var_px = dict_variable(priv->environment, "x");
+      var_py = dict_variable(priv->environment, "y");
+      var_pw = dict_variable(priv->environment, "sw");
+      var_ph = dict_variable(priv->environment, "sh");
+      *var_pw = priv->width;
+      *var_ph = priv->height;
+        
+      scope_load_runnable(priv, effect);
+
+      int offs=0;
+      int is_rect = priv->trans_effect == 32767 ? rectangular : __movement_descriptions[priv->trans_effect].uses_rect;
+      if (1)         
+      {
+        double w2=w/2;
+        double h2=h/2;
+        double xsc=1.0/w2,ysc=1.0/h2;
+
+        for (y = 0; y < h; y ++)
+        {
+          for (x = 0; x < w; x ++)
+          {
+            double xd,yd;
+            int ow,oh;
+            xd=x-w2;
+            yd=y-h2;
+            *var_px=xd*xsc;
+            *var_py=yd*ysc;
+            *var_d=sqrt(xd*xd+yd*yd)*divmax_d;
+            *var_r=atan2(yd,xd) + M_PI*0.5;
+    
+            scope_run(priv);
+        
+            double tmp1,tmp2;
+            if (!is_rect)
+            {
+              *var_d *= max_d;
+              *var_r -= M_PI/2.0;
+              tmp1=((h/2) + sin(*var_r)* *var_d);
+              tmp2=((w/2) + cos(*var_r)* *var_d);
+            }
+            else
+            {
+              tmp1=((*var_py+1.0)*h2);
+              tmp2=((*var_px+1.0)*w2);
+            }
+            if (priv->subpixel)
+            {
+              oh=(int) tmp1;
+              ow=(int) tmp2;
+              int xpartial=(int)(32.0*(tmp2-ow));
+              int ypartial=(int)(32.0*(tmp1-oh));
+              if (priv->wrap)
+              {
+                ow%=(w-1);
+                oh%=(h-1);
+                if (ow<0)ow+=w-1;
+                if (oh<0)oh+=h-1;
+              }
+              else
+              {
+                if (ow < 0) { xpartial=0; ow=0; }
+                if (ow >= w-1) { xpartial=31; ow=w-2; }
+                if (oh < 0) { ypartial=0; oh=0; }
+                if (oh >= h-1) {ypartial=31; oh=h-2; }
+              }
+              *transp++ = (ow+oh*w) | (ypartial<<22) | (xpartial<<27); // FIXME
+            }
+            else
+            {
+              tmp1+=0.5;
+              tmp2+=0.5;
+              oh=(int) tmp1;
+              ow=(int) tmp2;
+              if (priv->wrap)
+              {
+                ow%=(w);
+                oh%=(h);
+                if (ow<0)ow+=w;
+                if (oh<0)oh+=h;
+              }
+              else
+              {
+                if (ow < 0) ow=0;
+                if (ow >= w) ow=w-1;
+                if (oh < 0) oh=0;
+                if (oh >= h) oh=h-1;
+              }
+              *transp++ = ow+oh*w;
+            }
+          }
+        }
+      }
+      else 
+      {
+        transp=priv->tab;
+        priv->subpixel=0;
+        for (x = 0; x < w*h; x ++)
+          *transp++=x;
+      }
+    }
+    priv->effect_exp_ch=0;
+  }
+
+  if (!(isBeat & 0x80000000))
+  {
+    if ((priv->sourcemapped&2)&&isBeat) priv->sourcemapped^=1;
+    if (priv->sourcemapped&1)
+    {
+      if (!priv->blend) memset(fbout,0,w*h*sizeof(int));
+      else memcpy(fbout,framebuffer,w*h*sizeof(int));
+    }
+  }
 }
 
 #define OFFSET_MASK ((1<<22)-1)
 
-static void trans_render(MovementPrivate *priv, uint32_t *fbin, uint32_t *fbout)
+static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout)
 {
-    uint32_t *inp = fbin;
-    uint32_t *outp = fbout;
-    unsigned int *transp = priv->tab, x;
+  uint32_t *inp = framebuffer;
+  uint32_t *outp = fbout;
+  uint32_t *transp = priv->tab, x;
 
-    int max_threads = 1;
-    int this_thread = 0;
+  int max_threads = 1;
+  int this_thread = 0;
 
-    int start_l = (this_thread * priv->height) / max_threads;
-    int end_l;
+  int w = priv->width, h = priv->height;
 
-    if(this_thread >= max_threads - 1) end_l = priv->height;
-    else end_l = ((this_thread+1) * priv->height) / max_threads;
+  if(!priv->effect) return;
 
-    int outh=end_l-start_l;
-    if(outh<1) return;
+  if (max_threads < 1) max_threads=1;
 
-    if(!priv->effect) return;
+  int start_l = ( this_thread * h ) / max_threads;
+  int end_l;
 
-    int skip_pix = start_l*priv->width;
+  if (this_thread >= max_threads - 1) end_l = h;
+  else end_l = ( (this_thread+1) * h ) / max_threads;  
 
-    x = (priv->width * priv->height ) / 4;
-    if (priv->sourcemapped&1) {
-        printf("trans render level 1\n");
-        inp += skip_pix;
-        transp += skip_pix;
-        if (priv->subpixel) {
-            printf("trans render level 1.1\n");
-            int i;
-            while (x--) {
-                fbout[transp[0]&OFFSET_MASK] = BLEND_MAX(inp[0],fbout[transp[0]&OFFSET_MASK]);
-                fbout[transp[1]&OFFSET_MASK] = BLEND_MAX(inp[1],fbout[transp[1]&OFFSET_MASK]);
-                fbout[transp[2]&OFFSET_MASK] = BLEND_MAX(inp[2],fbout[transp[2]&OFFSET_MASK]);
-                fbout[transp[3]&OFFSET_MASK] = BLEND_MAX(inp[3],fbout[transp[3]&OFFSET_MASK]);
-                inp+=4;
-                transp+=4;
-            }
+  int outh=end_l-start_l;
+  if (outh<1) return;
 
-            x = (priv->width * priv->height) & 3;
-            if (x>0) while (x--) {
-                fbout[transp[0]&OFFSET_MASK] = BLEND_MAX(inp++[0], fbout[transp[0]&OFFSET_MASK]);
-                transp++;
-            }
-        } else { 
-            printf("trans render level 1.2\n");
-            while(x--)
-            {
-                fbout[transp[0]]=BLEND_MAX(inp[0], fbout[transp[0]]);
-                fbout[transp[1]]=BLEND_MAX(inp[1], fbout[transp[1]]);
-                fbout[transp[2]]=BLEND_MAX(inp[2], fbout[transp[2]]);
-                fbout[transp[3]]=BLEND_MAX(inp[3], fbout[transp[3]]);
-                inp+=4;
-                transp+=4;
-            }
-            x = (priv->width * priv->height)&3;
-            if (x > 0) while (x--)
-            {
-                fbout[transp[0]]=BLEND_MAX(inp++[0], fbout[transp[0]]);
-                transp++;
-            }
-        }
-        if (priv->blend) {
-            printf("trans render level 1.3\n");
-            fbin += skip_pix;
-            fbout += skip_pix;
-            x=(priv->width * priv->height)/4;
-            while (x--) {
-                fbout[0] = BLEND_AVG(fbout[0], fbin[0]);
-                fbout[1] = BLEND_AVG(fbout[1], fbin[1]);
-                fbout[2] = BLEND_AVG(fbout[2], fbin[2]);
-                fbout[3] = BLEND_AVG(fbout[3], fbin[3]);
-                fbout+=4;
-                fbin+=4;
-            }
-            x = (priv->width * priv->height)&3;
-            while(x--)
-            {
-                fbout[0]=BLEND_AVG(fbout[0], fbin[0]);
-                fbout++;
-                fbin++;
-            }
-        }
-    } else {
-        printf("trans render level 1.4\n");
-        inp += skip_pix;
-        outp += skip_pix;
-        transp += skip_pix;
-        if(priv->subpixel && priv->blend)
-        {
-            printf("trans render level 1.4.1 x=%d w=%d h=%d\n", x, priv->width, priv->height);
-            while(x--)
-            {
-                int offs=transp[0]&OFFSET_MASK;
-                outp[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
 
-                outp[1]=BLEND_AVG(inp[1],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[1]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                outp[2]=BLEND_AVG(inp[2],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[2]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                outp[3]=BLEND_AVG(inp[3],BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[3]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
-                transp+=4;
-                outp+=4;
-                inp+=4;
-            }
-            x = (priv->width * outh)&3;
-            while (x--)
-            {
-                int offs=transp[0]&OFFSET_MASK;
-                outp++[0]=BLEND_AVG(inp[0], BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs,priv->width, ((transp[0]>>24)&(31<<3)), ((transp[0]>>19)&(31<<3))));
-                transp++;
-                inp++;
-            }
-        } else if (priv->subpixel) {
-            printf("trans render level 1.5\n");
-            while(x--)
-            {
-                int offs=transp[0]&OFFSET_MASK;
-                outp[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[1]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[2]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                outp[3]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                transp+=4;
-                outp+=4;
-            }
-            x = (priv->width * priv->height) & 3;
-            while(x--)
-            {
-                int offs=transp[0]&OFFSET_MASK;
-                outp++[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)fbin+offs, priv->width, ((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
-                transp++;
-            }
+  int skip_pix=start_l*w;
+  transp=priv->tab;
 
-        } else if (priv->blend) {
-        printf("trans render level 1.6\n");
-            while(x--)
-            {
-                outp[0]=BLEND_AVG(inp[0],fbin[transp[0]]);
-                outp[1]=BLEND_AVG(inp[1],fbin[transp[1]]);
-                outp[2]=BLEND_AVG(inp[2],fbin[transp[2]]);
-                outp[3]=BLEND_AVG(inp[3],fbin[transp[3]]);
-                outp+=4;
-                inp+=4;
-                transp+=4;
-            }
-            x = (priv->width * priv->height)&3;
-            if(x > 0) while(x--)
-            {
-                outp++[0]=BLEND_AVG(inp++[0], fbin[transp++[0]]);
-            }
-        } else {
-        printf("trans render level 1.7\n");
-            while(x--)
-            {
-                outp[0]=fbin[transp[0]];
-                outp[1]=fbin[transp[1]];
-                outp[2]=fbin[transp[2]];
-                outp[3]=fbin[transp[3]];
-                outp+=4;
-                transp+=4;
-            }
-            x = (priv->width * priv->height)&3;
-            if(x > 0) while(x--)
-            {
-                outp++[0]=fbin[transp++[0]];
-            }
-        }
+  outp = fbout;
+  x=(w*outh)/4;
+  if (priv->sourcemapped&1)
+  {
+    inp += skip_pix;
+    transp += skip_pix;
+    if (priv->subpixel)
+    {
+      while (x--) 
+      {
+        fbout[transp[0]&OFFSET_MASK]=BLEND_MAX(inp[0],fbout[transp[0]&OFFSET_MASK]);
+        fbout[transp[1]&OFFSET_MASK]=BLEND_MAX(inp[1],fbout[transp[1]&OFFSET_MASK]);
+        fbout[transp[2]&OFFSET_MASK]=BLEND_MAX(inp[2],fbout[transp[2]&OFFSET_MASK]);
+        fbout[transp[3]&OFFSET_MASK]=BLEND_MAX(inp[3],fbout[transp[3]&OFFSET_MASK]);
+        inp+=4;
+        transp+=4;
+      }
+      x = (w*outh)&3;
+      if (x>0) while (x--)
+      {
+        fbout[transp[0]&OFFSET_MASK]=BLEND_MAX(inp++[0],fbout[transp[0]&OFFSET_MASK]);
+        transp++;
+      }
     }
+    else
+    {
+      {
+        while (x--) 
+        {
+          fbout[transp[0]]=BLEND_MAX(inp[0],fbout[transp[0]]);
+          fbout[transp[1]]=BLEND_MAX(inp[1],fbout[transp[1]]);
+          fbout[transp[2]]=BLEND_MAX(inp[2],fbout[transp[2]]);
+          fbout[transp[3]]=BLEND_MAX(inp[3],fbout[transp[3]]);
+          inp+=4;
+          transp+=4;
+        }
+        x = (w*outh)&3;
+        if (x>0) while (x--)
+        {
+          fbout[transp[0]]=BLEND_MAX(inp++[0],fbout[transp[0]]);
+          transp++;
+        }
+      }
+    }
+    if (priv->blend)
+    {
+      framebuffer += skip_pix;
+      fbout += skip_pix;
+      x=(w*outh)/4;
+      while (x--)
+      {
+        fbout[0]=BLEND_AVG(fbout[0],framebuffer[0]);
+        fbout[1]=BLEND_AVG(fbout[1],framebuffer[1]);
+        fbout[2]=BLEND_AVG(fbout[2],framebuffer[2]);
+        fbout[3]=BLEND_AVG(fbout[3],framebuffer[3]);
+        fbout+=4;
+        framebuffer+=4;
+      }
+      x=(w*outh)&3;
+      while (x--)
+      {
+        fbout[0]=BLEND_AVG(fbout[0],framebuffer[0]);
+        fbout++;
+        framebuffer++;
+      }
+    }
+  }
+  else
+  {
+    inp += skip_pix;
+    outp += skip_pix;
+    transp += skip_pix;
+    if (priv->subpixel && priv->blend)
+    {
+      while (x--)
+      {
+        int offs=transp[0]&OFFSET_MASK;
+        outp[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+        offs=transp[1]&OFFSET_MASK;
+        outp[1]=BLEND_AVG(inp[1],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3))));
+        offs=transp[2]&OFFSET_MASK;
+        outp[2]=BLEND_AVG(inp[2],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3))));
+        offs=transp[3]&OFFSET_MASK;
+        outp[3]=BLEND_AVG(inp[3],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3))));
+        transp+=4;
+        outp+=4;
+        inp+=4;
+      }    
+      x=(w*outh)&3;
+      while (x--)
+      {
+        int offs=transp[0]&OFFSET_MASK;
+        outp++[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+        transp++;
+        inp++;
+      }    
+    }
+    else if (priv->subpixel)
+    {
+      while (x--)
+      {
+        int offs=transp[0]&OFFSET_MASK;
+        outp[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        offs=transp[1]&OFFSET_MASK;
+        outp[1]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3)));
+        offs=transp[2]&OFFSET_MASK;
+        outp[2]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3)));
+        offs=transp[3]&OFFSET_MASK;
+        outp[3]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3)));
+        transp+=4;
+        outp+=4;
+      }    
+      x=(w*outh)&3;
+      while (x--)
+      {
+        int offs=transp[0]&OFFSET_MASK;
+        outp++[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        transp++;
+      }    
+    }
+    else if (priv->blend)
+    {
+      while (x--) 
+      {
+        outp[0]=BLEND_AVG(inp[0],framebuffer[transp[0]]);
+        outp[1]=BLEND_AVG(inp[1],framebuffer[transp[1]]);
+        outp[2]=BLEND_AVG(inp[2],framebuffer[transp[2]]);
+        outp[3]=BLEND_AVG(inp[3],framebuffer[transp[3]]);
+        outp+=4;
+        inp+=4;
+        transp+=4;
+      }
+      x = (w*outh)&3;
+      if (x>0) while (x--)
+      {
+        outp++[0]=BLEND_AVG(inp++[0],framebuffer[transp++[0]]);
+      }
+    }
+    else
+    {
+      while (x--) 
+      {
+        outp[0]=framebuffer[transp[0]];
+        outp[1]=framebuffer[transp[1]];
+        outp[2]=framebuffer[transp[2]];
+        outp[3]=framebuffer[transp[3]];
+        outp+=4;
+        transp+=4;
+      }
+      x = (w*outh)&3;
+      if (x>0) while (x--)
+      {
+        outp++[0]=framebuffer[transp++[0]];
+      }
+    }
+  }
 }
-
-
-
 
