@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 
 <pipeline_preset>
- <container_simple>
-  <container_once>
-   <general_clear>
-   </general_clear>
-  </container_once>
+ <container_main>
+  <container_child>
+   <avs_clear>
+   </avs_clear>
+  </container_child>
   <avs_superscope>
    <init type="string">n=50;count=12;siz=0.5;</init>
    <beat type="string">t = t + 5;count=count+15;</beat>
@@ -14,5 +14,5 @@
    <channel_source type="int">0</channel_source>
    <draw_type type="int">0</draw_type>
   </avs_superscope>
- </container_simple>
+ </container_main>
 </pipeline_preset>

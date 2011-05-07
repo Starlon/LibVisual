@@ -89,10 +89,17 @@ static const char *id_to_name_map[] = {
 	NULL
 };
 
+static VisParamEntry container_params[] = {
+	VISUAL_PARAM_LIST_ENTRY_INTEGER("clearscreen", 1),
+	VISUAL_PARAM_LIST_END
+};
+
 /* Prototypes */
 static int lvavs_preset_dtor (VisObject *object);
 static int lvavs_preset_element_dtor (VisObject *object);
 static int lvavs_preset_container_dtor (VisObject *object);
+
+LVAVSPresetContainer *lvavs_preset_container_from_xml_node(LVAVSPresetContainer *cont, xmlNodePtr node);
 
 /*static int preset_convert_from_wavs (LVAVSPresetContainer *presetcont, AVSContainer *cont);
 
@@ -178,8 +185,9 @@ static int parse_element (xmlNodePtr cur, LVAVSPresetElement *element)
 	LVAVSPresetElementType type;
 	xmlChar *prop = xmlGetProp(cur, (xmlChar *)"type");
 	content = (char*)xmlNodeGetContent (cur);
-	printf("content %s\n", content);
+
 	param = visual_param_entry_new((char *)cur->name);
+
 	if(strcmp((char *)prop, "string") == 0) {
 		visual_param_entry_set_string(param, content);
 	} else if( strcmp((char *)prop, "float") == 0) {
@@ -216,7 +224,9 @@ static int parse_element (xmlNodePtr cur, LVAVSPresetElement *element)
 			continue;
 		visual_param_entry_set_integer(param, val);
 	}
+
 	visual_param_container_add(element->pcont, param);	
+
 	xmlFree ((xmlChar*)content);
     }
     return TRUE;
@@ -252,27 +262,29 @@ LVAVSPreset *lvavs_preset_new_from_preset (char *filename)
 	preset = lvavs_preset_new ();
 	preset->main = lvavs_preset_container_new();
 
-	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY_INTEGER("clearscreen", 1),
-		VISUAL_PARAM_LIST_END
-	};
-
         VisParamContainer *pcont = visual_param_container_new();
-	visual_param_container_add_many(pcont, params);
+	visual_param_container_add_many(pcont, container_params);
 	LVAVS_PRESET_ELEMENT(preset->main)->pcont = pcont;
 
 	for (cur = cur->children; cur; cur = cur->next)
 	{
-		if(xmlStrcmp(cur->name, (const xmlChar *)"container_simple") == 0)
+		if(xmlStrcmp(cur->name, (const xmlChar *)"container_main") == 0)
 		{
 			xmlNodePtr child;
 			LVAVSPresetContainer *cont = lvavs_preset_container_new();
 			LVAVS_PRESET_ELEMENT(cont)->pcont = pcont;
+			visual_list_add(preset->main->members, cont);
+			cont = lvavs_preset_container_from_xml_node(cont, cur);
+/*
 			for(child = cur->children; child; child = child->next) 
 			{
       				if (xmlIsBlankNode (child) || child->type != XML_ELEMENT_NODE)
 					continue;
 
+				continue;
+				if(xmlStrcmp(child->name, "container_once") == 0) {
+
+				}
 				for(i = 0; id_to_name_map[i] != NULL; i++)
 					if (xmlStrcmp (child->name,
 						(const xmlChar *) id_to_name_map[i]) == 0) 
@@ -281,18 +293,47 @@ LVAVSPreset *lvavs_preset_new_from_preset (char *filename)
 				if(id_to_name_map[i] == NULL) 
 					continue;
 
-				visual_list_add(preset->main->members, cont);
-
-				printf("------------------------------------ %s\n", (char *)child->name);
 				element = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, (char*)child->name);
 				if(parse_element(child, element)) 
 					visual_list_add(cont->members, element);
 			}
+*/
 		}
 	}
 	xmlFreeDoc (doc);
 
   return preset;
+}
+
+LVAVSPresetContainer *lvavs_preset_container_from_xml_node(LVAVSPresetContainer *cont, xmlNodePtr node) {
+	xmlNodePtr child;
+	LVAVSPresetElement *element;
+	int i;
+	for(child = node->children; child; child = child->next) 
+	{
+		if (xmlIsBlankNode (child) || child->type != XML_ELEMENT_NODE)
+			continue;
+		if(xmlStrcmp(child->name, "container_child") == 0) {
+			LVAVSPresetContainer *cont2 = lvavs_preset_container_new();
+			VisParamContainer *pcont = visual_param_container_new();
+			LVAVS_PRESET_ELEMENT(cont2)->pcont = pcont;
+			visual_param_container_add_many(pcont, container_params);
+			visual_list_add(cont->members, cont2);
+			lvavs_preset_container_from_xml_node(cont2, child);
+		}
+		for(i = 0; id_to_name_map[i] != NULL; i++)
+			if (xmlStrcmp (child->name,
+				(const xmlChar *) id_to_name_map[i]) == 0) 
+				break;
+		if(id_to_name_map[i] == NULL) 
+			continue;
+
+		element = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, (char*)child->name);
+		if(parse_element(child, element)) 
+			visual_list_add(cont->members, element);
+	}
+	return cont;
+
 }
 
 LVAVSPresetElement *lvavs_preset_element_new (LVAVSPresetElementType type, const char *name)
