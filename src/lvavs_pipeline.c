@@ -274,10 +274,12 @@ int pipeline_from_preset (LVAVSPipelineContainer *container, LVAVSPresetContaine
             case LVAVS_PRESET_ELEMENT_TYPE_CONTAINER:
                 cont = lvavs_pipeline_container_new ();
 
+		LVAVS_PIPELINE_ELEMENT(cont)->params = LVAVS_PIPELINE_ELEMENT(container)->params;
+		LVAVS_PIPELINE_ELEMENT(cont)->pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline;
+
                 visual_list_add (container->members, cont);
 
                 pipeline_from_preset (cont, LVAVS_PRESET_CONTAINER (pelem));
-
                 break;
 
             case LVAVS_PRESET_ELEMENT_TYPE_RENDERSTATE:

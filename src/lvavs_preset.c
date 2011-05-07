@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <glib.h>
 #include <libxml/parser.h>
 #include <libxml/xmlmemory.h>
 
@@ -84,7 +85,8 @@ static const char *id_to_name_map[] = {
 
 	[AVS_ELEMENT_TYPE_MAIN]				= "error",
 	[AVS_ELEMENT_TYPE_APE]				= "error",
-	[AVS_ELEMENT_TYPE_TRANS_MULTIPLIER]		= "avs_multiplier"
+	[AVS_ELEMENT_TYPE_TRANS_MULTIPLIER]		= "avs_multiplier",
+	NULL
 };
 
 /* Prototypes */
@@ -92,13 +94,14 @@ static int lvavs_preset_dtor (VisObject *object);
 static int lvavs_preset_element_dtor (VisObject *object);
 static int lvavs_preset_container_dtor (VisObject *object);
 
-static int preset_convert_from_wavs (LVAVSPresetContainer *presetcont, AVSContainer *cont);
+/*static int preset_convert_from_wavs (LVAVSPresetContainer *presetcont, AVSContainer *cont);
 
 LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem);
 LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem);
 LVAVSPresetElement *wavs_convert_channelshift_new (AVSElement *avselem);
 
 LVAVSPresetElement *wavs_convert_remap (AVSElement *avselem, const char *plugname);
+*/
 
 /* Object destructors */
 static int lvavs_preset_dtor (VisObject *object)
@@ -157,28 +160,142 @@ LVAVSPreset *lvavs_preset_new ()
 	return preset;
 }
 
-LVAVSPreset *lvavs_preset_new_from_preset (char *filename)
+/* cur->name should be the element name */
+static int parse_element (xmlNodePtr cur, LVAVSPresetElement *element)
 {
-	LVAVSPreset *preset;
+  char *content;
+  LVAVSPresetElement *child;
+  VisParamEntry *param;
 
-	preset = lvavs_preset_new ();
+  for (cur = cur->xmlChildrenNode; cur; cur = cur->next)
+  {
+      if (xmlIsBlankNode (cur) || cur->type != XML_ELEMENT_NODE)
+	continue;
 
-	/* FIXME make */
+	LVAVSPresetElementType type;
+	xmlChar *prop = xmlGetProp(cur, (xmlChar *)"type");
+	content = (char*)xmlNodeGetContent (cur);
+	param = visual_param_entry_new((char *)cur->name);
+	if(strcmp((char *)prop, "string") == 0) {
+		visual_param_entry_set_string(param, content);
+	} else if( strcmp((char *)prop, "float") == 0) {
+		visual_param_entry_set_double(param, strtod(content, NULL));
+	} else if( strcmp((char *)prop, "integer") == 0) {
+		visual_param_entry_set_integer(param, (int)strtol(content, NULL, 0));
+	} else if( strcmp((char *)prop, "color") == 0) {
+		int r,g,b;
+		char *s = content+1;
+		r = strtoul (s, &s, 0);
+		if (r > 255 || ! (s = strchr (s, ',')))
+		  continue;
+		g = strtoul (s+1, &s, 0);
+		if (g > 255 || ! (s = strchr (s, ',')))
+		  continue;
+		b = strtoul (s+1, NULL, 0);
+		if (b > 255)
+		  continue;
+		visual_param_entry_set_color(param, r, g, b);
+	} else if( strcmp((char *)prop, "bool") == 0) {
+		char *c, *d;
+		int val;
 
-	return preset;
+#define isspace(c) (c == ' ' || c == '\t' || c == '\n')
+
+		for (c=content; isspace (*c); c++);
+		for (d=c; !isspace(*d); d++);
+		*d = '\0';
+		if (g_strcasecmp (c, "true") == 0)
+		  val = TRUE;
+		else if (g_strcasecmp (c, "false") == 0)
+		  val = FALSE;
+		else
+			continue;
+		visual_param_entry_set_integer(param, val);
+	}
+	visual_param_container_add(element->pcont, param);	
+	xmlFree ((xmlChar*)content);
+    }
+    return TRUE;
 }
 
-LVAVSPreset *lvavs_preset_new_from_wavs (AVSTree *wavs)
+LVAVSPreset *lvavs_preset_new_from_preset (char *filename)
 {
-	LVAVSPreset *preset;
+	LVAVSPreset *preset = NULL;
+	LVAVSPresetElement *element;
+	LVAVSPresetContainer *cont;
+	xmlDocPtr doc;
+	xmlNodePtr cur;
+	int i;
+
+	doc = xmlParseFile(filename);
+	if(doc == NULL) { 
+		return NULL;
+	}
+	cur = xmlDocGetRootElement (doc);
+	if(!cur) {
+		xmlFreeDoc(doc);
+		fprintf(stderr, "No root element\n");
+		return NULL;
+	}
+
+	if(xmlStrcmp(cur->name, (const xmlChar *) "pipeline_preset") != 0)
+	{	
+		xmlFreeDoc(doc);
+		fprintf(stderr, "Bad opening node in preset file %s. Looking for 'pipeline_preset' but got '%s'.", filename, cur->name);
+		return NULL;
+	}
 
 	preset = lvavs_preset_new ();
+	preset->main = lvavs_preset_container_new();
 
-	preset->main = LVAVS_PRESET_CONTAINER (wavs_convert_main_new (AVS_ELEMENT (wavs->main)));
+	//LVAVSPresetElement *scope = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
+	//visual_list_add(preset->main->members, scope);
 
-	preset_convert_from_wavs (preset->main, wavs->main);
+	static VisParamEntry params[] = {
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("clearscreen", 1),
+		VISUAL_PARAM_LIST_END
+	};
 
-	return preset;
+        VisParamContainer *pcont = visual_param_container_new();
+	visual_param_container_add_many(pcont, params);
+	LVAVS_PRESET_ELEMENT(preset->main)->pcont = pcont;
+
+	for (cur = cur->children; cur; cur = cur->next)
+	{
+		if(xmlStrcmp(cur->name, (const xmlChar *)"container_simple") == 0)
+		{
+			xmlNodePtr child;
+			for(child = cur->children; child; child = child->next) 
+			{
+      				if (xmlIsBlankNode (child) || child->type != XML_ELEMENT_NODE)
+					continue;
+
+				for(i = 0; id_to_name_map[i] != NULL; i++)
+					if (xmlStrcmp (child->name,
+						(const xmlChar *) id_to_name_map[i]) == 0) 
+						break;
+
+				if(id_to_name_map[i] == NULL) 
+					continue;
+
+				LVAVSPresetContainer *cont = lvavs_preset_container_new();
+				LVAVS_PRESET_ELEMENT(cont)->pcont = pcont;
+
+				visual_list_add(preset->main->members, cont);
+
+				//LVAVSPresetElement *blur = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
+				//visual_list_add(cont->members, blur);
+
+				printf("------------------------------------ %s\n", (char *)child->name);
+				element = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, (char*)child->name);
+				//if(parse_element(child, element)) 
+				visual_list_add(cont->members, element);
+			}
+		}
+	}
+	xmlFreeDoc (doc);
+
+  return preset;
 }
 
 LVAVSPresetElement *lvavs_preset_element_new (LVAVSPresetElementType type, const char *name)
@@ -200,6 +317,7 @@ LVAVSPresetElement *lvavs_preset_element_new (LVAVSPresetElementType type, const
 LVAVSPresetContainer *lvavs_preset_container_new ()
 {
 	LVAVSPresetContainer *container;
+        LVAVSPresetElement *el;
 
 	container = visual_mem_new0 (LVAVSPresetContainer, 1);
 
@@ -207,12 +325,15 @@ LVAVSPresetContainer *lvavs_preset_container_new ()
 	visual_object_initialize (VISUAL_OBJECT (container), TRUE, lvavs_preset_container_dtor);
 
 	container->members = visual_list_new (visual_object_collection_destroyer);
+	container->element.element_name = "new container";
+	container->element.type = LVAVS_PRESET_ELEMENT_TYPE_CONTAINER;
 
 	return container;
 }
 
 
 /* Internal functions */
+/*
 static int preset_convert_from_wavs (LVAVSPresetContainer *presetcont, AVSContainer *cont)
 {
 	AVSElement *avselem;
@@ -251,7 +372,8 @@ static int preset_convert_from_wavs (LVAVSPresetContainer *presetcont, AVSContai
 
 	return VISUAL_OK;
 }
-
+*/
+/*
 LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem)
 {
 	LVAVSPresetContainer *container;
@@ -268,7 +390,7 @@ LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem)
 
 	pcontw = avselem->pcont;
 
-	/* Copy all the matching */
+	// Copy all the matching
 	visual_param_container_copy_match (pcont, pcontw);
 
 	container = lvavs_preset_container_new ();
@@ -276,7 +398,8 @@ LVAVSPresetElement *wavs_convert_main_new (AVSElement *avselem)
 
 	return LVAVS_PRESET_ELEMENT (container);
 }
-
+*/
+/*
 LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem)
 {
 	LVAVSPresetElement *element;
@@ -298,7 +421,7 @@ LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem)
 
 	pcontw = avselem->pcont;
 
-	/* Copy all the matching */
+	// Copy all the matching 
 	visual_param_container_copy_match (pcont, pcontw);
 
 	sourceplace = visual_param_entry_get_integer (visual_param_container_get (pcontw, "source and place"));
@@ -311,82 +434,5 @@ LVAVSPresetElement *wavs_convert_ring_new (AVSElement *avselem)
 
 	return element;
 }
-
-LVAVSPresetElement *wavs_convert_channelshift_new (AVSElement *avselem)
-{
-	LVAVSPresetElement *element;
-	VisParamContainer *pcont;
-	VisParamContainer *pcontw;
-	int shift;
-
-	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY ("shift"),
-		VISUAL_PARAM_LIST_ENTRY ("onbeat"),
-		VISUAL_PARAM_LIST_END
-	};
-
-	pcont = visual_param_container_new ();
-	visual_param_container_add_many (pcont, params);
-
-	pcontw = avselem->pcont;
-
-	/* Copy all the matching */
-	visual_param_container_copy_match (pcont, pcontw);
-
-	shift = visual_param_entry_get_integer (visual_param_container_get (pcontw, "shift"));
-
-	/* Yes, the RGB and BRG entries have the same value here, I think it's a bug in winamp AVS */
-	switch (shift & 0xff) {
-		case 0xfb: /* BRG */
-			shift = 2;
-
-			break;
-
-		case 0xfc: /* RBG */
-			shift = 1;
-
-			break;
-
-		case 0xfd: /* BGR */
-			shift = 3;
-
-			break;
-
-		case 0xfa: /* GBR */
-			shift = 4;
-
-			break;
-
-		case 0xfe: /* GRB */
-			shift = 5;
-
-			break;
-
-		default: /* Default to RGB */
-			shift = 0;
-
-			break;
-
-
-	}
-
-	visual_param_entry_set_integer (visual_param_container_get (pcont, "shift"), shift);
-
-	element = lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_channelshift");
-	element->pcont = pcont;
-
-	return element;
-}
-
-LVAVSPresetElement *wavs_convert_remap (AVSElement *avselem, const char *plugname)
-{
-	LVAVSPresetElement *element;
-
-	element = lvavs_preset_element_new (LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, plugname);
-
-	visual_object_ref (VISUAL_OBJECT (avselem->pcont));
-	element->pcont = avselem->pcont;
-
-	return element;
-}
+*/
 

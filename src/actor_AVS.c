@@ -27,13 +27,12 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "avs_parse.h"
+//#include "avs_parse.h"
 #include "lvavs_preset.h"
 #include "lvavs_pipeline.h"
 
 typedef struct {
 	AVSTree		*wtree;		/* The winamp AVS tree */
-	int		 wavs;		/* TRUE if winamp AVS, FALSE if native libvisual AVS */
 
 	LVAVSPreset	*lvtree;	/* The LV AVS tree */
 	LVAVSPipeline	*pipeline;	/* The LV AVS Render pipeline */
@@ -51,6 +50,7 @@ int act_avs_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
+const VisPluginInfo *get_plugin_info(int *count);
 const VisPluginInfo *get_plugin_info (int *count)
 {
 	static const VisActorPlugin actor[] = {{
@@ -90,8 +90,7 @@ int act_avs_init (VisPluginData *plugin)
 
 	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
-				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/superscope.avs"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("winamp avs", 1),
+				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/simple.pip"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 1),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
 		
@@ -204,14 +203,8 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 
 					priv->wtree = NULL;
 
-					priv->wavs = TRUE;
-					if (filename != NULL && 0) {
-						if (priv->wavs == TRUE) {
-							priv->wtree = avs_tree_new_from_preset (filename);
-							priv->lvtree = lvavs_preset_new_from_wavs (priv->wtree);
-						} else {
-							priv->lvtree = lvavs_preset_new_from_preset (filename);
-						}
+					if (filename != NULL) {
+						priv->lvtree = lvavs_preset_new_from_preset (filename);
 					} else {
 						LVAVSPreset *preset;
 						LVAVSPresetElement *sscope1;
@@ -227,31 +220,38 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 						sscope2 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
 						sscope3 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
 						sscope4 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
-						move = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_movement");
 						blur1 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
 						blur2 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
 						blur3 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
 						blur4 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
+						move = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_movement");
 						preset = lvavs_preset_new ();
 						preset->main = lvavs_preset_container_new ();
 
 						visual_list_add (preset->main->members, sscope1);
-						visual_list_add (preset->main->members, sscope2);
+						static VisParamEntry params[] = {
+							VISUAL_PARAM_LIST_ENTRY_STRING("init", "n = 1;"),
+							VISUAL_PARAM_LIST_END
+						};
+						visual_param_container_add_many(sscope1->pcont, params);
+						/*visual_list_add (preset->main->members, sscope2);
 						visual_list_add (preset->main->members, sscope3);
 						visual_list_add (preset->main->members, sscope4);
-						visual_list_add (preset->main->members, blur1);
-						visual_list_add (preset->main->members, blur2);
-						visual_list_add (preset->main->members, blur3);
-						visual_list_add (preset->main->members, blur4);
-						visual_list_add (preset->main->members, move);
+						*/
+						//visual_list_add (preset->main->members, blur1);
+						//visual_list_add (preset->main->members, blur2);
+						//visual_list_add (preset->main->members, blur3);
+						//visual_list_add (preset->main->members, move);
+						//visual_list_add (preset->main->members, blur4);
+						//visual_list_add (preset->main->members, blur4);
 
-						static VisParamEntry params[] = {
-							VISUAL_PARAM_LIST_ENTRY_INTEGER ("clearscreen", 1),
+						static VisParamEntry params2[] = {
+							VISUAL_PARAM_LIST_ENTRY_INTEGER ("clearscreen", 0),
 							VISUAL_PARAM_LIST_END
 						};
 
 						VisParamContainer *pcont = visual_param_container_new();
-						visual_param_container_add_many(pcont, params);
+						visual_param_container_add_many(pcont, params2);
 						LVAVS_PRESET_ELEMENT(preset->main)->pcont = pcont;
 
 						priv->lvtree = preset;
@@ -263,11 +263,6 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 					lvavs_pipeline_realize (priv->pipeline);
 
 					priv->needsnego = TRUE;
-				}
-
-				if (visual_param_entry_is (param, "winamp avs")) {
-					priv->wavs = visual_param_entry_get_integer (param);
-
 				}
 
 				break;
@@ -300,9 +295,9 @@ int act_avs_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 
 	/* Clear screen bit is on, clearscreen every frame (This is from winamp AVS main section) */
-	if (visual_param_entry_get_integer (visual_param_container_get (LVAVS_PRESET_ELEMENT (priv->lvtree->main)->pcont,
-					"clearscreen")) == 1) {
-        memset((uint8_t *) visual_video_get_pixels(video), 0, visual_video_get_size(video));
+	VisParamEntry *param = visual_param_container_get(LVAVS_PRESET_ELEMENT (priv->lvtree->main)->pcont, "clearscreen");
+	if (param && visual_param_entry_get_integer (param) == 1) {
+	        memset((uint8_t *) visual_video_get_pixels(video), 0, visual_video_get_size(video));
 	}
 
 	lvavs_pipeline_run (priv->pipeline, video, audio);
