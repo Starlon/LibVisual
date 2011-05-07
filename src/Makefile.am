@@ -22,8 +22,6 @@ actor_AVS_la_SOURCES = actor_AVS.c \
 		       lvavs_preset.c \
 		       lvavs_preset.h \
 		       lvavs_pipeline.c \
-		       lvavs_pipeline.h\
-                       avs_cfg.c \
-                       avs_cfg.h
+		       lvavs_pipeline.h
 
 actor_AVS_la_LIBADD = ../common/libavs.la
