@@ -7,7 +7,7 @@
    </general_clear>
   </container_once>
   <avs_superscope>
-   <init type="string">>n=50;count=12;siz=0.5;</init>
+   <init type="string">n=50;count=12;siz=0.5;</init>
    <beat type="string">t = t + 5;count=count+15;</beat>
    <frame type="string">count=count+5; drawmode = if(drawmode, 0, 1);</frame>
    <point type="string">siz=0.5;d=i*v*2;r=t+i*PI*count*100;x=cos(r)*d*siz;y=sin(r)*d*siz;</point>
