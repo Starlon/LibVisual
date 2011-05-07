@@ -480,7 +480,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-    VisVideo *dummy_vid = container->element.pipeline->dummy_vid;
+    VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
     
     if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
 	container->element.pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
