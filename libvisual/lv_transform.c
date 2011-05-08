@@ -41,6 +41,7 @@ static int transform_dtor (VisObject *object);
 
 static VisTransformPlugin *get_transform_plugin (VisTransform *transform);
 
+int visual_transform_init (VisTransform *transform, const char *transformname);
 
 static int transform_dtor (VisObject *object)
 {

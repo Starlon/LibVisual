@@ -31,6 +31,7 @@
 #include "lv_common.h"
 #include "lv_math.h"
 #include "lv_audio.h"
+#include "lv_beat.h"
 
 static int audio_dtor (VisObject *object);
 static int audio_samplepool_dtor (VisObject *object);
@@ -158,6 +159,8 @@ VisAudio *visual_audio_new ()
 	audio = visual_mem_new0 (VisAudio, 1);
 
 	visual_audio_init (audio);
+
+	audio->beat = visual_beat_new();
 
 	/* Do the VisObject initialization */
 	visual_object_set_allocated (VISUAL_OBJECT (audio), TRUE);
@@ -462,6 +465,7 @@ int visual_audio_get_sample_mixed (VisAudio *audio, VisBuffer *buffer, int divid
 	return VISUAL_OK;
 }
 
+// FIXME: This function is entirely broken from the looks of it.
 int visual_audio_get_sample_mixed_category (VisAudio *audio, VisBuffer *buffer, char *category, int divide)
 {
 	VisListEntry *le = NULL;
@@ -475,6 +479,8 @@ int visual_audio_get_sample_mixed_category (VisAudio *audio, VisBuffer *buffer, 
 	visual_log_return_val_if_fail (category != NULL, -VISUAL_ERROR_NULL);
 
 	visual_buffer_init_allocate (&temp, visual_buffer_get_size (buffer), visual_buffer_destroyer_free);
+
+	samplepool = visual_audio_samplepool_new (); // this function's broken. This line was added to get rid of a compile warning. Not sure what samplepool's supposed to be, because it appears the below code expects an already existing VisAudioSamplePool. Dunno.
 
 	while ((channel = visual_list_next (samplepool->channels, &le)) != NULL) {
 		if (strstr (channel->channelid, category) != NULL) {
@@ -495,6 +501,7 @@ int visual_audio_get_sample_mixed_category (VisAudio *audio, VisBuffer *buffer, 
 	return VISUAL_OK;
 }
 
+// FIXME: This function is entirely broken from the looks of it.
 int visual_audio_get_sample_mixed_all (VisAudio *audio, VisBuffer *buffer, int divide)
 {
 	VisListEntry *le = NULL;
@@ -507,6 +514,8 @@ int visual_audio_get_sample_mixed_all (VisAudio *audio, VisBuffer *buffer, int d
 	visual_log_return_val_if_fail (buffer != NULL, -VISUAL_ERROR_AUDIO_SAMPLEPOOL_NULL);
 
 	visual_buffer_init_allocate (&temp, visual_buffer_get_size (buffer), visual_buffer_destroyer_free);
+
+	samplepool = visual_audio_samplepool_new (); // this function's broken. This line was added to get rid of a compile warning. Not sure what samplepool's supposed to be, because it appears the below code expects an already existing VisAudioSamplePool. Dunno.
 
 	while ((channel = visual_list_next (samplepool->channels, &le)) != NULL) {
 		if (visual_audio_get_sample (audio, &temp, channel->channelid) == VISUAL_OK) {
@@ -1106,7 +1115,7 @@ static int transform_format_buffer_from_float (VisBuffer *dest, VisBuffer *src, 
 {
 	float *sbuf = visual_buffer_get_data (src);
 	int entries = visual_buffer_get_size (dest) / size;
-	int signedcorr;
+	int signedcorr = 0;
 	int i;
 
 	signedcorr += byte_max_numeric (size) / 2;

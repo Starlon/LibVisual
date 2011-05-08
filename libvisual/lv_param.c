@@ -894,12 +894,12 @@ int visual_param_entry_set_collection (VisParamEntry *param, VisCollection *coll
 	param->type = VISUAL_PARAM_ENTRY_TYPE_COLLECTION;
 
 	if (param->collection != NULL)
-		visual_object_unref (param->collection);
+		visual_object_unref (VISUAL_OBJECT(param->collection));
 
 	param->collection = collection;
 
 	if (param->collection != NULL)
-		visual_object_ref(param->collection);
+		visual_object_ref(VISUAL_OBJECT(param->collection));
 
 	return VISUAL_OK;
 }
@@ -915,6 +915,7 @@ int visual_param_entry_set_collection (VisParamEntry *param, VisCollection *coll
 int visual_param_entry_set_annotation (VisParamEntry *param, char *anno)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+;
 	visual_log_return_val_if_fail(anno != NULL, -VISUAL_ERROR_PARAM_ANNO_NULL);
 
 	if (param->annotation != NULL)

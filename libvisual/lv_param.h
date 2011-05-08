@@ -66,7 +66,6 @@ typedef enum {
 typedef struct _VisParamContainer VisParamContainer;
 typedef struct _VisParamEntryCallback VisParamEntryCallback;
 typedef struct _VisParamEntry VisParamEntry;
-typedef struct _VisParamEntryMinMax VisParamEntryMinMax;
 
 /**
  * The param changed callback is used to be able to notify of changes within parameters. This should

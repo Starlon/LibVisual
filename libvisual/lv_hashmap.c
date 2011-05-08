@@ -98,6 +98,7 @@ static int hashmap_chain_destroy (VisHashmap *hashmap, VisList *list)
 			visual_list_destroy (list, &le);
 		}
 	}
+	return VISUAL_OK;
 }
 
 static int hashmap_list_entry_destroyer (void *data)
@@ -260,8 +261,8 @@ static int string_hash (char *key)
 static int get_hash (VisHashmap *hashmap, void *key, VisHashmapKeyType keytype)
 {
 	if (keytype == VISUAL_HASHMAP_KEY_TYPE_INTEGER)
-		return integer_hash (*((uint32_t *) key)) % hashmap->tablesize;
-	else if (keytype = VISUAL_HASHMAP_KEY_TYPE_STRING)
+		return (integer_hash (*((uint32_t *) key)) % hashmap->tablesize);
+	else if (keytype == VISUAL_HASHMAP_KEY_TYPE_STRING)
 		return string_hash ((char *) key) % hashmap->tablesize;
 
 	return 0;

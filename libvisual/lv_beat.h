@@ -169,7 +169,6 @@ struct _VisBeat {
     int new_song;
 };
 
-
 VisBeat *visual_beat_new();
 int visual_beat_init(VisBeat *beat);
 VisBeatPeak *visual_beat_get_peak(VisBeat *beat);

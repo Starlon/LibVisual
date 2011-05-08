@@ -74,7 +74,7 @@ int beat_get_time_offset_since_start(VisBeat *beat, long TC);
 #define min(a, b) a < b ? a : b;
 #define max(a, b) a > b ? a : b;
 
-int beat_dtor(VisObject *obj)
+static int beat_dtor(VisObject *obj)
 {
     VisBeat *beat = VISUAL_BEAT(obj);
 
@@ -121,6 +121,7 @@ int beat_dtor(VisObject *obj)
  *
  * @return A newly allocated VisBeat, or NULL on failure.
  */
+//VisBeatAdv *visual_beat_adv_new()
 VisBeat *visual_beat_new()
 {
     VisBeat *beat = visual_mem_new0(VisBeat, 1);
@@ -188,7 +189,7 @@ int visual_beat_init(VisBeat *beat)
     return VISUAL_OK;
 }
 
-int beat_adv_dtor(VisObject *obj)
+static int beat_adv_dtor(VisObject *obj)
 {
     VisBeatAdv *adv = VISUAL_BEAT_ADV(obj);
     
