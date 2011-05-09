@@ -7,6 +7,7 @@
 #include "avs.h"
 #include "avs_ix.h"
 
+// FIXME see about getting rid of the warnings regarding %08x and the fact that we're passing (AvsNumber *) in that position, when it's expecting an unsigned integer.
 static void dump_tree(IXOpcode *root)
 {
 	static char *names[] = {

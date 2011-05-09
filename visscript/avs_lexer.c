@@ -75,16 +75,16 @@ static inline unsigned char gc(AvsLexerContext *ctx)
 
 static inline AvsLexerTokenType convert_number(AvsLexerContext *ctx,
 					       AvsLexerTokenValue *value, 
-					       char *buf, unsigned int length)
+					       unsigned char *buf, unsigned int length)
 {
-	char *endptr;
+	unsigned char *endptr;
 	
-	value->v.constant = strtod(buf, (char**)&endptr);
+	value->v.constant = strtod((char *)buf, (char**)&endptr);
 
 	if (errno == ERANGE)
 		AvsLexerReturnError(AvsLexerErrorConstantOverflow);
 
-	if (endptr - buf < length)
+	if ((endptr - buf) < length)
 		AvsLexerReturnError(AvsLexerErrorConstantInvalid);
 
 	AvsLexerReturn(AvsLexerTokenConstant);

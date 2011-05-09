@@ -182,12 +182,12 @@ int avs_runnable_compile(AvsRunnable *obj, unsigned char *data, unsigned int len
 static int runnable_dtor(VisObject *object)
 {	
 	AvsRunnable *obj = AVS_RUNNABLE(object);
-	AvsRunnableVariable *var, *next;
+	//AvsRunnableVariable *var, *next;
 	
 	/* Cleanup assembler for output object */
 	avs_il_runnable_cleanup(&obj->ctx->assembler, obj);
 
-	/* Cleanup variables */
+	/* Cleanup variables */ // FIXME
 //	for (var=obj->variables; var != NULL; var=next) {
 //		next = var->next;
 //		visual_mem_free(var);
