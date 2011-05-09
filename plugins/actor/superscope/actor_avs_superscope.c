@@ -63,13 +63,10 @@ typedef struct {
     char            *beat;
     char            *init;
     int          channel_source;
-    int          draw_type;
     int             color_pos;
     VisPalette       pal;
 
     int             needs_init;
-
-    VisAudio    *audio;
 
     AVSGfxColorCycler   *cycler;
 } SuperScopePrivate;
@@ -129,7 +126,6 @@ int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *b
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
-    priv->runnable[runnable]->audio = priv->audio;
     avs_runnable_execute(priv->runnable[runnable]);
     return 0;
 }
@@ -146,9 +142,9 @@ int lv_superscope_init (VisPluginData *plugin)
         VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
         VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel_source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("draw type", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("drawmode", 0),
         VISUAL_PARAM_LIST_END
     };
 
@@ -282,13 +278,13 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
                     scope_load_runnable(priv, SCOPE_RUNNABLE_INIT, priv->init);
                     priv->needs_init = TRUE;
 
-                } else if (visual_param_entry_is (param, "channel source"))
+                } else if (visual_param_entry_is (param, "channel_source"))
 
                     priv->channel_source = visual_param_entry_get_integer (param);
 
-                else if (visual_param_entry_is (param, "draw type"))
+                else if (visual_param_entry_is (param, "drawmode"))
 
-                    priv->draw_type = visual_param_entry_get_integer (param);
+                    priv->drawmode = visual_param_entry_get_integer (param);
 
                 else if (visual_param_entry_is (param, "palette")) {
 
@@ -353,6 +349,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     float pcmbuf[1024];
 
 
+/*
     visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
 
     visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
@@ -360,20 +357,14 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
             VISUAL_AUDIO_CHANNEL_RIGHT,
             1.0,
             1.0);
-
+*/
 
     isBeat = pipeline->isBeat;
-
-    /* Provide audio for AvsRunnable */
-    priv->audio = audio;
 
     if(priv->needs_init) {
         priv->needs_init = FALSE;
         scope_run(priv, SCOPE_RUNNABLE_INIT);
     }
-
-//  visual_video_fill_color(video, visual_color_black()); 
-    buf = visual_video_get_pixels (video);
 
     int a, l, lx = 0, ly = 0, x = 0, y = 0;
     int32_t current_color;
@@ -384,14 +375,12 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if((priv->channel_source&3) >= 2)
     {
         for(x = 0; x < 576; x++) {
-            //fa_data[x] = pipeline->audiodata[ws^1][0][x] * UINT8_MAX + pipeline->audiodata[ws^1][1][x] * UINT8_MAX;
             pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
         }
     }
     else 
     {
         for(x = 0; x < 576; x++) {
-            //fa_data[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x] * UINT16_MAX;
             pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
         }
     }
@@ -425,7 +414,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     priv->red = ((current_color>>16)&0xff)/255.0;
     priv->skip = 0.0;
     priv->linesize = (double) ((priv->pipeline->blendmode&0xff0000)>>16);
-    priv->drawmode = priv->draw_type ? 1.0 : 0.0;
+    priv->drawmode = priv->drawmode ? 1.0 : 0.0;
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
 
@@ -444,7 +433,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         double s1=r-(int)r;
         //double yr=(fa_data[(int)r]^xorv)*(1.0f-s1)+(fa_data[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
-        priv->v = (pcmbuf[a] + 2) / 2;
+        priv->v = (pcmbuf[a] + 1) / 2;
         priv->i = (AvsNumber)a/(AvsNumber)(l-1);
         priv->skip = 0.0;
         scope_run(priv, SCOPE_RUNNABLE_POINT);

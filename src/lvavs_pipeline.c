@@ -204,6 +204,58 @@ int lvavs_pipeline_propagate_event (LVAVSPipeline *pipeline, VisEvent *event)
 
 int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audio)
 {
+    int i;
+    VisBuffer pcmbuf1;
+    VisBuffer pcmbuf2;
+    VisBuffer spmbuf1;
+    VisBuffer spmbuf2;
+    VisBuffer tmp;
+
+    float data[2][2][1024];
+
+    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
+
+    /* Left audio */
+    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
+
+    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
+
+        visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
+
+    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
+
+    visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
+
+    /* Right audio */
+    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
+
+    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
+
+        visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
+
+    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
+
+    visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
+
+    visual_object_unref(VISUAL_OBJECT(&tmp));
+
+    for(i = 0; i < 1024; i++) {
+	pipeline->audiodata[0][0][i] = (data[0][0][i] + 1) / 2;
+	pipeline->audiodata[1][0][i] = (data[1][0][i] + 1) / 2;
+	pipeline->audiodata[0][1][i] = (data[0][1][i] + 1) / 2;
+	pipeline->audiodata[1][1][i] = (data[1][1][i] + 1) / 2;
+    }
+
+    float beatdata[2048];
+
+    memcpy(beatdata, data[1][0], 1024 * sizeof(float));
+    memcpy(beatdata + 1024, data[1][1], 1024 * sizeof(float));
+
+    for(i = 0; i < 2048; i++)
+        beatdata[i] = (beatdata[i] + 1) / 2;
+
+    pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
+
     pipeline_container_run (LVAVS_PIPELINE_CONTAINER (pipeline->container), video, audio);
 
     return VISUAL_OK;
@@ -452,33 +504,6 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     VisBuffer tmp;
     unsigned int *fbout;
     unsigned int *framebuffer;
-    float data[2][2][1024];
-
-    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
-
-    /* Left audio */
-    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
-
-    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
-
-        visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
-
-    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
-
-    visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
-
-    /* Right audio */
-    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
-
-    if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
-
-        visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
-
-    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
-
-    visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
-
-    visual_object_unref(VISUAL_OBJECT(&tmp));
 
     VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
     
@@ -495,24 +520,16 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     avs_gfx_line_ints (video, 0, video->height / 2, video->width, video->height, &color);
 */
 
-    for(i = 0; i < 1024; i++) {
-        container->element.pipeline->audiodata[0][0][i] = data[0][0][i];
-        container->element.pipeline->audiodata[1][0][i] = data[1][0][i];
-        container->element.pipeline->audiodata[0][1][i] = data[0][1][i];
-        container->element.pipeline->audiodata[1][1][i] = data[1][1][i];
-    }
+
+
 
     int s = 0;
     while ((element = visual_list_next (container->members, &le)) != NULL) {
 
 	VisVideo *tmpvid;
         LVAVSPipeline *pipeline = element->pipeline;
-        float *beatdata = visual_mem_malloc0(2048 * sizeof(float));
 
-	memcpy(beatdata, data[1][0], 1024 * sizeof(float));
-	memcpy(beatdata + 1024, data[1][1], 1024 * sizeof(float));
 
-        pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
 	if(s) {
 		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->fbout = visual_video_get_pixels(video);
@@ -520,6 +537,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->framebuffer = visual_video_get_pixels(video);
 	}
+
         switch (element->type) {
             case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
 

@@ -2,30 +2,13 @@
 
 <pipeline_preset>
  <container_main>
-  <container_child>
-   <avs_clear>
-   </avs_clear>
-  </container_child>
   <avs_superscope>
    <init type="string">n=50;count=12;siz=0.5;</init>
-   <beat type="string">t = t + 5;count=count+15;</beat>
-   <frame type="string">count=count+5; drawmode = if(drawmode, 0, 1);</frame>
+   <beat type="string">t = t + 5;count=count+15;drawmode = if(drawmode, 0, 1);</beat>
+   <frame type="string">count=count+5;</frame>
    <point type="string">siz=0.5;d=i*v*2;r=t+i*PI*count*100;x=cos(r)*d*siz;y=sin(r)*d*siz;</point>
-   <channel_source type="int">0</channel_source>
-   <draw_type type="int">0</draw_type>
+   <channel_source type="integer">0</channel_source>
+   <drawmode type="integer">1</drawmode>
   </avs_superscope>
-  <avs_superscope>
-   <init type="string">n=20;count=12;siz=0.5;</init>
-   <beat type="string">t = t + 5;count=count+15;</beat>
-   <frame type="string">count=count+5; drawmode = if(drawmode, 0, 1);</frame>
-   <point type="string">siz=0.5;d=i*v*2;r=t+i*PI*count*100;x=cos(r)*d*siz;y=sin(r)*d*siz;</point>
-   <channel_source type="int">0</channel_source>
-   <draw_type type="int">0</draw_type>
-  </avs_superscope>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
  </container_main>
 </pipeline_preset>

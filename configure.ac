@@ -244,6 +244,20 @@ else
     AC_MSG_RESULT([no])
 fi
 
+AC_ARG_ENABLE([avs_clear],
+        AC_HELP_STRING([--disable-clear],
+            [Do not build the AVS clear plugin @<:@default=enabled@:>@]),
+        [avs_clear=$enableval],
+        [avs_clear=yes])
+AC_MSG_CHECKING([Whether to build AVS clear plugin])
+if test x$avs_clear = xyes; then
+    AC_MSG_RESULT([yes])
+    build_trans="$build_trans clear"
+    AC_SUBST([AVS_CLEAR], ['transform_avs_clear.la'])
+else
+    AC_MSG_RESULT([no])
+fi
+
 #
 # Build paramaters
 #
@@ -357,7 +371,9 @@ AC_CONFIG_FILES([
 	plugins/transform/onetone/Makefile
 	plugins/transform/dmovement/Makefile
         plugins/transform/blur/Makefile
+        plugins/transform/clear/Makefile
         libcalc/Makefile
+	visscript/Makefile
 ])
 
 

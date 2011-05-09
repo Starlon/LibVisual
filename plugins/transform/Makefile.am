@@ -1,3 +1,3 @@
 
-SUBDIRS = movement blur
+SUBDIRS = movement blur clear
 
