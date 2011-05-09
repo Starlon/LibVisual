@@ -352,7 +352,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     VisBuffer pcm;
     float pcmbuf[1024];
 
-    printf("lv_superscope_render %p\n", video);
 
     visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
 
@@ -391,7 +390,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     }
     else 
     {
-        printf(" < 2\n");
         for(x = 0; x < 576; x++) {
             //fa_data[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x] * UINT16_MAX;
             pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
@@ -417,7 +415,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         r3 = ((((c1>>16)&255)*(63-r))+(((c2>>16)&255)*r))/64;
 
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
-        printf("r1 %d, r2 %d, r3 %d, current_color %x\n", r1, r2, r3, current_color);
     }
 
     priv->h = video->height;
@@ -455,7 +452,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         x = (int)((priv->x + 1.0) * (AvsNumber)video->width * 0.5);
         y = (int)((priv->y + 1.0) * (AvsNumber)video->height * 0.5);
 
-        printf("x = %d, y = %d, t = %f v = %f\n", x, y, priv->t, priv->v);
 
         if (priv->skip >= 0.00001)
             continue;
