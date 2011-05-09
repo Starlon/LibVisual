@@ -32,14 +32,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+
 #include <libvisual/libvisual.h>
 
-#include "calc.h"
-//#include "evaluator.h"
-//#include "visscript.h"
-
 #include "avs_common.h"
+#include "avs.h"
 #include "lvavs_pipeline.h"
+
+AvsNumber PI = M_PI;
+
+typedef enum scope_runnable ScopeRunnable;
 
 enum scope_runnable {
     SCOPE_RUNNABLE_INIT,
@@ -48,28 +50,13 @@ enum scope_runnable {
     SCOPE_RUNNABLE_POINT,
 };
 
-typedef enum scope_runnable ScopeRunnable;
-
-/*
 typedef struct {
-    void *data;
-} VoidP;
-*/
-
-/*
-typedef struct {
-   expression_t *expression;
-   symbol_dict_t *dict;
-} AvsRunnable;
-*/
-
-typedef struct {
+    AvsRunnableContext      *ctx;
+    AvsRunnableVariableManager  *vm;
+    AvsRunnable         *runnable[4];
+    AvsNumber           n, b, x, y, i, v, w, h, red, green, blue, linesize, skip, drawmode, t, d; 
     LVAVSPipeline *pipeline;
-    expression_t *runnable[4];
-    symbol_dict_t *environment;
 
-    //double *n, *b, *x, *y, *i, *v, *w, *h, *t, *d, *red, *green, *blue, *linesize, *skip, *drawmode; 
-    //double n, b, x, y, i, v, w, h, t, d, red, green, blue, linesize, skip, drawmode; 
 
     char            *point;
     char            *frame;
@@ -94,36 +81,37 @@ int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, 
 int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events);
 VisPalette *lv_superscope_palette (VisPluginData *plugin);
 int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
-void set_vars(SuperScopePrivate *priv);
-void get_vars(SuperScopePrivate *priv);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
 const VisPluginInfo *get_plugin_info (int *count)
 {
-    static VisActorPlugin actor[1];
+    static const VisActorPlugin actor[] = {{
+        .requisition = lv_superscope_requisition,
+        .palette = lv_superscope_palette,
+        .render = lv_superscope_render,
+        .vidoptions.depth =
+            VISUAL_VIDEO_DEPTH_8BIT |
+            VISUAL_VIDEO_DEPTH_32BIT
 
-    actor[0].requisition = lv_superscope_requisition;
-    actor[0].palette = lv_superscope_palette;
-    actor[0].render = lv_superscope_render;
-    actor[0].vidoptions.depth = VISUAL_VIDEO_DEPTH_8BIT | VISUAL_VIDEO_DEPTH_32BIT;
+    }};
 
-    static VisPluginInfo info[1];
+    static const VisPluginInfo info[] = {{
+        .type = VISUAL_PLUGIN_TYPE_ACTOR, //".[avs]",
 
-    info[0].type = VISUAL_PLUGIN_TYPE_ACTOR, //".[avs]",
+        .plugname = "avs_superscope",
+        .name = "Libvisual AVS Render: superscope element",
+        .author = "Dennis Smit <ds@nerds-incorporated.org>",
+        .version = "0.1",
+        .about = "The Libvisual AVS Render: superscope element",
+        .help = "This is the superscope element for the libvisual AVS system",
 
-    info[0].plugname = "avs_superscope";
-    info[0].name = "Libvisual AVS Render: superscope element";
-    info[0].author = "Dennis Smit <ds@nerds-incorporated.org>";
-    info[0].version = "0.1";
-    info[0].about = "The Libvisual AVS Render: superscope element";
-    info[0].help = "This is the superscope element for the libvisual AVS system";
+        .init = lv_superscope_init,
+        .cleanup = lv_superscope_cleanup,
+        .events = lv_superscope_events,
 
-    info[0].init = lv_superscope_init;
-    info[0].cleanup = lv_superscope_cleanup;
-    info[0].events = lv_superscope_events;
-
-    info[0].plugin = VISUAL_OBJECT (&actor[0]);
+        .plugin = VISUAL_OBJECT (&actor[0])
+    }};
 
     *count = sizeof (info) / sizeof (*info);
 
@@ -132,73 +120,86 @@ const VisPluginInfo *get_plugin_info (int *count)
 
 int scope_load_runnable(SuperScopePrivate *priv, ScopeRunnable runnable, char *buf)
 {
-    priv->runnable[runnable] = expr_compile_string(buf, priv->environment);
+    AvsRunnable *obj = avs_runnable_new(priv->ctx);
+    avs_runnable_set_variable_manager(obj, priv->vm);
+    priv->runnable[runnable] = obj;
+    avs_runnable_compile(obj, (unsigned char *)buf, strlen(buf));
     return 0;
 }
 
 int scope_run(SuperScopePrivate *priv, ScopeRunnable runnable)
 {
-    expr_execute(priv->runnable[runnable], priv->environment);
-
+    priv->runnable[runnable]->audio = priv->audio;
+    avs_runnable_execute(priv->runnable[runnable]);
     return 0;
 }
 
 
 int lv_superscope_init (VisPluginData *plugin)
 {
-    int i;
+    SuperScopePrivate *priv;
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
-    SuperScopePrivate *priv = visual_mem_new0(SuperScopePrivate, 1);
+    int i;
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=50;count=12;siz=0.5;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t = t + 5;count=count+15;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "count=count+5; drawmode = if(drawmode, 0, 1);"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "siz=0.5;d=i*v*2;r=t+i*PI*count*100;x=cos(r)*d*siz;y=sin(r)*d*siz;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4; x = cos(r)*d; y = sin(r) * d;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("draw type", 0),
         VISUAL_PARAM_LIST_END
     };
 
-    visual_param_container_add_many (paramcontainer, params);
+    visual_param_container_add_many(paramcontainer, params);
 
-    priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
+    priv = visual_mem_new0 (SuperScopePrivate, 1);
+    priv->pipeline = visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
-
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-    priv->environment = dict_new();
+    visual_palette_allocate_colors (&priv->pal, 1);
 
-    /* initialize variables */
-    set_vars(priv);
-
-    visual_palette_allocate_colors (&priv->pal, 2);
-
-    priv->pal.colors[0].r = 0x00;
-    priv->pal.colors[0].g = 0xff;
-    priv->pal.colors[0].b = 0xff;
-    priv->pal.colors[1].r = 0xff;
-    priv->pal.colors[1].g = 0xff;
-    priv->pal.colors[1].b = 0x00;
-
-/*
     for (i = 0; i < priv->pal.ncolors; i++) {
-        priv->pal.colors[i].r = (i%2) * 0xff;
-        priv->pal.colors[i].g = (i%2) * 0xff;
+        priv->pal.colors[i].r = 0xff;
+        priv->pal.colors[i].g = 0xff;
         priv->pal.colors[i].b = 0xff;
     }
-*/
+
     visual_param_entry_set_palette (visual_param_container_get (paramcontainer, "palette"), &priv->pal);
 
     visual_palette_free_colors (&priv->pal);
+
+    /* Init super scope */
+    priv->ctx = avs_runnable_context_new();
+    priv->vm = avs_runnable_variable_manager_new();
+
+    /* Bind variables to context */
+    avs_runnable_variable_bind(priv->vm, "n", &priv->n);
+    avs_runnable_variable_bind(priv->vm, "b", &priv->b);
+    avs_runnable_variable_bind(priv->vm, "x", &priv->x);
+    avs_runnable_variable_bind(priv->vm, "y", &priv->y);
+    avs_runnable_variable_bind(priv->vm, "i", &priv->i);
+    avs_runnable_variable_bind(priv->vm, "v", &priv->v);
+    avs_runnable_variable_bind(priv->vm, "w", &priv->w);
+    avs_runnable_variable_bind(priv->vm, "h", &priv->h);
+    avs_runnable_variable_bind(priv->vm, "t", &priv->t);
+    avs_runnable_variable_bind(priv->vm, "d", &priv->d);
+    avs_runnable_variable_bind(priv->vm, "$PI", &PI);
+    avs_runnable_variable_bind(priv->vm, "red", &priv->red);
+    avs_runnable_variable_bind(priv->vm, "green", &priv->green);
+    avs_runnable_variable_bind(priv->vm, "blue", &priv->blue);
+    avs_runnable_variable_bind(priv->vm, "linesize", &priv->linesize);
+    avs_runnable_variable_bind(priv->vm, "skip", &priv->skip);
+    avs_runnable_variable_bind(priv->vm, "drawmode", &priv->drawmode);
 
     return 0;
 }
 
 int lv_superscope_cleanup (VisPluginData *plugin)
 {
-    SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
+    SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
     if(priv->point != NULL)
         visual_mem_free(priv->point);
@@ -214,15 +215,6 @@ int lv_superscope_cleanup (VisPluginData *plugin)
 
     if(priv->pipeline != NULL)
         visual_object_unref(VISUAL_OBJECT(priv->pipeline));
-
-    int i;
-    for(i = 0; i < 4; i++) {
-	if(priv->runnable[i] != NULL)
-	        expr_free(priv->runnable[i]);
-    }
-
-    if(priv->environment != NULL)
-        dict_free(priv->environment);
 
     visual_mem_free (priv);
 
@@ -243,7 +235,7 @@ int lv_superscope_dimension (VisPluginData *plugin, VisVideo *video, int width, 
 
 int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
 {
-    SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
+    SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     VisParamEntry *param;
     VisEvent ev;
 
@@ -255,7 +247,7 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
                 break;
 
             case VISUAL_EVENT_PARAM:
-                param = (VisParamEntry *)ev.event.param.param;
+                param = ev.event.param.param;
 
                 if (visual_param_entry_is (param, "point")) {
 
@@ -325,33 +317,21 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
 
     return 0;
 }
+/*
+static int makeint(AvsNumber t)
+{
+    if (t <= 0.0)
+        return 0;
+    if (t >= 1.0)
+        return 255;
+    return (int)(t*255.0);
+}
+*/
 VisPalette *lv_superscope_palette (VisPluginData *plugin)
 {
     //SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
     return NULL;
-}
-
-void set_vars(SuperScopePrivate *priv)
-{   
-    /* instantiate variables -- as long as no other variables are included in the environment after these next steps, these pointers will point to valid data. */
-    
-	dict_variable(priv->environment, "n");
-	dict_variable(priv->environment, "b");
-	dict_variable(priv->environment, "x");
-	dict_variable(priv->environment, "y");
-	dict_variable(priv->environment, "i");
-	dict_variable(priv->environment, "v");
-	dict_variable(priv->environment, "w");
-	dict_variable(priv->environment, "h");
-	dict_variable(priv->environment, "t");
-	dict_variable(priv->environment, "d");
-	dict_variable(priv->environment, "red");
-	dict_variable(priv->environment, "green");
-	dict_variable(priv->environment, "blue");
-	dict_variable(priv->environment, "linesize");
-	dict_variable(priv->environment, "skip");
-	dict_variable(priv->environment, "drawmode");
 }
 
 static __inline int makeint(double t)
@@ -361,25 +341,32 @@ static __inline int makeint(double t)
   return (int)(t*255.0);
 }
 
-// We don't use VisAudio directly in pipeline sub-elements normally. LVAVSPipeline provides ->fbout and ->framebuffer. Superscope only uses ->framebuffer. Some elements, such as blur, will write to ->fbout. Internally the two buffers are blended together and swapped out for one another ass appropriate. set pipeline->inverted=1 if you're using ->fbout
 int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
-
-    SuperScopePrivate *priv = (SuperScopePrivate *)visual_object_get_private (VISUAL_OBJECT (plugin));
+    SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *buf = visual_video_get_pixels(video);//pipeline->framebuffer;
+    uint32_t *buf = visual_video_get_pixels (video);
     int isBeat;
+    int i;
 
     VisBuffer pcm;
-    float pcmbuf[576];
+    float pcmbuf[1024];
 
-    double *var_n, *var_b, *var_x, *var_y, *var_i, *var_v, *var_w, *var_h, *var_t, *var_d, *var_red, *var_green, *var_blue, *var_linesize, *var_skip, *var_drawmode; 
-                        
-    /*VisColor color;
-    visual_color_from_uint32(&color, 0xffffffff);
-    avs_gfx_line_ints(video, 0, 0, video->width, video->height, &color);*/
+    printf("lv_superscope_render %p\n", video);
 
-    isBeat = priv->pipeline->isBeat;
+    visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
+
+    visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
+            VISUAL_AUDIO_CHANNEL_LEFT,
+            VISUAL_AUDIO_CHANNEL_RIGHT,
+            1.0,
+            1.0);
+
+
+    isBeat = pipeline->isBeat;
+
+    /* Provide audio for AvsRunnable */
+    priv->audio = audio;
 
     if(priv->needs_init) {
         priv->needs_init = FALSE;
@@ -387,7 +374,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     }
 
 //  visual_video_fill_color(video, visual_color_black()); 
-    //buf = (uint32_t *)visual_video_get_pixels (video);
+    buf = visual_video_get_pixels (video);
 
     int a, l, lx = 0, ly = 0, x = 0, y = 0;
     int32_t current_color;
@@ -395,22 +382,22 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     int xorv=(ws*128)^128;
     uint16_t fa_data[576];
 
-    
     if((priv->channel_source&3) >= 2)
     {
         for(x = 0; x < 576; x++) {
+            //fa_data[x] = pipeline->audiodata[ws^1][0][x] * UINT8_MAX + pipeline->audiodata[ws^1][1][x] * UINT8_MAX;
             pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
         }
     }
-    else
+    else 
     {
+        printf(" < 2\n");
         for(x = 0; x < 576; x++) {
+            //fa_data[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x] * UINT16_MAX;
             pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
-            //pcmbuf[x] = pipeline->audiodata[1][1][x];
         }
     }
-
-/*
+    
     priv->color_pos++;
 
     if(priv->color_pos >= priv->pal.ncolors * 64) priv->color_pos = 0;
@@ -430,83 +417,60 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         r3 = ((((c1>>16)&255)*(63-r))+(((c2>>16)&255)*r))/64;
 
         current_color = r1|(r2<<8)|(r3<<16)|(255<<24);
+        printf("r1 %d, r2 %d, r3 %d, current_color %x\n", r1, r2, r3, current_color);
     }
-*/
-    current_color = visual_color_to_uint32(avs_gfx_color_cycler_run(priv->cycler));
-    
-    var_h = dict_variable(priv->environment, "h");
-    *var_h = video->height;
-    var_w = dict_variable(priv->environment, "w");
-    *var_w = video->width;
-    var_b = dict_variable(priv->environment, "b");
-    *var_b = isBeat?1.0:0.0;
-    var_blue = dict_variable(priv->environment, "blue");
-    *var_blue = (current_color&0xff)/255.0;
-    var_green = dict_variable(priv->environment, "green");
-    *var_green = ((current_color>>8)&0xff)/255.0;
-    var_red = dict_variable(priv->environment, "red");
-    *var_red = ((current_color>>16)&0xff)/255.0;
-    var_skip = dict_variable(priv->environment, "skip");
-    *var_skip = 0.0;
-    var_linesize = dict_variable(priv->environment, "linesize");
-    *var_linesize = (double) ((pipeline->blendmode&0xff0000)>>16);
+
+    priv->h = video->height;
+    priv->w = video->width;
+    priv->b = isBeat?1.0:0.0;
+    priv->blue = (current_color&0xff)/255.0;
+    priv->green = ((current_color>>8)&0xff)/255.0;
+    priv->red = ((current_color>>16)&0xff)/255.0;
+    priv->skip = 0.0;
+    priv->linesize = (double) ((priv->pipeline->blendmode&0xff0000)>>16);
+    priv->drawmode = priv->draw_type ? 1.0 : 0.0;
 
     scope_run(priv, SCOPE_RUNNABLE_FRAME);
-    if (isBeat) {
+
+    if (isBeat)
         scope_run(priv, SCOPE_RUNNABLE_BEAT);
-    }
 
-    var_drawmode = dict_variable(priv->environment, "drawmode");
-    //*var_drawmode = priv->draw_type ? 1.0 : 0.0;
-    var_n = dict_variable(priv->environment, "n");
-
-    //int candraw=0;
-    l = *var_n;
+    int candraw=0;
+    l = priv->n;
     if (l > 128*1024)
         l = 128*1024;
 
-    if( l == 0 || l == 1 )
-        l = 2;
 
     for (a=0; a < l; a++) 
     {
-        //int x, y;
-        //double r=(a*576.0)/l;
-        //double s1=r-(int)r;
-        //double yr=((int)pcmbuf[(int)r]^xorv)*(1.0f-s1)+((int)pcmbuf[(int)r+1]^xorv)*(s1);
+        double r=(a*576.0)/l;
+        double s1=r-(int)r;
+        //double yr=(fa_data[(int)r]^xorv)*(1.0f-s1)+(fa_data[(int)r+1]^xorv)*(s1);
         //priv->v = yr/128.0 - 1.0;
-
-	var_v = dict_variable(priv->environment, "v");
-        *var_v = (pcmbuf[a * 288 / l] + 3) / 3 ;
-	var_i = dict_variable(priv->environment, "i");
-        *var_i = a/(double)(l-1);
-	var_skip = dict_variable(priv->environment, "skip");
-        *var_skip = 0.0;
-
+        priv->v = (pcmbuf[a] + 2) / 2;
+        priv->i = (AvsNumber)a/(AvsNumber)(l-1);
+        priv->skip = 0.0;
         scope_run(priv, SCOPE_RUNNABLE_POINT);
 
-	var_x = dict_variable(priv->environment, "x");
-	var_y = dict_variable(priv->environment, "y");
-	var_red = dict_variable(priv->environment, "red");
-	var_green = dict_variable(priv->environment, "green");
-	var_blue = dict_variable(priv->environment, "blue");
+        x = (int)((priv->x + 1.0) * (AvsNumber)video->width * 0.5);
+        y = (int)((priv->y + 1.0) * (AvsNumber)video->height * 0.5);
 
-        x = (int)((*var_x + 1.0) * video->width * 0.5);
-        y = (int)((*var_y + 1.0) * video->height * 0.5);
+        printf("x = %d, y = %d, t = %f v = %f\n", x, y, priv->t, priv->v);
 
-        if (*var_skip >= 0.00001)
+        if (priv->skip >= 0.00001)
             continue;
 
-        int this_color = makeint(*var_blue) | (makeint(*var_green) << 8) | (makeint(*var_red) << 16);
+        int this_color = makeint(priv->blue) | (makeint(priv->green) << 8) | (makeint(priv->red) << 16);
 
-        if (*var_drawmode < 0.00001) {
-                if (y >= 0 && y < video->height && x >= 0 && x < video->width)
-                    BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, (int)pipeline->blendmode);
+        if (priv->drawmode < 0.00001) {
+            if (y >= 0 && y < video->height && x >= 0 && x < video->width)
+                BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, pipeline->blendmode);
         } else {
             if (a > 0) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width &&
                     ly >= 0 && ly < video->height && lx >= 0 && lx < video->width) {
                         VisColor color;
+                        //this_color = 0xffffff;
                         visual_color_from_uint32(&color, this_color);
                         avs_gfx_line_ints(video, lx, ly, x, y, &color);
                 }
@@ -518,5 +482,4 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     return 0;
 }
-
 

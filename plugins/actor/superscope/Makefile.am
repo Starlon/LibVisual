@@ -14,11 +14,12 @@ INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
 	-I$(top_srcdir)/libcalc \
-	-I$(top_srcdir)/src
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/visscript
 
 actor_avs_superscope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version -laudcore
 
 actor_avs_superscope_la_SOURCES = actor_avs_superscope.c
 
 
-actor_avs_superscope_la_LIBADD = ../../../common/libavs.la ../../../libcalc/libcalc.la
+actor_avs_superscope_la_LIBADD = ../../../common/libavs.la ../../../libcalc/libcalc.la ../../../visscript/libvisscript.la
