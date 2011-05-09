@@ -167,6 +167,7 @@ struct _VisBeat {
     int stickyConfidenceCount;  // Used to decided when to go sticky
     uint8_t doResyncBpm;
     int new_song;
+    VisTimer timer;
 };
 
 VisBeat *visual_beat_new();

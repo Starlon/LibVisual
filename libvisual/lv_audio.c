@@ -32,6 +32,7 @@
 #include "lv_math.h"
 #include "lv_audio.h"
 #include "lv_beat.h"
+#include "lv_time.h"
 
 static int audio_dtor (VisObject *object);
 static int audio_samplepool_dtor (VisObject *object);
@@ -1535,6 +1536,9 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, float
     float *p;
     VisBeatPeak *peak = visual_beat_get_peak(audio->beat);
     VisBeatAdv *adv = visual_beat_get_adv(audio->beat);
+    VisTime *now = visual_time_new();
+
+    visual_time_get(now);
 
     p = data;
 
@@ -1606,7 +1610,25 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, float
 
     b = visual_beat_refine_beat(audio->beat, audio_beat);
 
-/*
+    static int init = 1;
+    if(init) {
+        visual_timer_start(&audio->beat->timer);
+        init = 0;
+    }
+
+    if(audio->beat->predictionBpm && audio->beat->confidence > 5) {
+            b = 0;
+	    int val = audio->beat->predictionBpm / 60.0 * 1000;
+	    if(visual_timer_elapsed_msecs(&audio->beat->timer) > val) {
+        	visual_timer_reset(&audio->beat->timer);
+	        visual_timer_start(&audio->beat->timer);
+                b = 1;
+	    }
+   } else if(audio->beat->predictionBpm && b) {
+	visual_timer_reset(&audio->beat->timer);
+	visual_timer_start(&audio->beat->timer);
+   }
+
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 
     memset(outBuf, ' ', 8);
@@ -1635,7 +1657,8 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, float
     printf("[I] %s [I]\n", inBuf);
     printf("[O] %s [O]\n", outBuf);
     printf("    --------    \n");
-*/
+
+
 
     if(b)
         return TRUE;
