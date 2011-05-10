@@ -422,9 +422,9 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     {
         double r=(a*size)/(double)l;
         double s1=r-(int)r;
-	unsigned int val1 = (pcmbuf[(int)r] + 1) / 2.0 * 128;
-	unsigned int val2 = (pcmbuf[(int)r+1] + 1) / 2.0  * 128;
-        double yr=(val1^xorv)*(1.0f-s1)+(val2^xorv)*(s1);
+	int val1 = (pcmbuf[(int)r] + 1) / 2.0 * 128;
+	int val2 = (pcmbuf[(int)r+1] + 1) / 2.0  * 128;
+        double yr=(val1^xorv)*(1.0-s1)+(val2^xorv)*(s1);
         priv->v = yr/128.0;
         priv->i = (AvsNumber)a/(AvsNumber)(l-1);
         priv->skip = 0.0;
