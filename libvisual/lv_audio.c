@@ -1641,7 +1641,6 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
     
         peak->beat_cnt++;
     
-printf("lt ::::::::::::::::::::::::: %d >= %d, %d\n", lt[0], peak->beat_peak1, peak->beat_peak2);
         if(lt[0] >= (peak->beat_peak1*34)/32 && lt[0] > (size*16))
         {
             if(peak->beat_cnt >= 0)
@@ -1686,6 +1685,8 @@ printf("lt ::::::::::::::::::::::::: %d >= %d, %d\n", lt[0], peak->beat_peak1, p
 	visual_timer_start(&audio->beat->timer);
    }
 */
+
+    return b;
 
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 
