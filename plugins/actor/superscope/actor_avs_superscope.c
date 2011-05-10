@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <limits.h>
 
 #include <libvisual/libvisual.h>
 
@@ -346,18 +347,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     int i;
 
     VisBuffer pcm;
-    float pcmbuf[1024];
-
-
-/*
-    visual_buffer_set_data_pair (&pcm, pcmbuf, sizeof (pcmbuf));
-
-    visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
-            VISUAL_AUDIO_CHANNEL_LEFT,
-            VISUAL_AUDIO_CHANNEL_RIGHT,
-            1.0,
-            1.0);
-*/
+    float pcmbuf[BEAT_ADV_MAX];
+    int size = BEAT_ADV_MAX/2;
 
     isBeat = pipeline->isBeat;
 
@@ -374,13 +365,13 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     if((priv->channel_source&3) >= 2)
     {
-        for(x = 0; x < 576; x++) {
+        for(x = 0; x < size; x++) {
             pcmbuf[x] = pipeline->audiodata[ws^1][0][x] / 2 + pipeline->audiodata[ws^1][1][x] / 2;
         }
     }
     else 
     {
-        for(x = 0; x < 576; x++) {
+        for(x = 0; x < size; x++) {
             pcmbuf[x] = pipeline->audiodata[ws^1][priv->channel_source&3][x];
         }
     }
@@ -423,17 +414,18 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     int candraw=0;
     l = priv->n;
-    if (l > 128*1024)
-        l = 128*1024;
+    if (l > 128*size)
+        l = 128*size;
 
 
     for (a=0; a < l; a++) 
     {
-        double r=(a*576.0)/l;
+        double r=(a*size)/(double)l;
         double s1=r-(int)r;
-        //double yr=(fa_data[(int)r]^xorv)*(1.0f-s1)+(fa_data[(int)r+1]^xorv)*(s1);
-        //priv->v = yr/128.0 - 1.0;
-        priv->v = (pcmbuf[a] + 1) / 2;
+	unsigned int val1 = (pcmbuf[(int)r] + 1) / 2.0 * 128;
+	unsigned int val2 = (pcmbuf[(int)r+1] + 1) / 2.0  * 128;
+        double yr=(val1^xorv)*(1.0f-s1)+(val2^xorv)*(s1);
+        priv->v = yr/128.0;
         priv->i = (AvsNumber)a/(AvsNumber)(l-1);
         priv->skip = 0.0;
         scope_run(priv, SCOPE_RUNNABLE_POINT);
