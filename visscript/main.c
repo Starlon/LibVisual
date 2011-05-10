@@ -1,4 +1,6 @@
 #include <libvisual/libvisual.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "avs.h"
 
@@ -24,8 +26,12 @@ int run(Private *priv)
     return 0;
 }
 
+extern AvsNumber _rand(AvsNumber val);
+
 int main(int argc, char **argv)
 {
+	printf("rand %f\n", (double)_rand(50.0));
+/*
     char *script = "foo=3*0.2; bar=foo*10; baz=foo*bar;";
     Private *priv;
     priv = visual_mem_new0 (Private, 1);
@@ -42,5 +48,6 @@ int main(int argc, char **argv)
     run(priv);
 
     printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
+*/
     return 0;
 }

@@ -5,6 +5,9 @@
 #include <errno.h>
 #include <math.h>
 #include <sys/time.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <time.h>
 
 #include "avs.h"
 #include "avs_functions.perf.h"
@@ -15,6 +18,7 @@
 AvsNumber _getosc(VisAudio *audio, AvsNumber band, AvsNumber width, AvsNumber channel);
 AvsNumber _getspec(VisAudio *audio, AvsNumber band, AvsNumber width, AvsNumber channel);
 AvsNumber _gettime(AvsNumber start);
+AvsNumber _rand(AvsNumber val);
 
 AVS_BUILTIN_FUNCTION(abs,	fabs(*args[0]));
 AVS_BUILTIN_FUNCTION(sin,	sin(*args[0]));
@@ -37,7 +41,7 @@ AVS_BUILTIN_FUNCTION(sign,	copysign(*args[0]!=0.0?1.0:0.0, *args[0]));
 AVS_BUILTIN_FUNCTION(min,	*args[0] < *args[1] ? *args[0] : *args[1]);
 AVS_BUILTIN_FUNCTION(max,	*args[0] > *args[1] ? *args[0] : *args[1]);
 AVS_BUILTIN_FUNCTION(sigmoid,	1.0/(1.0 + exp(-*args[0])));
-AVS_BUILTIN_FUNCTION(rand,	0xdeadbeaf * *args[0]);
+AVS_BUILTIN_FUNCTION(rand,	_rand(*args[0]));
 AVS_BUILTIN_FUNCTION(band,	AVS_VALUEBOOL(*args[0]) && AVS_VALUEBOOL(*args[1]));
 AVS_BUILTIN_FUNCTION(bor,	AVS_VALUEBOOL(*args[0]) || AVS_VALUEBOOL(*args[1]));
 AVS_BUILTIN_FUNCTION(bnot,	!AVS_VALUEBOOL(*args[0]));
@@ -260,4 +264,9 @@ AvsNumber _gettime(AvsNumber sc)
     return (AvsNumber)((start_ms - now_ms) - sc);
 }
 
-
+AvsNumber _rand(AvsNumber val)
+{
+	unsigned int iseed = (unsigned int)time(NULL);
+	srand(iseed);
+	return (AvsNumber)(rand() % (int)val);
+}
