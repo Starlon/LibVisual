@@ -481,7 +481,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
 
     visual_time_get(&now);
 
-    TCNow = visual_time_get_msec(&now);
+    TCNow = visual_time_get_msecs(&now);
 
     if (isBeat) // Show the beat received from AVS
         beat_slider_step(beat, VISUAL_BEAT_SLIDE_IN, &beat->inSlide);
@@ -573,6 +573,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     {
         beat->predictionLastTC = TCNow;
         if (beat->confidence > 25) 
+        //accepted = beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_REAL);
             beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_GUESSED);
         beat_slider_step(beat, VISUAL_BEAT_SLIDE_OUT, &beat->outSlide);
         beat->doResyncBpm=FALSE;
@@ -768,38 +769,40 @@ void beat_half_beat(VisBeat *beat)
 }
 
 // Called whenever isBeat was true in render
+//        accepted = beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_REAL);
+//            beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_GUESSED);
+
 int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int type)
 {
     visual_log_return_val_if_fail(beat != NULL, FALSE); 
 
     int i=0;
     int offI;
-    uint8_t thisLen;
+    int thisLen;
     int learning = beat_ready_to_learn(beat);
-    thisLen = TC - visual_time_get_msec(&beat->lastTC);
+    thisLen = TC - visual_time_get_msecs(&beat->lastTC);
+    thisLen = thisLen>=0?thisLen:0;
     
     // If this beat is sooner than half the average - 20%, throw it away
     // FIXME: Why doesn't this work?
-    /*
-    if (thisLen < beat->avg/2 - beat->avg*0.2)
+    if (thisLen < beat->avg/2.0 - beat->avg*0.2)
     {
         printf("inside level 1\n");
         if (learning)
         {
-            printf("inside level 2 %ld %ld %ld\n", TC, t[0].TC, t[1].TC);
+            printf("inside level 2 %d %d %d\n", TC, t[0].TC, t[1].TC);
             printf("inside %d < %d\n", abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)));
             printf("inside %ld < %ld\n", beat->avg - (TC - t[1].TC), beat->avg - (t[0].TC - t[1].TC));
             if (abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)))
             {
                 printf("inside level 3\n");
-                t->TC = TC + visual_time_get_msec(&beat->startTC);
+                t->TC = TC;// + visual_time_get_msecs(&beat->startTC);
                 t->type = type;
                 return TRUE;
             }
         }
         return FALSE;
-    }*/
-    
+    }
     if (learning) 
       for (offI = 2; offI < beat->offIMax; offI++) // Try to see if this beat is in the middle of our current Bpm, or maybe 1/3, 1/4 etc... to offIMax
         if ((float)abs((beat->avg/offI)-thisLen) < (float)(beat->avg/offI)*0.2)
@@ -814,7 +817,7 @@ int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int ty
     (*_hdPos)%=8;
     
     // Remember this tick count
-    visual_time_set_from_msec(&beat->lastTC, TC + visual_time_get_msec(&beat->startTC));
+    visual_time_set_from_msecs(&beat->lastTC, TC + visual_time_get_msecs(&beat->startTC));
 
     // Insert this beat.
     beat_insert_hist_step(beat, t, TC, type, 0); 

@@ -130,7 +130,7 @@ int visual_time_get (VisTime *time_)
  * @return Milliseconds on success, -1 on failure
  */
 
-long visual_time_get_msec(VisTime *time_)
+long visual_time_get_msecs(VisTime *time_)
 {
     visual_log_return_val_if_fail(time_ != NULL, 0);
 
@@ -157,20 +157,20 @@ int visual_time_set (VisTime *time_, long sec, long usec)
 }
 
 /**
- * Sets the time by msec in a VisTime structure.
+ * Sets the time by msecs in a VisTime structure.
  *
  * @param time_ Pointer to the VisTime in which the time is set.
- * @param msec The milliseconds.
+ * @param msecs The milliseconds.
  *
  * @return VISUAL_OK on success, -VISUAL_ERROR_TIME_NULL on failure
  */
-int visual_time_set_from_msec(VisTime *time_, long msec)
+int visual_time_set_from_msecs(VisTime *time_, long msecs)
 {
     visual_log_return_val_if_fail(time_ != NULL, -VISUAL_ERROR_TIME_NULL);
 
 
-    long sec = msec / 1000;
-    long usec = (msec % 1000) * 1000;
+    long sec = msecs / 1000;
+    long usec = (msecs % 1000) * 1000;
 
     visual_time_set(time_, sec, usec);
 
