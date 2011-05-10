@@ -414,8 +414,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
     int candraw=0;
     l = priv->n;
-    if (l > 128*size)
-        l = 128*size;
+    if (l >= 128*size)
+        l = 128*size - 1;
 
 
     for (a=0; a < l; a++) 
