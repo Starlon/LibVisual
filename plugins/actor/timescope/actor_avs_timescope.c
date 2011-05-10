@@ -205,7 +205,7 @@ int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio
     int h = video->height;
 
     int i,j;
-    int c, x = 0;
+    int c;
     char center_channel[576];
     unsigned char *fa_data;
 
@@ -219,9 +219,9 @@ int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio
     }
     else fa_data=(unsigned char *)&pipeline->audiodata[1][priv->which_ch][0];
 
-    x++;
-    x %= w;
-    framebuffer+=x;
+    priv->x++;
+    priv->x %= w;
+    framebuffer+=priv->x;
     int r,g,b;
     r=priv->color&0xff;
     g=(priv->color>>8)&0xff;

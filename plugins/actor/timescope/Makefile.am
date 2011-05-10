@@ -22,4 +22,4 @@ actor_avs_timescope_la_LDFLAGS = -rpath $(libdir) -module -avoid-version -laudco
 actor_avs_timescope_la_SOURCES = actor_avs_timescope.c
 
 
-actor_avs_timescope_la_LIBADD = ../../../common/libavs.la../../../visscript/libvisscript.la
+actor_avs_timescope_la_LIBADD = ../../../common/libavs.la ../../../visscript/libvisscript.la
