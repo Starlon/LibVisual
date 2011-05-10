@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sttimescope.h>
+//#include <sttimescope.h>
 
 #include <libvisual/libvisual.h>
 
@@ -48,6 +48,7 @@ typedef struct {
     int nbands;
     int x;
     int oldh;
+    int which_ch;
 
 } TimescopePrivate;
 
@@ -103,7 +104,7 @@ int lv_timescope_init (VisPluginData *plugin)
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 	int i;
 
-	static VisParamEntryProxy params[] = {
+	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("color", 2),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0x10),
@@ -116,11 +117,11 @@ int lv_timescope_init (VisPluginData *plugin)
     priv = visual_mem_new0 (TimescopePrivate, 1);
     priv->pipeline = visual_object_get_private(VISUAL_OBJECT(plugin));
 
-    if(priv->proxy == NULL) {
+    if(priv->pipeline == NULL) {
         visual_log(VISUAL_LOG_CRITICAL, "This element is part of the AVS plugin");
         return 0;
     }
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
 	visual_param_container_add_many(paramcontainer, params);
@@ -198,25 +199,25 @@ VisPalette *lv_timescope_palette (VisPluginData *plugin)
 int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     TimescopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-    AvsGlobalProxy *proxy = priv->proxy;
+    LVAVSPipeline *pipeline = priv->pipeline;
     uint32_t *framebuffer = visual_video_get_pixels(video);
     int w = video->width;
     int h = video->height;
 
     int i,j;
-    int c;
+    int c, x = 0;
     char center_channel[576];
     unsigned char *fa_data;
 
     if (!priv->enabled) return 0;
-    if (proxy->isBeat&0x80000000) return 0;
+    if (pipeline->isBeat&0x80000000) return 0;
 
     if (priv->which_ch >=2)
     {
-        for (j = 0; j < 576; j ++) center_channel[j]=proxy->audiodata[1][0][j]/2+proxy->audiodata[1][1][j]/2;
+        for (j = 0; j < 576; j ++) center_channel[j]=pipeline->audiodata[1][0][j]/2+pipeline->audiodata[1][1][j]/2;
         fa_data=(unsigned char *)center_channel;
     }
-    else fa_data=(unsigned char *)&proxy->audiodata[1][priv->which_ch][0];
+    else fa_data=(unsigned char *)&pipeline->audiodata[1][priv->which_ch][0];
 
     x++;
     x %= w;
@@ -227,10 +228,10 @@ int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio
     b=(priv->color>>16)&0xff;
     for (i=0;i<h;i++)
     {
-        c = proxy->audiodata[0][0][(i*priv->nbands)/h] & 0xFF;
+        c = (int)pipeline->audiodata[0][0][(i*priv->nbands)/h] & 0xFF;
         c = (r*c)/256 + (((g*c)/256)<<8) + (((b*c)/256)<<16);
         if (priv->blend == 2)
-            BLEND_LINE(framebuffer,c);
+            BLEND_LINE(framebuffer,c,  pipeline->blendtable, pipeline->blendmode);
         else if (priv->blend == 1)
             framebuffer[0]=BLEND(framebuffer[0],c);
         else if (priv->blendavg)
