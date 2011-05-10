@@ -168,6 +168,7 @@ struct _VisBeat {
     uint8_t doResyncBpm;
     int new_song;
     VisTimer timer;
+    unsigned char logtab[256];
 };
 
 VisBeat *visual_beat_new();

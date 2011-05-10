@@ -176,6 +176,10 @@ int visual_beat_init(VisBeat *beat)
     beat->sticked=0;
     beat->oldsticked=-1;
     beat->new_song = TRUE;
+    beat->cfg_smartbeat = FALSE;
+    beat->cfg_smartbeatsticky = TRUE;
+    beat->cfg_smartbeatresetnewsong = TRUE;
+    beat->cfg_smartbeatonlysticky = FALSE;
     visual_time_init(&beat->lastTC);
     visual_time_init(&beat->startTC);
     visual_time_get(&beat->startTC);
@@ -185,6 +189,16 @@ int visual_beat_init(VisBeat *beat)
     beat->half_discriminated = visual_mem_malloc0(beat->TCHistSize*(sizeof(int)));
     beat->half_discriminated2 = visual_mem_malloc0(beat->TCHistSize*(sizeof(int)));
     beat->adv = visual_beat_adv_new();
+
+	int x;
+	for (x = 0; x < 256; x ++)
+	{
+		double a=log(x*60.0/255.0 + 1.0)/log(60.0);
+		int t=(int)(a*255.0);
+		if (t<0)t=0;
+		if (t>255)t=255;
+		beat->logtab[x]=(unsigned char )t;
+	}
 
     return VISUAL_OK;
 }
@@ -474,7 +488,7 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
 
     if (beat_song_changed(beat))
     {
-        beat->bestConfidence=(int)((float)beat->bestConfidence*0.5);
+        beat->bestConfidence=0;//(int)((float)beat->bestConfidence*0.5);
         beat->sticked=0;
         beat->stickyConfidenceCount=0;
         if (beat->cfg_smartbeatresetnewsong)
@@ -686,6 +700,7 @@ int beat_song_changed(VisBeat *beat)
 
     if(beat->new_song)
     {
+	beat->avg = 0;
         beat->new_song = FALSE;
         return TRUE;
     }
@@ -765,7 +780,8 @@ int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int ty
     
     // If this beat is sooner than half the average - 20%, throw it away
     // FIXME: Why doesn't this work?
-    /*if (thisLen < beat->avg/2 - beat->avg*0.2)
+    /*
+    if (thisLen < beat->avg/2 - beat->avg*0.2)
     {
         printf("inside level 1\n");
         if (learning)
@@ -776,8 +792,8 @@ int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int ty
             if (abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)))
             {
                 printf("inside level 3\n");
-                t[0].TC = TC + visual_time_get_msec(&beat->startTC);
-                t[0].type = type;
+                t->TC = TC + visual_time_get_msec(&beat->startTC);
+                t->type = type;
                 return TRUE;
             }
         }
