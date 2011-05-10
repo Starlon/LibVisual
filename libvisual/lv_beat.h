@@ -73,7 +73,7 @@ VISUAL_BEGIN_DECLS
 #define BEAT_STICKY_THRESHOLD_LOW   85
 
 #define BEAT_ADV_MAX 200
-#define BEAT_ADV_SIZE (576*2)
+#define BEAT_ADV_SIZE 2048
 
 typedef struct _VisBeat VisBeat;
 typedef struct _VisBeatType VisBeatType;

@@ -1378,7 +1378,7 @@ static int input_interleaved_stereo (VisAudioSamplePool *samplepool, VisBuffer *
 
 //out is in the format of [spectrum:0,wave:1][channel][band]
 //returns TRUE if there's a beat, FALSE otherwise.
-int visual_audio_get_cheap_audio_data(VisAudio *audio, unsigned char out[2][2][1024])
+int visual_audio_get_cheap_audio_data(VisAudio *audio, unsigned char out[2][2][576])
 {
     int i, ch;
     VisBuffer pcmbuf1;
@@ -1386,46 +1386,47 @@ int visual_audio_get_cheap_audio_data(VisAudio *audio, unsigned char out[2][2][1
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
-    float data[2][2][1024];
-    unsigned char visdata[2048];
+    int size = 576;
+    unsigned char visdata[size*2];
+    float data[2][2][size];
 
-    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
+    visual_buffer_init_allocate(&tmp, sizeof(float) * size, visual_buffer_destroyer_free);
 
     /* Left audio */
-    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * size);
 
     if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
 
         visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
 
-    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * size);
 
     visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
 
     /* Right audio */
-    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * size);
 
     if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
 
         visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
 
-    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * size);
 
     visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
 
     for(ch = 0; ch < 2; ch++) {
-	    for(i = 0; i < 1024; i++) {
+	    for(i = 0; i < size; i++) {
 		out[0][ch][i] = (data[0][ch][i] + 1) / 2.0 * UCHAR_MAX;
 		out[1][ch][i] = (data[1][ch][i] + 1) / 2.0 * UCHAR_MAX;
 	    }
     }
 
-    memcpy(visdata, out[1][0], 1024);
-    memcpy(visdata+1024, out[1][1], 1024);
+    memcpy(visdata, out[1][0], size);
+    memcpy(visdata+size, out[1][1], size);
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-    return visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_PEAK, visdata, 1024);
+    return visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_PEAK, visdata, size);
 }
 
 VisBeat *visual_audio_get_beat(VisAudio *audio)
@@ -1577,7 +1578,7 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
 
     for(i = 0; i < BEAT_ADV_SIZE; i++)
     {
-	visdata[i] = (buffer[i] + 1) / 2.0 * CHAR_MAX;
+	visdata[i] = (buffer[i] + 1) / 2.0 * UCHAR_MAX;
     }
     return visual_audio_is_beat_with_data(audio, algo, visdata, BEAT_ADV_SIZE);
 }
@@ -1621,11 +1622,11 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
     }
     else if(algo == VISUAL_BEAT_ALGORITHM_PEAK)
     {
-
+	int size = BEAT_ADV_SIZE / 2;
 	for(ch = 0; ch < 2; ch++)
 	{
 		unsigned char *f = (unsigned char*)(visdata + ch * size);
-		for(x = 0; x < 576; x++)
+		for(x = 0; x < size; x++)
 		{
 			int r = *f++^128;
 			r-=128;
@@ -1636,12 +1637,12 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
     
         lt[0] = max(lt[0], lt[1]);
     
-        peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3) / 128;
+        peak->beat_peak1 = (peak->beat_peak1*125/576*size+peak->beat_peak2*3/576*size) / 128;
     
         peak->beat_cnt++;
     
 printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
-        if(lt[0] >= (peak->beat_peak1*34)/32 && lt[0] > (576*16))
+        if(lt[0] >= (peak->beat_peak1*34/576*size)/32/576*size && lt[0] > (size*16))
         {
             if(peak->beat_cnt >= 0)
             {
@@ -1656,7 +1657,7 @@ printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
             peak->beat_peak2 = lt[0];
         }
         else
-            peak->beat_peak2 = (peak->beat_peak2 * 14) / 16;
+            peak->beat_peak2 = (peak->beat_peak2 * 14 / 576 * size) / 16 / 576 * size;
     
     } else {
         visual_log(VISUAL_LOG_INFO, "%s", "Bad algorithm for beat detection");
