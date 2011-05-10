@@ -1,3 +1,3 @@
 
-SUBDIRS = superscope ring
+SUBDIRS = superscope ring timescope
 

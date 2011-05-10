@@ -35,10 +35,11 @@
 
 #include <libvisual/libvisual.h>
 
+#include "lvavs_pipeline.h"
 #include "avs_common.h"
 
 typedef struct {
-    AvsGlobalProxy *proxy;
+    LVAVSPipeline *pipeline;
 
     int enabled;
     int color;
@@ -103,18 +104,17 @@ int lv_timescope_init (VisPluginData *plugin)
 	int i;
 
 	static VisParamEntryProxy params[] = {
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1, VISUAL_PARAM_LIMIT_NONE, "Enable Timescope"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("color", 2, VISUAL_PARAM_LIMIT_NONE, "Color"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0x10, VISUAL_PARAM_LIMIT_NONE, "Blend"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendavg", 0, VISUAL_PARAM_LIMIT_NONE, "Blend average"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("which_ch", 0, VISUAL_PARAM_LIMIT_NONE, "Which channel"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("nbands", 0, VISUAL_PARAM_LIMIT_NONE, "Number of bands to draw"),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("color", 2),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0x10),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendavg", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("which_ch", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("nbands", 0),
 		VISUAL_PARAM_LIST_END
 	};
-
-    
-	priv = visual_mem_new0 (TimescopePrivate, 1);
-    priv->proxy = visual_object_get_private(VISUAL_OBJECT(plugin));
+	
+    priv = visual_mem_new0 (TimescopePrivate, 1);
+    priv->pipeline = visual_object_get_private(VISUAL_OBJECT(plugin));
 
     if(priv->proxy == NULL) {
         visual_log(VISUAL_LOG_CRITICAL, "This element is part of the AVS plugin");
@@ -123,7 +123,7 @@ int lv_timescope_init (VisPluginData *plugin)
     visual_object_ref(VISUAL_OBJECT(priv->proxy));
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-	visual_param_container_add_many_proxy (paramcontainer, params);
+	visual_param_container_add_many(paramcontainer, params);
 
 	return 0;
 }
@@ -197,11 +197,11 @@ VisPalette *lv_timescope_palette (VisPluginData *plugin)
 
 int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
-	TimescopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+    TimescopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     AvsGlobalProxy *proxy = priv->proxy;
-    uint8_t *framebuffer = visual_video_get_pixels(video);
-	int w = video->width;
-	int h = video->height;
+    uint32_t *framebuffer = visual_video_get_pixels(video);
+    int w = video->width;
+    int h = video->height;
 
     int i,j;
     int c;
