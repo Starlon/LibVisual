@@ -82,7 +82,7 @@ struct _LVAVSPipeline {
 
 	VisVideo *dummy_vid;
 
-	float audiodata[2][2][1024];
+	float audiodata[2][2][576];
 
 	unsigned char blendtable[256][256];
 

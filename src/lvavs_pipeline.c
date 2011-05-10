@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 
 #include <libvisual/libvisual.h>
 
@@ -211,50 +212,53 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
     VisBuffer spmbuf2;
     VisBuffer tmp;
 
-    float data[2][2][1024];
+    int size = BEAT_ADV_SIZE/2;
 
-    visual_buffer_init_allocate(&tmp, sizeof(float) * 1024, visual_buffer_destroyer_free);
+    float data[2][2][size];
+
+    visual_buffer_init_allocate(&tmp, sizeof(float) * size, visual_buffer_destroyer_free);
 
     /* Left audio */
-    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&pcmbuf1, data[0][0], sizeof(float) * size);
 
     if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
 
         visual_audio_sample_buffer_mix(&pcmbuf1, &tmp, TRUE, 1.0);
 
-    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&spmbuf1, &data[1][0], sizeof(float) * size);
 
     visual_audio_get_spectrum_for_sample (&spmbuf1, &tmp, TRUE);
 
     /* Right audio */
-    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&pcmbuf2, data[0][1], sizeof(float) * size);
 
     if(visual_audio_get_sample(audio, &tmp, VISUAL_AUDIO_CHANNEL_LEFT) == VISUAL_OK)
 
         visual_audio_sample_buffer_mix(&pcmbuf2, &tmp, TRUE, 1.0);
 
-    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * 1024);
+    visual_buffer_set_data_pair(&spmbuf2, data[1][1], sizeof(float) * size);
 
     visual_audio_get_spectrum_for_sample(&spmbuf2, &tmp, TRUE);
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-    for(i = 0; i < 1024; i++) {
+    for(i = 0; i < size; i++) {
 	pipeline->audiodata[0][0][i] = (data[0][0][i] + 1) / 2;
 	pipeline->audiodata[1][0][i] = (data[1][0][i] + 1) / 2;
 	pipeline->audiodata[0][1][i] = (data[0][1][i] + 1) / 2;
 	pipeline->audiodata[1][1][i] = (data[1][1][i] + 1) / 2;
     }
 
-    float beatdata[2048];
+    float beatdata[BEAT_ADV_SIZE];
+    unsigned char visdata[BEAT_ADV_SIZE];
 
-    memcpy(beatdata, data[1][0], 1024 * sizeof(float));
-    memcpy(beatdata + 1024, data[1][1], 1024 * sizeof(float));
+    memcpy(beatdata, data[1][0], size * sizeof(float));
+    memcpy(beatdata + size, data[1][1], size * sizeof(float));
 
-    for(i = 0; i < 2048; i++)
-        beatdata[i] = (beatdata[i] + 1) / 2;
+    for(i = 0; i < BEAT_ADV_SIZE; i++)
+        visdata[i] = (beatdata[i] + 1) / 2.0 * UCHAR_MAX;
 
-    pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_ADV, beatdata, 2408);
+    pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_PEAK, visdata, BEAT_ADV_SIZE);
 
     pipeline_container_run (LVAVS_PIPELINE_CONTAINER (pipeline->container), video, audio);
 
