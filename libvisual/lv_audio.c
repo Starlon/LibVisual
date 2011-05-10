@@ -1637,19 +1637,19 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
     
         lt[0] = max(lt[0], lt[1]);
     
-        peak->beat_peak1 = (peak->beat_peak1*125/576*size+peak->beat_peak2*3/576*size) / 128;
+        peak->beat_peak1 = (peak->beat_peak1*125+peak->beat_peak2*3) / 128;
     
         peak->beat_cnt++;
     
-printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
-        if(lt[0] >= (peak->beat_peak1*34/576*size)/32/576*size && lt[0] > (size*16))
+printf("lt ::::::::::::::::::::::::: %d >= %d, %d\n", lt[0], peak->beat_peak1, peak->beat_peak2);
+        if(lt[0] >= (peak->beat_peak1*34)/32 && lt[0] > (size*16))
         {
             if(peak->beat_cnt >= 0)
             {
                 peak->beat_cnt=0;
                 audio_beat = 1;
             }
-            peak->beat_peak1 = (lt[0]+peak->beat_peak1_peak)/2;
+            peak->beat_peak1 = (lt[0]+peak->beat_peak1_peak) / 2;
             peak->beat_peak1_peak = lt[0];
         }
         else if (lt[0] > peak->beat_peak2)
@@ -1657,7 +1657,7 @@ printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
             peak->beat_peak2 = lt[0];
         }
         else
-            peak->beat_peak2 = (peak->beat_peak2 * 14 / 576 * size) / 16 / 576 * size;
+            peak->beat_peak2 = (peak->beat_peak2*14)/17;
     
     } else {
         visual_log(VISUAL_LOG_INFO, "%s", "Bad algorithm for beat detection");
@@ -1666,6 +1666,7 @@ printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
 
     b = visual_beat_refine_beat(audio->beat, audio_beat);
 
+/*
     static int init = 1;
     if(init) {
         visual_timer_start(&audio->beat->timer);
@@ -1684,6 +1685,7 @@ printf("lt ::::::::::::::::::::::::: %d\n", lt[0]);
 	visual_timer_reset(&audio->beat->timer);
 	visual_timer_start(&audio->beat->timer);
    }
+*/
 
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 
