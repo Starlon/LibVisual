@@ -76,7 +76,7 @@ int main (int argc, char **argv)
     params = visual_plugin_get_params(actor->plugin);
 
     param = visual_param_container_get(params, "filename");
-    visual_param_entry_set_string(param, "/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/superscope.avs");
+    visual_param_entry_set_string(param, "/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/simple.pip");
 
 	localqueue = visual_event_queue_new ();
 
