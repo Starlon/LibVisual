@@ -59,8 +59,8 @@ typedef struct {
     StarFormat Stars[4096];
     int Width, Height;
     int onbeat;
-    int spdBeat;
-    int incBeat;
+    float spdBeat;
+    float incBeat;
     int durFrames;
     float CurrentSpeed;
     int nc;
@@ -128,7 +128,7 @@ int lv_stars_init (VisPluginData *plugin)
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendavg", 0),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("warpSpeed", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("warpSpeed", 6),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("MaxStars_set", 350),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("onbeat", 0),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("spdBeat", 4),
@@ -156,6 +156,8 @@ int lv_stars_init (VisPluginData *plugin)
     }
 
     priv->MaxStars = 350;
+    priv->Zoff = 255;
+    priv->CurrentSpeed = 6;
 
     visual_param_container_add_many (paramcontainer, params);
 
