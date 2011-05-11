@@ -94,6 +94,21 @@ else
 fi
 
 # The AVS elements.
+AC_ARG_ENABLE([avs_stars],
+	      AC_HELP_STRING([--disable-stars],
+			     [Do not build the AVS render stars plugin @<:@default=enabled@:>@]),
+	      [avs_stars=$enableval],
+	      [avs_stars=yes])
+AC_MSG_CHECKING([whether to build AVS render stars plugin])
+if test x$avs_stars = xyes; then
+  AC_MSG_RESULT([yes])
+  build_actor="$build_actor stars"
+  AC_SUBST([AVS_STARS], ['actor_avs_stars.la'])
+else
+  AC_MSG_RESULT([no])
+fi
+
+# The AVS elements.
 AC_ARG_ENABLE([avs_ring],
 	      AC_HELP_STRING([--disable-ring],
 			     [Do not build the AVS render ring plugin @<:@default=enabled@:>@]),
@@ -119,6 +134,21 @@ if test x$avs_superscope = xyes; then
   AC_MSG_RESULT([yes])
   build_actor="$build_actor superscope"
   AC_SUBST([AVS_SUPERSCOPE], ['actor_avs_superscope.la'])
+else
+  AC_MSG_RESULT([no])
+fi
+
+# The AVS elements.
+AC_ARG_ENABLE([avs_timescope],
+	      AC_HELP_STRING([--disable-timescope],
+			     [Do not build the AVS render timescope plugin @<:@default=enabled@:>@]),
+	      [avs_timescope=$enableval],
+	      [avs_timescope=yes])
+AC_MSG_CHECKING([whether to build AVS render timescope plugin])
+if test x$avs_timescope = xyes; then
+  AC_MSG_RESULT([yes])
+  build_actor="$build_actor timescope"
+  AC_SUBST([AVS_TIMESCOPE], ['actor_avs_timescope.la'])
 else
   AC_MSG_RESULT([no])
 fi
@@ -364,14 +394,12 @@ AC_CONFIG_FILES([
 	plugins/actor/ring/Makefile
 	plugins/actor/superscope/Makefile
 	plugins/transform/Makefile
-	plugins/transform/multiplier/Makefile
-	plugins/transform/channelshift/Makefile
 	plugins/transform/movement/Makefile
-	plugins/transform/invert/Makefile
-	plugins/transform/onetone/Makefile
 	plugins/transform/dmovement/Makefile
         plugins/transform/blur/Makefile
         plugins/transform/clear/Makefile
+        plugins/actor/timescope/Makefile
+        plugins/actor/stars/Makefile
         libcalc/Makefile
 	visscript/Makefile
 ])
