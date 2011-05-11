@@ -192,7 +192,6 @@ int lv_clear_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 	run_runnable(priv);
 
-        printf("aaaaaaaaaaaaaaaaaahahahahaha\n");
 	if(priv->clear) {
 		memset(priv->pipeline->fbout, 0, sizeof(int) * video->width * video->height);
 		memset(priv->pipeline->framebuffer, 0, sizeof(int) * video->width * video->height);
