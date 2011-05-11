@@ -32,18 +32,24 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <limits.h>
 
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
+#include "lvavs_pipeline.h"
 
 typedef struct {
-	int			 source;
+	LVAVSPipeline *pipeline;
 	int			 place;
 	VisPalette		 pal;
-	int			 size;
-	int			 type;
-
+	int effect;
+	int num_colors;
+	int colors[16];
+	int color_pos;
+	
+	int size;
+	int source;
 	AVSGfxColorCycler	*cycler;
 } RingPrivate;
 
@@ -54,8 +60,6 @@ int lv_ring_dimension (VisPluginData *plugin, VisVideo *video, int width, int he
 int lv_ring_events (VisPluginData *plugin, VisEventQueue *events);
 VisPalette *lv_ring_palette (VisPluginData *plugin);
 int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
-
-short get_data (RingPrivate *priv, VisAudio *audio, int index);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -100,15 +104,18 @@ int lv_ring_init (VisPluginData *plugin)
 	int i;
 
 	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("source", 1),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("place", 2),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("effect", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("num_colors", 2),
 		VISUAL_PARAM_LIST_ENTRY ("palette"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("size", 0x10),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("type", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("source", 0),
 		VISUAL_PARAM_LIST_END
 	};
 
 	priv = visual_mem_new0 (RingPrivate, 1);
+
+	priv->pipeline = visual_object_get_private(VISUAL_OBJECT( plugin));
+
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
 	visual_palette_allocate_colors (&priv->pal, 1);
@@ -165,14 +172,14 @@ int lv_ring_events (VisPluginData *plugin, VisEventQueue *events)
 			case VISUAL_EVENT_PARAM:
 				param = ev.event.param.param;
 
-				if (visual_param_entry_is (param, "source"))
-					priv->source = visual_param_entry_get_integer (param);
-				else if (visual_param_entry_is (param, "place"))
-					priv->place = visual_param_entry_get_integer (param);
+				if (visual_param_entry_is (param, "effect"))
+					priv->effect = visual_param_entry_get_integer (param);
+				else if (visual_param_entry_is (param, "num_colors"))
+					priv->num_colors = visual_param_entry_get_integer (param);
 				else if (visual_param_entry_is (param, "size"))
 					priv->size = visual_param_entry_get_integer (param);
-				else if (visual_param_entry_is (param, "type"))
-					priv->type = visual_param_entry_get_integer (param);
+				else if (visual_param_entry_is (param, "source"))
+					priv->source = visual_param_entry_get_integer (param);
 				else if (visual_param_entry_is (param, "palette")) {
 					VisPalette *pal;
 
@@ -207,6 +214,7 @@ VisPalette *lv_ring_palette (VisPluginData *plugin)
 	return NULL;
 }
 
+#if 0
 int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
 	RingPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
@@ -217,8 +225,11 @@ int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 	float a = 0;
 	float add = (2 * 3.1415) / 100;
 	float size_mult;
-	uint32_t *buf = visual_video_get_pixels (video);
+	uint32_t *buf = priv->pipeline->framebuffer;
+        float visdata[2][2][1024];
 	VisColor *col;
+
+	memcpy(visdata, priv->pipeline->audiodata, sizeof(visdata));
 
 	if (priv->place == 1)
 		hx += video->width / 4;
@@ -230,16 +241,18 @@ int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 	else	
 		size_mult = (float) video->width * ((float) priv->size / 64.00);
 	
-	ox = (cos (a) * (size_mult + (get_data (priv, audio, 0))));
-	oy = (sin (a) * (size_mult + (get_data (priv, audio, 0))));
+        float val = (visdata[priv->type][0][0] + 1) / 2;
+	ox = (cos (a) * (size_mult + (val)));
+	oy = (sin (a) * (size_mult + (val)));
 
 	a += add;
 
 	for (i = 0; i < 50; i++) {
 
 
-		x = (cos (a) * (size_mult + (get_data (priv, audio, i + 1))));
-		y = (sin (a) * (size_mult + (get_data (priv, audio, i + 1))));
+		val = (visdata[priv->type][0][i + 1] + 1) / 2;
+		x = (cos (a) * (size_mult + (val)));
+		y = (sin (a) * (size_mult + (val)));
 		
 		a += add;
 
@@ -257,14 +270,95 @@ int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 	return 0;
 }
+#endif
 
-short get_data (RingPrivate *priv, VisAudio *audio, int index)
+int lv_ring_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
-	if (priv->type == 0)
-		return avs_sound_get_from_source (audio, AVS_SOUND_SOURCE_TYPE_SCOPE, priv->source, index) >> 9;
-	else	
-		return avs_sound_get_from_source (audio, AVS_SOUND_SOURCE_TYPE_SPECTRUM, priv->source, index);
+  RingPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+  int x;
+  int current_color;
+  unsigned char *fa_data;
+  char center_channel[1024];
+  int which_ch=(priv->effect>>2)&3;
+  int y_pos=(priv->effect>>4);
+  unsigned char visdata[2][2][1024];
+  int w = video->width * 2, h = video->height;
+  int s, c, i;
+  for(s = 0; s < 2; s++) for(c = 0; c < 2; c++) for(i = 0; i < 1024; i++) 
+	visdata[s][c][i] = (priv->pipeline->audiodata[s][c][i] + 1) / 2 * UCHAR_MAX;
 
-	return 0;
+  if (priv->pipeline->isBeat&0x80000000) return 0;
+  if (!priv->num_colors) return 0;
+  priv->color_pos++;
+  if (priv->color_pos >= priv->num_colors * 64) priv->color_pos=0;
+
+  {
+    int p=priv->color_pos/64;
+    int r=priv->color_pos&63;
+    int c1,c2;
+    int r1,r2,r3;
+    c1=priv->colors[p];
+    if (p+1 < priv->num_colors)
+      c2=priv->colors[p+1];
+    else c2=priv->colors[0];
+
+    r1=(((c1&255)*(63-r))+((c2&255)*r))/64;
+    r2=((((c1>>8)&255)*(63-r))+(((c2>>8)&255)*r))/64;
+    r3=((((c1>>16)&255)*(63-r))+(((c2>>16)&255)*r))/64;
+    
+    current_color=r1|(r2<<8)|(r3<<16);
+  }
+
+  if (which_ch>=2)
+  {
+    for (x = 0; x < 1024; x ++) center_channel[x]=visdata[priv->source?0:1][0][x]/2+visdata[priv->source?0:1][1][x]/2;
+  }
+  if (which_ch < 2) fa_data=(unsigned char *)&visdata[priv->source?0:1][which_ch][0];
+  else fa_data=(unsigned char *)center_channel;
+
+  {
+    double s=priv->size/32.0;
+      int lx,ly;
+#define min(a, b) (a<b?a:b)
+	  double is=min((h*s),(w*s));
+	  int c_x;
+    int c_y=h/2;
+    if (y_pos == 2) c_x = w/2;
+    else if (y_pos == 0) c_x=(w/4);
+    else c_x=w/2+w/4;
+	  {
+		  int q=0;
+      double a=0.0;
+      double sca;
+      if (!priv->source) sca=0.1 + ((fa_data[q]^128)/255.0)*0.9;
+      else sca=0.1 + ((fa_data[q*2]/2+fa_data[q*2+1]/2)/255.0)*0.9;
+      int n_seg=1;
+      lx=c_x+(cos(a)*is*sca);
+      ly=c_y+(sin(a)*is*sca);
+
+		  for (q = 1; q <= 80; q += n_seg)
+		  {
+        int tx,ty;
+        a -= 3.14159*2.0 / 80.0 * n_seg;
+        if (!priv->source) sca=0.1 + ((fa_data[q>40?80-q:q]^128)/255.0)*0.90;
+        else sca=0.1 + ((fa_data[q>40?(80-q)*2:q*2]/2+fa_data[q>40?(80-q)*2+1:q*2+1]/2)/255.0)*0.9;
+        tx=c_x+(cos(a)*is*sca);
+        ty=c_y+(sin(a)*is*sca);
+
+			  if ((tx >= 0 && tx < w && ty >= 0 && ty < h) ||
+            (lx >= 0 && lx < w && ly >= 0 && ly < h))
+        {
+           VisColor color;
+           visual_color_from_uint32(&color, 0xffffffff);
+           avs_gfx_line_non_naieve_ints (video, tx, ty, lx, ly, &color);
+           //line(framebuffer,tx,ty,lx,ly,w,h,current_color,(priv->pipeline->mode&0xff0000)>>16);
+        }
+        lx=tx;
+        ly=ty;
+      }
+	  }
+  }
+  return 0;
 }
+
 
