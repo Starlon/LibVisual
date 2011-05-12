@@ -62,33 +62,35 @@ unsigned int  BLEND(unsigned int a, unsigned int b)
 #define FASTMIN(x,y) min(x,y)
 //(x+(((y-x)>>(32-1))&(y-x))) 
 #else
-#pragma warning( push, 1 )
 
- int FASTMAX(int x, int y)
+static int FASTMAX(int x, int y)
 {
-  __asm
-  {
-    mov ecx, [x]
-    mov eax, [y]
-    sub	ecx, eax
-  	cmc
-  	and	ecx, edx
-  	add	eax, ecx
-  }
+    int ret;
+    asm("mov %0, %%ecx\n\t"
+        "mov %1, %%eax\n\t"
+        "sub %%eax, %%ecx\n\t"
+        "cmc\n\t"
+        "and %%edx, %%ecx\n\t"
+        "add %%ecx, %%eax" 
+        : "=a"(ret) 
+        : "m"(x), "m"(y)
+        : "memory");
+    return ret;
 }
- int FASTMIN(int x, int y)
+static int FASTMIN(int x, int y)
 {
-  __asm
-  {
-    mov ecx, [x]
-    mov eax, [y]
-    sub	ecx, eax
-	  sbb	edx, edx
-	  and	ecx, edx
-	  add	eax, ecx
-  }
+    int ret;
+    asm("mov %0, %%ecx\n\t"
+        "mov %1, %%eax\n\t"
+        "sub %%eax, %%ecx\n\t"
+        "sbb %%edx, %%edx\n\t"
+        "and %%edx, %%ecx\n\t"
+        "and %%eax, %%ecx\n\t"
+        : "=m"(ret) 
+        : "m"(x), "m"(y) 
+        : "memory");
+    return ret;
 }
-#pragma warning( pop ) 
 
 #endif
 
