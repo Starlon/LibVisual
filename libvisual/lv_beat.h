@@ -173,7 +173,6 @@ struct _VisBeat {
 
 VisBeat *visual_beat_new();
 int visual_beat_init(VisBeat *beat);
-VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
 int visual_beat_refine_beat(VisBeat *beat, int beat_in);
 int visual_beat_change_song(VisBeat *beat);
 int visual_beat_reset_adapt(VisBeat *beat);
