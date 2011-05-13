@@ -580,9 +580,8 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
-#pragma omp parallel
-#pragma omp for private(i)
-    for(i = 0; i < video->width*video->height; i++) {
+    #pragma omp parallel for private(i)
+    for(i = video->width*video->height - 1; i>=0; i++) {
         BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
     }
 
