@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
@@ -574,17 +575,16 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	}
 
     }
-        LVAVSPipeline *pipeline = container->element.pipeline;
-    	fbout = visual_video_get_pixels(video);
-	framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
-	for(i = 0; i < video->width*video->height; i++) {
-		BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
-	}
-	/*visual_video_composite_set_type(video, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
-	VisRectangle *drect = visual_rectangle_new(0, 0, video->width, video->height);
-	VisRectangle *srect = visual_rectangle_new(0, 0, video->width, video->height);
-	visual_video_blit_overlay_rectangle(video, drect, pipeline->dummy_vid, srect, 0.5);
-	*/
+        
+    LVAVSPipeline *pipeline = container->element.pipeline;
+    fbout = visual_video_get_pixels(video);
+    framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+
+#pragma omp parallel
+#pragma omp for private(i)
+    for(i = 0; i < video->width*video->height; i++) {
+        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
+    }
 
     return VISUAL_OK;
 }

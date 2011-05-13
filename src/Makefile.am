@@ -8,11 +8,11 @@ libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
 LIBS += -L. -L$(prefix)/lib $(XML_LIBS) $(GLIB_LIBS) @LIBVISUAL_LIBS@ -lxml2 -laudcore
 
-AM_CFLAGS = $(XML_CFLAGS) $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@ -I/usr/include/libxml2/
+AM_CFLAGS = $(XML_CFLAGS) $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@ -I/usr/include/libxml2/ -fopenmp
 
 INCLUDES = $(all_includes) -I$(top_srcdir) -I$(top_srcdir)/common
 
-actor_AVS_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
+actor_AVS_la_LDFLAGS = -rpath $(libdir) -module -avoid-version
 
 actor_AVS_la_SOURCES = actor_AVS.c \
 		       avs_parse.c \
