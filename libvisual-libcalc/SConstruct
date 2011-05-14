@@ -1,0 +1,24 @@
+import subprocess, sys
+
+glibCflags, _ = subprocess.Popen(Split("pkg-config --cflags glib-2.0"),
+	stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+
+env = Environment(CCFLAGS = Split("-laudcore -g -Wall -O0 " + glibCflags))
+
+glibLdflags, _ = subprocess.Popen(Split("pkg-config --libs glib-2.0"),
+	stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+
+output = glibLdflags
+
+libs = env.ParseFlags(Split(output))
+env.MergeFlags(libs)
+
+plugin = env.StaticLibrary(target = "libcalc", source = Split("\
+       dict.c\
+       execute.c\
+       function.c\
+       parser.c	\
+       storage.c\
+"))
+
+
