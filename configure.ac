@@ -414,7 +414,6 @@ AC_CONFIG_FILES([
         plugins/transform/clear/Makefile
         plugins/actor/timescope/Makefile
         plugins/actor/stars/Makefile
-        libcalc/Makefile
 	visscript/Makefile
 ])
 
