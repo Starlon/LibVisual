@@ -13,12 +13,12 @@ AM_CFLAGS = $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
-	-I$(top_srcdir)/libcalc \
-	-I$(top_srcdir)/src
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/visscript
 
 transform_avs_movement_la_LDFLAGS = -rpath $(libdir) -module -avoid-version -laudcore 
 
 transform_avs_movement_la_SOURCES = transform_avs_movement.c
 
-transform_avs_movement_la_LIBADD = ../../../common/libavs.la ../../../libcalc/libcalc.la
+transform_avs_movement_la_LIBADD = ../../../common/libavs.la ../../../visscript/libvisscript.la
 

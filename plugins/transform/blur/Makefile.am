@@ -13,12 +13,11 @@ AM_CFLAGS = $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@ -fopenmp
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
-	-I$(top_srcdir)/libcalc \
 	-I$(top_srcdir)/src
 
 transform_avs_blur_la_LDFLAGS = -rpath $(libdir) -module -avoid-version -laudcore 
 
 transform_avs_blur_la_SOURCES = transform_avs_blur.c
 
-transform_avs_blur_la_LIBADD = ../../../common/libavs.la ../../../libcalc/libcalc.la
+transform_avs_blur_la_LIBADD = ../../../common/libavs.la
 

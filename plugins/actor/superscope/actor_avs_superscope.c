@@ -140,13 +140,13 @@ int lv_superscope_init (VisPluginData *plugin)
     int i;
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4; x = cos(r)*d; y = sin(r) * d;"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4*count; x = cos(r)*d; y = sin(r) * d;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;count=count+1;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
         VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("channel_source", 0),
         VISUAL_PARAM_LIST_ENTRY ("palette"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("drawmode", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("drawmode", 1),
         VISUAL_PARAM_LIST_END
     };
 
@@ -420,7 +420,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
 
 #if _OPENMP
-#pragma omb parallell for
+//#pragma omp parallel for
 #endif
 
     for (a=0; a < l; a++) 
@@ -446,6 +446,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         if (priv->drawmode < 0.00001) {
             if (y >= 0 && y < video->height && x >= 0 && x < video->width)
+#pragma omp critical(drawnice)
                 BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, pipeline->blendmode);
         } else {
             if (a > 0) {
@@ -454,6 +455,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
                         VisColor color;
                         //this_color = 0xffffff;
                         visual_color_from_uint32(&color, this_color);
+
+#pragma omp critical(drawnice)
                         avs_gfx_line_ints(video, lx, ly, x, y, &color);
                 }
             }

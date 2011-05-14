@@ -38,7 +38,7 @@
 
 #include "avs_common.h"
 #include "lvavs_pipeline.h"
-#include "calc.h"
+//#include "calc.h"
 
 #define REFFECT_MIN 3
 #define REFFECT_MAX 23
@@ -74,8 +74,8 @@ static t_reffect *radial_effects[REFFECT_MAX-REFFECT_MIN+1]=
 
 typedef struct {
     LVAVSPipeline *pipeline;
-    symbol_dict_t *environment;
-    expression_t *runnable;
+    //symbol_dict_t *environment;
+    //expression_t *runnable;
 
     uint8_t *swapbuf, *renderbuf;
 
@@ -150,13 +150,13 @@ static inline int effect_uses_eval(int t)
 
 static int scope_load_runnable(MovementPrivate *priv, char *buf)
 {
-    priv->runnable = expr_compile_string(buf, priv->environment);
+    //priv->runnable = expr_compile_string(buf, priv->environment);
     return 0;
 }
 
 static int scope_run(MovementPrivate *priv)
 {
-    expr_execute(priv->runnable, priv->environment);
+    //expr_execute(priv->runnable, priv->environment);
 
     return 0;
 }
@@ -238,6 +238,7 @@ int lv_movement_init (VisPluginData *plugin)
 	
     priv = visual_mem_new0 (MovementPrivate, 1);
 
+/*
     priv->environment = dict_new();
 
     dict_variable_new(priv->environment, "d", 0);
@@ -246,7 +247,7 @@ int lv_movement_init (VisPluginData *plugin)
     dict_variable_new(priv->environment, "y", 0);
     dict_variable_new(priv->environment, "sw", 0);
     dict_variable_new(priv->environment, "sh", 0);
-
+*/
     priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
@@ -539,6 +540,7 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
       int y;
       double *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
         
+/*
       var_d = dict_variable(priv->environment, "d");
       var_r = dict_variable(priv->environment, "r");
       var_px = dict_variable(priv->environment, "x");
@@ -547,7 +549,7 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
       var_ph = dict_variable(priv->environment, "sh");
       *var_pw = priv->width;
       *var_ph = priv->height;
-        
+  */      
       scope_load_runnable(priv, effect);
 
       int offs=0;
