@@ -243,7 +243,8 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
-    for(i = 0; i < size; i++) {
+#pragma omp parallel for private(i)
+    for(i = size - 1; i >= 0; i--) {
 	pipeline->audiodata[0][0][i] = (data[0][0][i] + 1) / 2;
 	pipeline->audiodata[1][0][i] = (data[1][0][i] + 1) / 2;
 	pipeline->audiodata[0][1][i] = (data[0][1][i] + 1) / 2;
@@ -256,8 +257,10 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
     memcpy(beatdata, data[1][0], size * sizeof(float));
     memcpy(beatdata + size, data[1][1], size * sizeof(float));
 
-    for(i = 0; i < BEAT_ADV_SIZE; i++)
+#pragma omp parallel for private(i)
+    for(i = BEAT_ADV_SIZE - 1; i >= 0; i--) {
         visdata[i] = (beatdata[i] + 1) / 2.0 * UCHAR_MAX;
+    }
 
     pipeline->isBeat = visual_audio_is_beat_with_data(audio, VISUAL_BEAT_ALGORITHM_PEAK, visdata, BEAT_ADV_SIZE);
 
@@ -527,13 +530,12 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
 
 
-
     int s = 0;
-    while ((element = visual_list_next (container->members, &le)) != NULL) {
-
+    int count = visual_list_count(container->members);
+    for(i = 0; i < count; i++) {
+        element = visual_list_get(container->members, i);
 	VisVideo *tmpvid;
         LVAVSPipeline *pipeline = element->pipeline;
-
 
 	if(s) {
 		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);

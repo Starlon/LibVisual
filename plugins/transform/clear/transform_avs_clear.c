@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
@@ -192,12 +193,16 @@ int lv_clear_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 	run_runnable(priv);
 
+#pragma omp parallel
+{
 	if(priv->clear) {
-		memset(priv->pipeline->fbout, 0, sizeof(int) * video->width * video->height);
-		memset(priv->pipeline->framebuffer, 0, sizeof(int) * video->width * video->height);
+		#pragma omp task
+		visual_mem_set(priv->pipeline->fbout, 0, sizeof(int) * video->width * video->height);
+		#pragma omp task
+		visual_mem_set(priv->pipeline->framebuffer, 0, sizeof(int) * video->width * video->height);
 		priv->clear = FALSE;
 	}
-
+}
 	return 0;
 }
 

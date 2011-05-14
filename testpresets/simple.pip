@@ -4,5 +4,8 @@
  <container_main>
   <avs_clearscreen></avs_clearscreen>
   <avs_stars></avs_stars>
+  <avs_blur></avs_blur>
+  <avs_blur></avs_blur>
+  <avs_blur></avs_blur>
  </container_main>
 </pipeline_preset>

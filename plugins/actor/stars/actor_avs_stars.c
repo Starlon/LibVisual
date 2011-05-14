@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
@@ -289,8 +290,10 @@ int lv_stars_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     }
     if (isBeat&0x80000000) return 0;
 
+#pragma omp parallel for private(i)
     for (i=0;i<priv->MaxStars;i++)
     {
+        #pragma omp critical(nextstar)
         if ((int)priv->Stars[i].Z > 0)
         {
             NX = ((priv->Stars[i].X << 7) / (int)priv->Stars[i].Z) + priv->Xoff;
@@ -299,10 +302,12 @@ int lv_stars_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
             {
                 c = (int)((255-(int)priv->Stars[i].Z)*priv->Stars[i].Speed);
                 if (color != 0xFFFFFF) c = BLEND_ADAPT((c|(c<<8)|(c<<16)), color, c>>4); else c = (c|(c<<8)|(c<<16));
+		{
                 framebuffer[NY*w+NX] = priv->blend ? BLEND(framebuffer[NY*w+NX], c) : priv->blendavg ? BLEND_AVG(framebuffer[NY*w+NX], c) : c;
                 priv->Stars[i].OX = NX;
                 priv->Stars[i].OY = NY;
                 priv->Stars[i].Z-=priv->Stars[i].Speed*priv->CurrentSpeed;
+		}
             }
             else
                 create_star(priv, i);

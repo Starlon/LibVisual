@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
@@ -69,7 +70,7 @@ int lv_blur_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_blur_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_blur_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-void smp_render(BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
+void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -173,26 +174,26 @@ int lv_blur_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
 	BlurPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     	uint8_t isBeat = priv->pipeline->isBeat;
-
-	smp_render(priv, priv->pipeline->audiodata, priv->pipeline->isBeat, priv->pipeline->framebuffer, priv->pipeline->fbout, video->width, video->height);
+#pragma omp parallel 
+{
+	int i = 0, num_threads = omp_get_num_threads();
+	#pragma omp for
+        for(i = num_threads - 1; i>=0; i--)
+		smp_render(i, num_threads, priv, priv->pipeline->audiodata, priv->pipeline->isBeat, priv->pipeline->framebuffer, priv->pipeline->fbout, video->width, video->height);
 	priv->pipeline->swap = 1;
+}
 	return 0;
 }
 
-void smp_render(BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h)
+void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h)
 {
   if (!priv->enabled) return;
 
-  //timingEnter(0);
-  int this_thread = 0;
-  int max_threads = 1;
   int roundmode = priv->roundmode;
   int enabled = priv->enabled;
 
   unsigned int *f = (unsigned int *) framebuffer;
   unsigned int *of = (unsigned int *) fbout;
-
-  if (max_threads < 1) max_threads=1;
 
   int start_l = ( this_thread * h ) / max_threads;
   int end_l;
