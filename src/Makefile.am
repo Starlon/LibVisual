@@ -8,7 +8,7 @@ libdir = @LIBVISUAL_PLUGINS_BASE_DIR@/actor
 
 LIBS += -L. -L$(prefix)/lib $(XML_LIBS) $(GLIB_LIBS) @LIBVISUAL_LIBS@ -lxml2 -laudcore
 
-AM_CFLAGS = $(XML_CFLAGS) $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@ -I/usr/include/libxml2/ -fopenmp
+AM_CFLAGS = $(XML_CFLAGS) $(GLIB_CFLAGS) @LIBVISUAL_CFLAGS@ -I/usr/include/libxml2/
 
 INCLUDES = $(all_includes) -I$(top_srcdir) -I$(top_srcdir)/common
 

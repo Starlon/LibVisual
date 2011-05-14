@@ -1,5 +1,5 @@
 
-AM_CFLAGS = @LIBVISUAL_CFLAGS@
+AM_CFLAGS = @LIBVISUAL_CFLAGS@ -fopenmp
 
 noinst_LTLIBRARIES = libavs.la
 

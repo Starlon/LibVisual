@@ -3,6 +3,10 @@
 <pipeline_preset>
  <container_main>
   <avs_clearscreen></avs_clearscreen>
+  <avs_superscope>
+  	<drawmode type="integer">1</drawmode>
+  	<init type="string">n = 5000;t=5;</init>
+  </avs_superscope>
   <avs_stars></avs_stars>
   <avs_blur></avs_blur>
   <avs_blur></avs_blur>

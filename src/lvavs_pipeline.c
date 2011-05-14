@@ -28,7 +28,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #include <libvisual/libvisual.h>
 
@@ -243,7 +247,10 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
 
     visual_object_unref(VISUAL_OBJECT(&tmp));
 
+#ifdef _OPENMP
 #pragma omp parallel for private(i)
+#endif
+
     for(i = size - 1; i >= 0; i--) {
 	pipeline->audiodata[0][0][i] = (data[0][0][i] + 1) / 2;
 	pipeline->audiodata[1][0][i] = (data[1][0][i] + 1) / 2;
@@ -257,7 +264,10 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
     memcpy(beatdata, data[1][0], size * sizeof(float));
     memcpy(beatdata + size, data[1][1], size * sizeof(float));
 
+#ifdef _OPENMP
 #pragma omp parallel for private(i)
+#endif
+
     for(i = BEAT_ADV_SIZE - 1; i >= 0; i--) {
         visdata[i] = (beatdata[i] + 1) / 2.0 * UCHAR_MAX;
     }
@@ -582,7 +592,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
-    #pragma omp parallel for private(i)
+#ifdef _OPENMP
+#pragma omp parallel for private(i)
+#endif
+
     for(i = video->width*video->height - 1; i>=0; i--) {
         BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
     }

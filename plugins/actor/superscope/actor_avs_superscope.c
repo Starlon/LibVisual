@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <limits.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
@@ -417,6 +418,10 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if (l >= 128*size)
         l = 128*size - 1;
 
+
+#if _OPENMP
+#pragma omb parallell for
+#endif
 
     for (a=0; a < l; a++) 
     {
