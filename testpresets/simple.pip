@@ -4,8 +4,15 @@
  <container_main>
   <avs_clearscreen></avs_clearscreen>
   <avs_superscope>
-  	<drawmode type="integer">1</drawmode>
-  	<init type="string">n = 5000;t=5;</init>
+    <init type="string">n=32;t=0;</init>
+    <frame type="string">t = t - 5;</frame>
+    <beat type="string">drawmode = if(drawmode, 0, 1); count = count + 4;</beat>
+    <point type="string">
+      d = i + v * .2;
+      r = t + i*PI*count*100;
+      x = cos(r)*d*0.8;
+      y = sin(r)*d*0.8;
+    </point>
   </avs_superscope>
   <avs_stars></avs_stars>
   <avs_blur></avs_blur>

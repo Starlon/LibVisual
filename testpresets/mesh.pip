@@ -51,7 +51,6 @@
    <channel_source type="integer">0</channel_source>
    <drawmode type="integer">1</drawmode>
   </avs_superscope>
-  <avs_movement></avs_movement>
   <avs_blur></avs_blur>
  </container_main>
 </pipeline_preset>
