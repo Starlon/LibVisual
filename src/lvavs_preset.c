@@ -135,7 +135,7 @@ static int lvavs_preset_element_dtor (VisObject *object)
 		visual_object_unref (VISUAL_OBJECT (element->pcont));
 
 	if (element->element_name != NULL)
-		visual_memory_free(element->element_name);
+		visual_mem_free((void *)element->element_name);
 
 	element->pcont = NULL;
 
@@ -313,7 +313,7 @@ LVAVSPresetContainer *lvavs_preset_container_from_xml_node(LVAVSPresetContainer 
 	{
 		if (xmlIsBlankNode (child) || child->type != XML_ELEMENT_NODE)
 			continue;
-		if(xmlStrcmp(child->name, "container_child") == 0) {
+		if(xmlStrcmp(child->name, (xmlChar *)"container_child") == 0) {
 			LVAVSPresetContainer *cont2 = lvavs_preset_container_new();
 			VisParamContainer *pcont = visual_param_container_new();
 			LVAVS_PRESET_ELEMENT(cont2)->pcont = pcont;
@@ -363,7 +363,7 @@ LVAVSPresetContainer *lvavs_preset_container_new ()
 	visual_object_initialize (VISUAL_OBJECT (container), TRUE, lvavs_preset_container_dtor);
 
 	container->members = visual_list_new (visual_object_collection_destroyer);
-	container->element.element_name = "new container";
+	container->element.element_name = strdup("new container");
 	container->element.type = LVAVS_PRESET_ELEMENT_TYPE_CONTAINER;
 
 	return container;

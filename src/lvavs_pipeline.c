@@ -126,7 +126,6 @@ static int lvavs_pipeline_container_dtor (VisObject *object)
     return TRUE;
 }
 
-
 /* LVAVS Preset */
 LVAVSPipeline *lvavs_pipeline_new ()
 {
@@ -137,6 +136,7 @@ LVAVSPipeline *lvavs_pipeline_new ()
     pipeline->dummy_vid = visual_video_new_with_buffer(0, 0, 1);
 
     /* Do the VisObject initialization */
+    visual_object_set_allocated (VISUAL_OBJECT (pipeline), TRUE);
     visual_object_initialize (VISUAL_OBJECT (pipeline), TRUE, lvavs_pipeline_dtor);
 
     return pipeline;

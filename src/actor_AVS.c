@@ -85,6 +85,10 @@ const VisPluginInfo *get_plugin_info (int *count)
 int act_avs_init (VisPluginData *plugin)
 {
 	AVSPrivate *priv;
+	char filename[256];
+	VisParamEntry *param;
+	memset(filename, 0, sizeof(filename));
+	snprintf(filename, sizeof(filename), "%s/%s", getenv("HOME"), ".pipelines.xml");
 
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 
@@ -98,6 +102,8 @@ int act_avs_init (VisPluginData *plugin)
 	};
 
 	visual_param_container_add_many (paramcontainer, params);
+	param = visual_param_container_get(paramcontainer, "filename");
+	visual_param_entry_set_string(param, filename);
 
 	priv = visual_mem_new0 (AVSPrivate, 1);
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
@@ -189,14 +195,14 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 				}
 				if (visual_param_entry_is (param, "filename")) {
 					char *filename = visual_param_entry_get_string (param);
-					AVSTree *tree;
+					//AVSTree *tree;
 
-                    printf("event filename %s\n", filename);
+		                        printf("event filename %s\n", filename);
 					if (priv->wtree != NULL)
 						visual_object_unref (VISUAL_OBJECT (priv->wtree));
 
 					if (priv->lvtree != NULL)
-						visual_object_unref (VISUAL_OBJECT (priv->lvtree));
+						;//visual_object_unref (VISUAL_OBJECT (priv->lvtree));
 
 					if (priv->pipeline != NULL)
 						visual_object_unref (VISUAL_OBJECT (priv->pipeline));
@@ -258,6 +264,10 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 					}
 
 					/* Neat, now make the render pipeline */
+					if(priv->pipeline != NULL) {
+						visual_object_unref(VISUAL_OBJECT(priv->pipeline));
+						priv->pipeline = NULL;
+					}
 					priv->pipeline = lvavs_pipeline_new_from_preset (priv->lvtree);
 
 					lvavs_pipeline_realize (priv->pipeline);

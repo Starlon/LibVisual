@@ -64,7 +64,7 @@ struct _LVAVSPresetElement {
 
 	LVAVSPresetElementType	 type;
 
-	const char		*element_name;
+	char		*element_name;
 
 	VisParamContainer	*pcont;
 };
