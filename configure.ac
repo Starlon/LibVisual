@@ -443,5 +443,6 @@ compiler:                             : ${CC}
 Other options:
 Debug support:                        : ${debug}
 Extra optimization                    : ${extra_opt}
+OpenMP support (multicore):           : ${HAVE_OPENMP}
 "
 
