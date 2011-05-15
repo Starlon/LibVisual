@@ -33,18 +33,15 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
-#include "avs.h"
-
-AvsNumber PI = M_PI;
-
-typedef enum trans_runnable TransRunnable;
+#include "lvavs_pipeline.h"
 
 typedef struct {
-    AVSGlobalProxy *proxy;
+    LVAVSPipeline *pipeline;
 
     // Params
     int enabled;
@@ -60,6 +57,9 @@ int lv_water_cleanup (VisPluginData *plugin);
 int lv_water_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
+
+void trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
+void trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -101,26 +101,26 @@ int lv_water_init (VisPluginData *plugin)
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
     int i;
 
-    static VisParamEntryProxy params[] = {
-        VISUAL_PARAM_LIST_INTEGER("enabled", 0, VISUAL_PARAM_LIMIT_BOOLEAN, "Enable water effect"),
+    static VisParamEntry params[] = {
+        VISUAL_PARAM_LIST_ENTRY_INTEGER("enabled", 1),
         VISUAL_PARAM_LIST_END
     };
 
     priv = visual_mem_new0 (WaterPrivate, 1);
 
-    priv->proxy = AVS_GLOBAL_PROXY(visual_object_get_private(VISUAL_OBJECT(plugin)));
+    priv->pipeline = LVAVS_PIPELINE(visual_object_get_private(VISUAL_OBJECT(plugin)));
     
-    if(priv->proxy == NULL)
+    if(priv->pipeline == NULL)
     {
         visual_log(VISUAL_LOG_CRITICAL, "This plugin is part of the AVS plugin.");
         return -VISUAL_ERROR_GENERAL;
     }
   
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
     visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-    visual_param_container_add_many_proxy (paramcontainer, params);
+    visual_param_container_add_many (paramcontainer, params);
 
     return 0;
 }
@@ -129,7 +129,7 @@ int lv_water_cleanup (VisPluginData *plugin)
 {
     WaterPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
-    visual_object_unref(VISUAL_OBJECT(priv->proxy));
+    visual_object_unref(VISUAL_OBJECT(priv->pipeline));
 
     visual_mem_free (priv);
 
@@ -170,172 +170,200 @@ int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio)
 #define _B(x) ((( x )) & 0xff0000)
 #define _RGB(r,g,b) (( r ) | (( g ) & 0xff00) | (( b ) & 0xff0000))
 
-int trans_render(WaterPrivate *priv, uint8_t *framebuffer, uint8_t *fbout, int w, int h, int isBeat);
-int trans_begin(WaterPrivate *priv, uint8_t *fbin, uint8_t *fbout, int w, int h, int isBeat);
 
 int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     WaterPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-    uint8_t isBeat = priv->proxy->isBeat;
+    int8_t isBeat = priv->pipeline->isBeat;
     int w = video->width;
     int h = video->height;
-    uint8_t *framebuffer = visual_mem_malloc0(w * h * video->pitch);
-    uint8_t fbout = visual_video_get_pixels (video);
-    int *fbin=framebuffer;
+    uint32_t *framebuffer = priv->pipeline->framebuffer;
+    uint32_t *fbout = priv->pipeline->fbout;
+    uint32_t *fbin=framebuffer;
     visual_mem_copy(framebuffer, fbout, w * h * video->pitch);
 
     trans_begin(priv, fbin, fbout, w, h, isBeat);
 
     if(isBeat & 0x80000000) return 0;
 
-    trans_render(0,1,visdata,isBeat,framebuffer,fbout,w,h);
-
+    trans_render(0,1,priv, priv->pipeline->audiodata,isBeat,framebuffer,fbout,w,h);
+#pragma omp parallel
+{
+    int i = 0, num_threads = omp_get_num_threads();
+    #pragma omp for
+    for(i = num_threads - 1; i>=0; i--)
+       trans_render(i, num_threads, priv, priv->pipeline->audiodata, isBeat, framebuffer, fbout, w, h);
+}
     return 0;
 }
 
-int trans_begin(WaterPrivate *priv, uint8_t *fbin, uint8_t *fbout, int w, int h, int isBeat)
+int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat)
 {
-  if (!enabled) return 0;
+  if (!priv->enabled) return 0;
 
-  if (!lastframe || w*h != lastframe_len)
+  if (!priv->lastframe || w*h != priv->lastframe_len)
   {
-    if (lastframe) GlobalFree(lastframe);
-    lastframe_len=w*h;
-    lastframe=(unsigned int *)GlobalAlloc(GPTR,w*h*sizeof(int));
+    if (priv->lastframe) visual_mem_free(priv->lastframe);
+    priv->lastframe_len=w*h;
+    priv->lastframe = visual_mem_new0(uint32_t, sizeof(uint32_t) * w * h);
   }
 
-  return max_threads;
+  return 0;
 }
 
-#define NO_MMX
 
-int trans_render(WaterPrivate *priv, uint8_t *framebuffer, uint8_t *fbout, int w, int h, int isBeat)
+int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
 {
-    if (!enabled) return;
+  if (!priv->enabled) return 0;
 
-    unsigned int *f = (unsigned int *) framebuffer;
-    unsigned int *of = (unsigned int *) fbout;
-    unsigned int *lfo = (unsigned int *) priv->lastframe;
+	unsigned int *f = (unsigned int *) framebuffer;
+  unsigned int *of = (unsigned int *) fbout;
+  unsigned int *lfo = (unsigned int *) priv->lastframe;
 
+
+  int start_l = ( this_thread * h ) / max_threads;
+  int end_l;
+
+  if (this_thread >= max_threads - 1) end_l = h;
+  else end_l = ( (this_thread+1) * h ) / max_threads;  
+
+  int outh=end_l-start_l;
+  if (outh<1) return 0;
+
+  int skip_pix=start_l*w;
+
+  f += skip_pix;
+  of+= skip_pix;
+  lfo += skip_pix;
+
+  int at_top=0, at_bottom=0;
+
+  if (!this_thread) at_top=1;
+  if (this_thread >= max_threads - 1) at_bottom=1;
+
+
+  //timingEnter(0);
+
+  {
+
+    if (at_top)
+    // top line
     {
-
-        // top line
-        {
-            int x;
+      int x;
     
-            // left edge
-            {
-                int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                f++;
+      // left edge
+	    {
+        int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+        r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+        f++;
 
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
 
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
 
-            // middle of line
-            x=(w-2);
-            while (x--)
-            {
-                int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
-                r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                f++;
+      // middle of line
+      x=(w-2);
+	    while (x--)
+	    {
+        int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+        r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
+        r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+        f++;
 
-                r/=2; g/=2; b/=2;
+        r/=2; g/=2; b/=2;
 
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
 
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
 
-            // right block
-            {
-                int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
-                r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                f++;
+      // right block
+	    {
+        int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
+        r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+        f++;
 
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
 
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
+	  }
+
+
+	  // middle block
+    {
+      int y=outh-at_top-at_bottom;
+      while (y--)
+      {
+        int x;
+      
+        // left edge
+	      {
+          int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+          r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+          r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
+          f++;
+
+          r/=2; g/=2; b/=2;
+
+          r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+          lfo++;
+
+          if (r < 0) r=0;
+          else if (r > 255) r=255;
+          if (g < 0) g=0;
+          else if (g > 255*256) g=255*256;
+          if (b < 0) b=0;
+          else if (b > 255*65536) b=255*65536;
+		      *of++=_RGB(r,g,b);          
         }
 
-
-        // middle block
-        {
-            int y=h-at_top-at_bottom;
-            while (y--)
-            {
-                int x;
-      
-                // left edge
-                {
-                    int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                    r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                    r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
-                    f++;
-
-                    r/=2; g/=2; b/=2;
-
-                    r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                    lfo++;
-
-                    if (r < 0) r=0;
-                    else if (r > 255) r=255;
-                    if (g < 0) g=0;
-                    else if (g > 255*256) g=255*256;
-                    if (b < 0) b=0;
-                    else if (b > 255*65536) b=255*65536;
-                    *of++=_RGB(r,g,b);          
-                }
-
-                // middle of line
-                x=(w-2);
+        // middle of line
+        x=(w-2);
 #ifdef NO_MMX
-                while (x--)
-                {
-                    int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                    r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
-                    r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                    r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
-                    f++;
+	      while (x--)
+	      {
+          int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+          r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
+          r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+          r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
+          f++;
 
-                    r/=2; g/=2; b/=2;
+          r/=2; g/=2; b/=2;
 
-                    r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                    lfo++;
+          r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+          lfo++;
 
-                    if (r < 0) r=0;
-                    else if (r > 255) r=255;
-                    if (g < 0) g=0;
-                    else if (g > 255*256) g=255*256;
-                    if (b < 0) b=0;
-                    else if (b > 255*65536) b=255*65536;
-                    *of++=_RGB(r,g,b);          
-                }
+          if (r < 0) r=0;
+          else if (r > 255) r=255;
+          if (g < 0) g=0;
+          else if (g > 255*256) g=255*256;
+          if (b < 0) b=0;
+          else if (b > 255*65536) b=255*65536;
+		      *of++=_RGB(r,g,b);          
+        }
 #else
         __asm
         {
@@ -416,98 +444,101 @@ mmx_water_loop1:
           mov lfo, edx
         };
 #endif
-                // right block
-                {
-                    int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
-                    r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
-                    r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
-                    f++;
+        // right block
+	      {
+          int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
+          r += _R(f[w]);  g += _G(f[w]);  b += _B(f[w]);
+          r += _R(f[-w]); g += _G(f[-w]); b += _B(f[-w]);
+          f++;
 
-                    r/=2; g/=2; b/=2;
+          r/=2; g/=2; b/=2;
 
-                    r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                    lfo++;
+          r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+          lfo++;
 
-                    if (r < 0) r=0;
-                    else if (r > 255) r=255;
-                    if (g < 0) g=0;
-                    else if (g > 255*256) g=255*256;
-                    if (b < 0) b=0;
-                    else if (b > 255*65536) b=255*65536;
-                    *of++=_RGB(r,g,b);          
-                }
-            }
+          if (r < 0) r=0;
+          else if (r > 255) r=255;
+          if (g < 0) g=0;
+          else if (g > 255*256) g=255*256;
+          if (b < 0) b=0;
+          else if (b > 255*65536) b=255*65536;
+		      *of++=_RGB(r,g,b);          
         }
-
-        // bottom line
-        {
-            int x;
-        
-            // left edge
-            {
-                int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
-                f++;
-    
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
-    
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
-    
-            // middle of line
-            x=(w-2);
-            while (x--)
-            {
-                int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
-                r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
-                r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
-                f++;
-    
-                r/=2; g/=2; b/=2;
-    
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
-    
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
-    
-            // right block
-            {
-                int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
-                r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
-                f++;
-    
-                r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
-                lfo++;
-    
-                if (r < 0) r=0;
-                else if (r > 255) r=255;
-                if (g < 0) g=0;
-                else if (g > 255*256) g=255*256;
-                if (b < 0) b=0;
-                else if (b > 255*65536) b=255*65536;
-                *of++=_RGB(r,g,b);          
-            }
-        }
+	    }
     }
+    // bottom line
+    if (at_bottom)
+    {
+      int x;
+    
+      // left edge
+	    {
+        int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+        r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
+        f++;
 
-  memcpy(priv->lastframe,framebuffer,w*sizeof(int));
-  
-#ifndef NO_MMX
-    __asm emms;
-#endif
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
 
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
+
+      // middle of line
+      x=(w-2);
+	    while (x--)
+	    {
+        int r=_R(f[1]); int g=_G(f[1]); int b=_B(f[1]);
+        r += _R(f[-1]); g += _G(f[-1]); b += _B(f[-1]);
+        r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
+        f++;
+
+        r/=2; g/=2; b/=2;
+
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
+
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
+
+      // right block
+	    {
+        int r=_R(f[-1]); int g=_G(f[-1]); int b=_B(f[-1]);
+        r += _R(f[-w]);  g += _G(f[-w]);  b += _B(f[-w]);
+        f++;
+
+        r-=_R(lfo[0]); g-=_G(lfo[0]); b-=_B(lfo[0]);
+        lfo++;
+
+        if (r < 0) r=0;
+        else if (r > 255) r=255;
+        if (g < 0) g=0;
+        else if (g > 255*256) g=255*256;
+        if (b < 0) b=0;
+        else if (b > 255*65536) b=255*65536;
+		    *of++=_RGB(r,g,b);          
+      }
+  }
 }
+
+//#pragma omp atomic
+  memcpy(priv->lastframe+skip_pix,framebuffer+skip_pix,w*outh*sizeof(int));
+  
+}
+//#ifndef NO_MMX
+//    __asm emms;
+//#endif
+return 0;
+}
+

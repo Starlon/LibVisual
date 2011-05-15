@@ -88,7 +88,7 @@ int act_avs_init (VisPluginData *plugin)
 	char filename[256];
 	VisParamEntry *param;
 	memset(filename, 0, sizeof(filename));
-	snprintf(filename, sizeof(filename), "%s/%s", getenv("HOME"), ".pipelines.xml");
+	snprintf(filename, sizeof(filename) - 1, "%s/%s", getenv("HOME"), ".pipelines.xml");
 
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 

@@ -1,3 +1,3 @@
 
-SUBDIRS = movement blur clear
+SUBDIRS = movement blur clear water
 

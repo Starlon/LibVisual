@@ -274,6 +274,21 @@ else
     AC_MSG_RESULT([no])
 fi
 
+# The AVS elements
+AC_ARG_ENABLE([avs_water],
+        AC_HELP_STRING([--disable-water],
+            [Do not build the AVS water plugin @<:@default=enabled@:>@]),
+        [avs_water=$enableval],
+        [avs_water=yes])
+AC_MSG_CHECKING([Whether to build AVS water plugin])
+if test x$avs_water = xyes; then
+    AC_MSG_RESULT([yes])
+    build_trans="$build_trans water"
+    AC_SUBST([AVS_WATER], ['transform_avs_water.la'])
+else
+    AC_MSG_RESULT([no])
+fi
+
 AC_ARG_ENABLE([avs_clear],
         AC_HELP_STRING([--disable-clear],
             [Do not build the AVS clear plugin @<:@default=enabled@:>@]),
@@ -412,6 +427,7 @@ AC_CONFIG_FILES([
 	plugins/transform/dmovement/Makefile
         plugins/transform/blur/Makefile
         plugins/transform/clear/Makefile
+        plugins/transform/water/Makefile
         plugins/actor/timescope/Makefile
         plugins/actor/stars/Makefile
 	visscript/Makefile
