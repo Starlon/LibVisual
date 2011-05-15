@@ -592,15 +592,13 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
-//#ifdef _OPENMP
-//#pragma omp parallel for private(i)
-//#endif
+#ifdef _OPENMP
+#pragma omp parallel for private(i)
+#endif
 
     for(i = video->width*video->height - 1; i>=0; i--) {
         BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, 3);
     }
-
-    //visual_mem_copy(fbout, framebuffer, video->width * video->height * sizeof(int));
 
     return VISUAL_OK;
 }
