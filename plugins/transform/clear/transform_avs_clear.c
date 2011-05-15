@@ -112,11 +112,13 @@ const VisPluginInfo *get_plugin_info (int *count)
 int lv_clear_init (VisPluginData *plugin)
 {
 	ClearPrivate *priv;
+	VisParamEntry *entry;
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 	int i;
 
 	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_STRING ("enabled", "clear=1"),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("test", 1),
 		VISUAL_PARAM_LIST_END
 	};
 
@@ -128,6 +130,12 @@ int lv_clear_init (VisPluginData *plugin)
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
 	visual_param_container_add_many (paramcontainer, params);
+
+	entry = visual_param_container_get(paramcontainer, "test");
+	visual_param_entry_min_set_integer(entry, -0xf7);
+	visual_param_entry_max_set_integer(entry, 0xf7);
+	visual_param_entry_set_annotation(entry, "Test and test again damnit yyyyyeaaaaahhhh");
+	visual_param_entry_default_set_integer(entry, 35);
 
 	priv->ctx = avs_runnable_context_new();
 	priv->vm = avs_runnable_variable_manager_new();
