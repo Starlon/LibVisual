@@ -58,11 +58,12 @@ int lv_water_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-void trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
-void trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat);
+int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
+int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
+const VisPluginInfo *get_plugin_info (int *count);
 const VisPluginInfo *get_plugin_info (int *count)
 {
     static const VisTransformPlugin transform[] = {{
@@ -149,6 +150,7 @@ int lv_water_events (VisPluginData *plugin, VisEventQueue *events)
 
                 if(visual_param_entry_is(param, "enabled")) {
                     priv->enabled = visual_param_entry_get_integer(param);
+		}
 
                 break;
 
@@ -159,7 +161,6 @@ int lv_water_events (VisPluginData *plugin, VisEventQueue *events)
 
     return 0;
 }
-
 int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio)
 {
     return 0;
@@ -170,7 +171,6 @@ int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio)
 #define _B(x) ((( x )) & 0xff0000)
 #define _RGB(r,g,b) (( r ) | (( g ) & 0xff00) | (( b ) & 0xff0000))
 
-
 int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     WaterPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
@@ -180,7 +180,8 @@ int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     uint32_t *framebuffer = priv->pipeline->framebuffer;
     uint32_t *fbout = priv->pipeline->fbout;
     uint32_t *fbin=framebuffer;
-    visual_mem_copy(framebuffer, fbout, w * h * video->pitch);
+
+    visual_mem_copy(framebuffer, fbout, h * video->pitch);
 
     trans_begin(priv, fbin, fbout, w, h, isBeat);
 
@@ -194,6 +195,7 @@ int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     for(i = num_threads - 1; i>=0; i--)
        trans_render(i, num_threads, priv, priv->pipeline->audiodata, isBeat, framebuffer, fbout, w, h);
 }
+    priv->pipeline->swap = TRUE;
     return 0;
 }
 
@@ -210,7 +212,6 @@ int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int 
 
   return 0;
 }
-
 
 int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
 {
@@ -533,12 +534,12 @@ mmx_water_loop1:
 }
 
 //#pragma omp atomic
-  memcpy(priv->lastframe+skip_pix,framebuffer+skip_pix,w*outh*sizeof(int));
+  visual_mem_copy(priv->lastframe+skip_pix,framebuffer+skip_pix,w*outh*sizeof(int));
   
+return 0;
 }
 //#ifndef NO_MMX
 //    __asm emms;
 //#endif
-return 0;
-}
-
+//return 0;
+//}
