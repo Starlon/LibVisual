@@ -72,6 +72,7 @@ int lv_blur_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
 
 void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
+
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
 const VisPluginInfo *get_plugin_info(int *count);

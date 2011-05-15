@@ -418,11 +418,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     if (l >= 128*size)
         l = 128*size - 1;
 
-
-#if _OPENMP
-//#pragma omp parallel for
-#endif
-
     for (a=0; a < l; a++) 
     {
         double r=(a*size)/(double)l;
@@ -446,7 +441,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 
         if (priv->drawmode < 0.00001) {
             if (y >= 0 && y < video->height && x >= 0 && x < video->width)
-#pragma omp critical(drawnice)
                 BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, pipeline->blendmode);
         } else {
             if (a > 0) {
@@ -456,7 +450,6 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
                         //this_color = 0xffffff;
                         visual_color_from_uint32(&color, this_color);
 
-#pragma omp critical(drawnice)
                         avs_gfx_line_ints(video, lx, ly, x, y, &color);
                 }
             }

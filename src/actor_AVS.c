@@ -95,7 +95,7 @@ int act_avs_init (VisPluginData *plugin)
 	static VisParamEntry params[] = {
 		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
 				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/simple.pip"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 3),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
 		
 		VISUAL_PARAM_LIST_END

@@ -117,7 +117,7 @@ static int lvavs_pipeline_container_dtor (VisObject *object)
     LVAVSPipelineContainer *container = LVAVS_PIPELINE_CONTAINER (object);
 
     if (container->members != NULL)
-        visual_object_unref (VISUAL_OBJECT (container->members));
+        ;//visual_object_unref (VISUAL_OBJECT (container->members));
 
     container->members = NULL;
 
@@ -547,7 +547,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	VisVideo *tmpvid;
         LVAVSPipeline *pipeline = element->pipeline;
 
-	if(s) {
+	if(!s) {
 		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->fbout = visual_video_get_pixels(video);
 	} else {
@@ -592,13 +592,15 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
-#ifdef _OPENMP
-#pragma omp parallel for private(i)
-#endif
+//#ifdef _OPENMP
+//#pragma omp parallel for private(i)
+//#endif
 
     for(i = video->width*video->height - 1; i>=0; i--) {
-        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
+        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, 3);
     }
+
+    //visual_mem_copy(fbout, framebuffer, video->width * video->height * sizeof(int));
 
     return VISUAL_OK;
 }

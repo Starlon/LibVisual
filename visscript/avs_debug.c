@@ -12,9 +12,10 @@ void message(const VisLogVerboseness level, const char *format, ...)
     char buffer[256];
     char tag[32];
     char *info = "VisScript INFO: ";
-    char *warning = "VisScript WARNING: ";
+    char *debug = "VisScript DEBUG: ";
     char *error = "VisScript ERROR: ";
 
+    return;
     va_start(ap, format);
     vsnprintf(buffer, sizeof(buffer), format, ap);
     va_end(ap);
@@ -25,12 +26,12 @@ void message(const VisLogVerboseness level, const char *format, ...)
     if(level == VISUAL_LOG_VERBOSENESS_LOW)
         snprintf(tag, 31, error);
     else if (level == VISUAL_LOG_VERBOSENESS_MEDIUM)
-        snprintf(tag, 31, warning);
+        snprintf(tag, 31, debug);
     else if (level == VISUAL_LOG_VERBOSENESS_HIGH)
         snprintf(tag, 31, info);
     else 
         return;
 
-    fprintf(level == VISUAL_LOG_VERBOSENESS_LOW ? stdout : stderr, "%s%s\n", tag, buffer);
+    //fprintf(level == VISUAL_LOG_VERBOSENESS_LOW ? stdout : stderr, "%s%s\n", tag, buffer);
 }
 
