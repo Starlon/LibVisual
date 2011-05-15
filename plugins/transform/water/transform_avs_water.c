@@ -533,7 +533,6 @@ mmx_water_loop1:
   }
 }
 
-//#pragma omp atomic
   visual_mem_copy(priv->lastframe+skip_pix,framebuffer+skip_pix,w*outh*sizeof(int));
   
 return 0;
