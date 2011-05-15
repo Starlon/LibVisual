@@ -1110,7 +1110,7 @@ char *visual_param_entry_get_annotation (VisParamEntry *param)
 	return param->annotation;
 }
 
-int visual_param_min_set_integer (VisParamEntry *param, int integer)
+int visual_param_entry_min_set_integer (VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1119,7 +1119,7 @@ int visual_param_min_set_integer (VisParamEntry *param, int integer)
 	return VISUAL_OK;
 }
 
-int visual_param_min_set_float (VisParamEntry *param, float floating)
+int visual_param_entry_min_set_float (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1129,7 +1129,7 @@ int visual_param_min_set_float (VisParamEntry *param, float floating)
 
 }
 
-int visual_param_min_set_double (VisParamEntry *param, double doubleflt)
+int visual_param_entry_min_set_double (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1139,7 +1139,7 @@ int visual_param_min_set_double (VisParamEntry *param, double doubleflt)
 
 }
 
-int visual_param_min_get_integer (VisParamEntry *param)
+int visual_param_entry_min_get_integer (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0);
 
@@ -1147,7 +1147,7 @@ int visual_param_min_get_integer (VisParamEntry *param)
 
 }
 
-float visual_param_min_get_float(VisParamEntry *param)
+float visual_param_entry_min_get_float(VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 
@@ -1155,7 +1155,7 @@ float visual_param_min_get_float(VisParamEntry *param)
 
 }
 
-double visual_param_min_get_double (VisParamEntry *param)
+double visual_param_entry_min_get_double (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 
@@ -1163,7 +1163,8 @@ double visual_param_min_get_double (VisParamEntry *param)
 
 }
 
-int visual_param_max_set_integer (VisParamEntry *param, int integer)
+
+int visual_param_entry_max_set_integer (VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1172,7 +1173,7 @@ int visual_param_max_set_integer (VisParamEntry *param, int integer)
 	return VISUAL_OK;
 
 }
-int visual_param_max_set_float (VisParamEntry *param, float floating)
+int visual_param_entry_max_set_float (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1181,7 +1182,7 @@ int visual_param_max_set_float (VisParamEntry *param, float floating)
 	return VISUAL_OK;
 
 }
-int visual_param_max_set_double (VisParamEntry *param, double doubleflt)
+int visual_param_entry_max_set_double (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
@@ -1190,7 +1191,7 @@ int visual_param_max_set_double (VisParamEntry *param, double doubleflt)
 	return VISUAL_OK;
 }
 
-int visual_param_max_get_integer (VisParamEntry *param)
+int visual_param_entry_max_get_integer (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0);
 
@@ -1198,19 +1199,58 @@ int visual_param_max_get_integer (VisParamEntry *param)
 
 }
 
-float visual_param_max_get_float(VisParamEntry *param)
+float visual_param_entry_max_get_float(VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 
 	return param->max.floating;
 
 }
-double visual_param_max_get_double (VisParamEntry *param)
+double visual_param_entry_max_get_double (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 
 	return param->max.doubleflt;
 
+}
+
+int visual_param_entry_default_set_integer(VisParamEntry *param, int integer)
+{
+	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+	param->defaultnum.integer = integer;
+	return VISUAL_OK;
+}
+
+int visual_param_entry_default_set_float (VisParamEntry *param, float floating)
+{
+	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+	param->defaultnum.floating = floating;
+	return VISUAL_OK;
+}
+
+int visual_param_entry_default_set_double (VisParamEntry *param, double doubleflt)
+{
+	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+	param->defaultnum.doubleflt = doubleflt;
+	return VISUAL_OK;
+}
+
+int visual_param_entry_default_get_integer (VisParamEntry *param)
+{
+	visual_log_return_val_if_fail(param != NULL, 0.0);
+	return param->defaultnum.integer;
+}
+
+float visual_param_entry_default_get_float(VisParamEntry *param)
+{
+	visual_log_return_val_if_fail(param != NULL, 0.0);
+	return param->defaultnum.floating;
+}
+
+double visual_param_entry_default_get_double (VisParamEntry *param)
+{
+	visual_log_return_val_if_fail(param != NULL, 0.0);
+	return param->defaultnum.doubleflt;
 }
 
 /**

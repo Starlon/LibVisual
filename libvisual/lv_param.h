@@ -142,6 +142,12 @@ struct _VisParamEntry {
 		float	floating;
 		double 	doubleflt;
 	} max; /**< ParemEntry's maximum threshold. */
+
+	struct {
+		int integer;
+		float floating;
+		double doubleflt;
+	} defaultnum; /**< ParamEntry's default value. */
 };
 
 /* prototypes */
@@ -189,21 +195,29 @@ VisObject *visual_param_entry_get_object (VisParamEntry *param);
 VisCollection *visual_param_entry_get_collection (VisParamEntry *param);
 char *visual_param_entry_get_annotation (VisParamEntry *param);
 
-int visual_param_min_set_integer (VisParamEntry *param, int integer);
-int visual_param_min_set_float (VisParamEntry *param, float floating);
-int visual_param_min_set_double (VisParamEntry *param, double doubleflt);
+int visual_param_entry_min_set_integer (VisParamEntry *param, int integer);
+int visual_param_entry_min_set_float (VisParamEntry *param, float floating);
+int visual_param_entry_min_set_double (VisParamEntry *param, double doubleflt);
 
-int visual_param_min_get_integer (VisParamEntry *param);
-float visual_param_min_get_float(VisParamEntry *param);
-double visual_param_min_get_double (VisParamEntry *param);
+int visual_param_entry_min_get_integer (VisParamEntry *param);
+float visual_param_entry_min_get_float(VisParamEntry *param);
+double visual_param_entry_min_get_double (VisParamEntry *param);
 
-int visual_param_max_set_integer (VisParamEntry *param, int integer);
-int visual_param_max_set_float (VisParamEntry *param, float floating);
-int visual_param_max_set_double (VisParamEntry *param, double doubleflt);
+int visual_param_entry_max_set_integer (VisParamEntry *param, int integer);
+int visual_param_entry_max_set_float (VisParamEntry *param, float floating);
+int visual_param_entry_max_set_double (VisParamEntry *param, double doubleflt);
 
-int visual_param_max_get_integer (VisParamEntry *param);
-float visual_param_max_get_float(VisParamEntry *param);
-double visual_param_max_get_double (VisParamEntry *param);
+int visual_param_entry_max_get_integer (VisParamEntry *param);
+float visual_param_entry_max_get_float(VisParamEntry *param);
+double visual_param_entry_max_get_double (VisParamEntry *param);
+
+int visual_param_entry_default_set_integer(VisParamEntry *param, int integer);
+int visual_param_entry_default_set_float (VisParamEntry *param, float floating);
+int visual_param_entry_default_set_double (VisParamEntry *param, double doubleflt);
+
+int visual_param_entry_default_get_integer (VisParamEntry *param);
+float visual_param_entry_default_get_float(VisParamEntry *param);
+double visual_param_entry_default_get_double (VisParamEntry *param);
 
 VISUAL_END_DECLS
 
