@@ -127,7 +127,7 @@ int lv_clear_init (VisPluginData *plugin)
 
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-	visual_param_container_add (paramcontainer, params);
+	visual_param_container_add_many (paramcontainer, params);
 
 	priv->ctx = avs_runnable_context_new();
 	priv->vm = avs_runnable_variable_manager_new();

@@ -226,7 +226,6 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
-    uint32_t *old_pixels = visual_video_get_pixels(pipeline->buffers[0]);
 
     int size = BEAT_ADV_SIZE/2;
 
