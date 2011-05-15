@@ -217,10 +217,9 @@ int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float vis
 {
   if (!priv->enabled) return 0;
 
-	unsigned int *f = (unsigned int *) framebuffer;
+  unsigned int *f = (unsigned int *) framebuffer;
   unsigned int *of = (unsigned int *) fbout;
   unsigned int *lfo = (unsigned int *) priv->lastframe;
-
 
   int start_l = ( this_thread * h ) / max_threads;
   int end_l;
