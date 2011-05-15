@@ -41,11 +41,12 @@ struct _VisColor {
 	uint8_t		r;	/**< The red channel of this VisColor. */
 	uint8_t		g;	/**< The green channel of this VisColor. */
 	uint8_t		b;	/**< The blue channel of this VisColor. */
-	uint8_t		unused;	/**< Unused. */
+	uint8_t		a;	/**< Alpha channel of this VisColor */
 };
 
 VisColor *visual_color_new (void);
 int visual_color_set (VisColor *color, uint8_t r, uint8_t g, uint8_t b);
+int visual_color_set_with_alpha(VisColor *color, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 int visual_color_compare (VisColor *src1, VisColor *src2);
 int visual_color_from_hsv (VisColor *color, float h, float s, float v);
 int visual_color_to_hsv (VisColor *color, float *h, float *s, float *v);

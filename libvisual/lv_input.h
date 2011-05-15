@@ -90,6 +90,7 @@ struct _VisInput {
 							  * @see visual_audio_analyse */
 	VisInputUploadCallbackFunc	 callback;	/**< Callback function when a callback
 							  * is used instead of a plugin. */
+        VisSongInfo songinfo;
 };
 
 /**
