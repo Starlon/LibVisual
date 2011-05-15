@@ -193,7 +193,6 @@ int lv_clear_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 	run_runnable(priv);
 
-return 0;
 #pragma omp parallel
 {
 	if(priv->clear) {
