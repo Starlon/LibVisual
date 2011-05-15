@@ -130,10 +130,20 @@ static int lvavs_pipeline_container_dtor (VisObject *object)
 LVAVSPipeline *lvavs_pipeline_new ()
 {
     LVAVSPipeline *pipeline;
+    int i;
+    VisColor *col = visual_color_black();
+    
 
     pipeline = visual_mem_new0 (LVAVSPipeline, 1);
 
     pipeline->dummy_vid = visual_video_new_with_buffer(0, 0, 1);
+
+    pipeline->last_vid = visual_video_new_with_buffer(0, 0, 1);
+    
+    for(i = 0; i < sizeof(pipeline->buffers) / sizeof(VisVideo); i++) {
+	pipeline->buffers[i] = visual_video_new_with_buffer(0, 0, 1);
+        //visual_video_fill_alpha(pipeline->buffers[i], 128);
+    }
 
     /* Do the VisObject initialization */
     visual_object_set_allocated (VISUAL_OBJECT (pipeline), TRUE);
@@ -216,6 +226,7 @@ int lvavs_pipeline_run (LVAVSPipeline *pipeline, VisVideo *video, VisAudio *audi
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
+    uint32_t *old_pixels = visual_video_get_pixels(pipeline->buffers[0]);
 
     int size = BEAT_ADV_SIZE/2;
 
@@ -526,8 +537,31 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
     
     if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
-	container->element.pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+
+	VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
+	VisVideo *last_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid;
+/*
+	visual_video_free_buffer(dummy_vid);
+	visual_video_free_buffer(last_vid);
+	visual_object_unref(VISUAL_OBJECT(dummy_vid));
+	visual_object_unref(VISUAL_OBJECT(last_vid));
+*/
+	LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+	LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+
+	for(i = 0; i < 16; i++) {
+		VisVideo *vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i];
+/*
+		visual_video_free_buffer(vid);
+		visual_object_unref(VISUAL_OBJECT(vid));
+*/
+		vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+		LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i] = vid;
+	}
     }
+
+
+    visual_video_blit_overlay(video, LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid, 0, 0, 0.5);
 
 /*
     dummy_vid = container->element.pipeline->dummy_vid;
@@ -600,6 +634,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, 3);
     }
 
+    visual_video_blit_overlay(LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid, video, 0, 0, 0.5);
     return VISUAL_OK;
 }
 

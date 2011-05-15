@@ -81,6 +81,7 @@ struct _LVAVSPipeline {
 	VisVideo			*buffers[16];
 
 	VisVideo *dummy_vid;
+        VisVideo *last_vid;
 
 	float audiodata[2][2][1024];
 

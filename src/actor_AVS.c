@@ -305,10 +305,14 @@ int act_avs_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 
 	/* Clear screen bit is on, clearscreen every frame (This is from winamp AVS main section) */
+/*
+ * A Pipeline element  handles clearing buffers.
+ *
 	VisParamEntry *param = visual_param_container_get(LVAVS_PRESET_ELEMENT (priv->lvtree->main)->pcont, "clearscreen");
 	if (param && visual_param_entry_get_integer (param) == 1) {
 	        //memset((uint8_t *) visual_video_get_pixels(video), 0, visual_video_get_size(video));
 	}
+*/
 
 	lvavs_pipeline_run (priv->pipeline, video, audio);
 
