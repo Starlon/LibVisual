@@ -454,7 +454,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
                 }
             }
         }
-        lx = x;
+       	lx = x;
         ly = y;
     }
 
