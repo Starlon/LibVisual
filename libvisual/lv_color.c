@@ -114,7 +114,7 @@ int visual_color_compare (VisColor *src1, VisColor *src2)
 	visual_log_return_val_if_fail (src1 != NULL, -VISUAL_ERROR_COLOR_NULL)
 	visual_log_return_val_if_fail (src2 != NULL, -VISUAL_ERROR_COLOR_NULL)
 
-	if (src1->r != src2->r || src1->g != src2->g || src1->b != src2->b || src1->a != src2->a)
+	if (src1->r != src2->r || src1->g != src2->g || src1->b != src2->b)
 		return FALSE;
 
 	return TRUE;
@@ -258,7 +258,7 @@ int visual_color_from_uint32 (VisColor *color, uint32_t rgb)
 	color->r = colors[0];
 	color->g = colors[1];
 	color->b = colors[2];
-        color->a = colors[3];
+        color->a = 0xff;//colors[3]; FIXME
 
 	return VISUAL_OK;
 }
@@ -283,7 +283,7 @@ uint32_t visual_color_to_uint32 (VisColor *color)
 
 	visual_log_return_val_if_fail (color != NULL, 0);
 
-	colors = (color->a << 24) |
+	colors = (255 << 24) | //FIXME alpha should go here
 		(color->r << 16) |
 		(color->g << 8) |
 		(color->b);
@@ -300,7 +300,7 @@ uint16_t visual_color_to_uint16 (VisColor *color)
 	colors.r = color->r >> 2;
 	colors.g = color->g >> 3;
 	colors.b = color->b >> 2;
-        colors.a = color->a >> 3;
+        colors.a = 0xff>>3;//color->a >> 3; FIXME
 
 	return *((uint16_t *) &colors);
 }
