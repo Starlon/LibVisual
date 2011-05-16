@@ -43,9 +43,9 @@ static int  min(int x, int y)
     return x < y ? x : y;
 }
 
-unsigned int  BLEND(unsigned int a, unsigned int b)
+uint32_t  BLEND(uint32_t a, uint32_t b)
 {
-	register unsigned int r,t;
+	register uint32_t r,t;
 	r=(a&0xff)+(b&0xff);
 	t=min(r,0xff);
 	r=(a&0xff00)+(b&0xff00);
@@ -94,9 +94,9 @@ static int FASTMIN(int x, int y)
 
 #endif
 
-unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
+uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
 {
-	register unsigned int t;
+	register uint32_t t;
   int _a=a&0xff;
   int _b=b&0xff;
 	t=FASTMAX(_a,_b);
@@ -107,10 +107,10 @@ unsigned int  BLEND_MAX(unsigned int a, unsigned int b)
 	return t;
 }
 
-unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
+uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
 {
 #if 1
-	register unsigned int t;
+	register uint32_t t;
   int _a=a&0xff;
   int _b=b&0xff;
 	t=FASTMIN(_a,_b);
@@ -171,13 +171,13 @@ unsigned int  BLEND_MIN(unsigned int a, unsigned int b)
 #endif
 
 
-unsigned int  BLEND_AVG(unsigned int a, unsigned int b)
+uint32_t  BLEND_AVG(uint32_t a, uint32_t b)
 {
 	return ((a>>1)&~((1<<7)|(1<<15)|(1<<23)))+((b>>1)&~((1<<7)|(1<<15)|(1<<23)));
 }
 
 
-unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
+uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
 {
 	register int r,t;
 	r=(a&0xff)-(b&0xff);
@@ -194,7 +194,7 @@ unsigned int  BLEND_SUB(unsigned int a, unsigned int b)
 #define BLEND_ADJ BLEND_ADJ_NOMMX
 #endif
 
-unsigned int  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], unsigned int a, unsigned int b, int v)
+uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32_t b, int v)
 {
 	register int t;
 	t=blendtable[a&0xFF][v]+blendtable[b&0xFF][0xFF-v];
@@ -203,7 +203,7 @@ unsigned int  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], unsigned int a
 	return t;
 }
 
-unsigned int  BLEND_MUL(unsigned char blendtable[256][256], unsigned int a, unsigned int b)
+uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b)
 {
 	register int t;
 	t=blendtable[a&0xFF][b&0xFF];
@@ -212,7 +212,7 @@ unsigned int  BLEND_MUL(unsigned char blendtable[256][256], unsigned int a, unsi
 	return t;
 }
 
-void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char blendtable[256][256], int mode)
+void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[256][256], int mode)
 {
   switch (mode)
   {
@@ -229,7 +229,7 @@ void BLEND_LINE(unsigned int *fb, unsigned int color, unsigned char blendtable[2
   }
 }
 
-__inline unsigned int BLEND4(unsigned char blendtable[256][256], unsigned int *p1, unsigned int w, int xp, int yp)
+__inline uint32_t BLEND4(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -313,7 +313,7 @@ __inline unsigned int BLEND4(unsigned char blendtable[256][256], unsigned int *p
 }
 
 
-__inline unsigned int BLEND4_16(unsigned char **blendtable, unsigned int *p1, unsigned int w, int xp, int yp)
+__inline uint32_t BLEND4_16(unsigned char **blendtable, uint32_t *p1, uint32_t w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -401,12 +401,7 @@ __inline unsigned int BLEND4_16(unsigned char **blendtable, unsigned int *p1, un
 #endif
 }
 
-
-/*
-#pragma warning( pop ) 
-
-
-static __inline void mmx_avgblend_block(int *output, int *input, int l)
+__inline void mmx_avgblend_block(uint32_t *output, uint32_t *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -457,7 +452,7 @@ mmx_avgblend_loop:
 }
 
 
-static __inline void mmx_addblend_block(int *output, int *input, int l)
+__inline void mmx_addblend_block(uint32_t *output, uint32_t *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -494,12 +489,12 @@ mmx_addblend_loop:
 #endif
 }
 
-static __inline void mmx_mulblend_block(int *output, int *input, int l)
+__inline void mmx_mulblend_block(unsigned char blendtable[256][256], uint32_t *output, uint32_t *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
   {
-    *output=BLEND_MUL(*input++,*output);
+    *output=BLEND_MUL(blendtable, *input++,*output);
     output++;
   }
 #else
@@ -539,12 +534,12 @@ mmx_mulblend_loop:
 #endif
 }
 
-static void __inline mmx_adjblend_block(int *o, int *in1, int *in2, int len, int v)
+void __inline mmx_adjblend_block(unsigned char blendtable[256][256], uint32_t *o, uint32_t *in1, uint32_t *in2, int len, int v)
 {
 #ifdef NO_MMX
   while (len--)
   {
-    *o++=BLEND_ADJ(*in1++,*in2++,inblendval);
+    *o++=BLEND_ADJ(blendtable, *in1++,*in2++,v);
   }
 #else
   __asm
@@ -611,6 +606,4 @@ _mmx_adjblend_loop:
   };
 #endif
 }
-*/
-
 #endif

@@ -103,6 +103,17 @@ struct _LVAVSPipeline {
 
 	int isBeat;
 
+        int mode;
+        int inblendval;
+	int outblendval;
+	int bufferin;
+	int bufferout;
+	int ininvert;
+	int outinvert;
+	int beat_render;
+	int beat_render_frames;
+        int use_inblendval;
+
 	LVAVSPipelineContainer		*container;
 };
 
@@ -145,9 +156,9 @@ struct _LVAVSPipelineContainer {
 
 
 /* Prototypes */
-LVAVSPipeline *lvavs_pipeline_new ();
+LVAVSPipeline *lvavs_pipeline_new (void);
 LVAVSPipelineElement *lvavs_pipeline_element_new (LVAVSPipelineElementType type);
-LVAVSPipelineContainer *lvavs_pipeline_container_new ();
+LVAVSPipelineContainer *lvavs_pipeline_container_new (void);
 
 LVAVSPipeline *lvavs_pipeline_new_from_preset (LVAVSPreset *preset);
 int lvavs_pipeline_realize (LVAVSPipeline *pipeline);

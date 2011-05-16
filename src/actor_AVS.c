@@ -93,10 +93,18 @@ int act_avs_init (VisPluginData *plugin)
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 
 	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY_STRING ("filename",
-				"/home/scott/Work/libvisual/branches/libvisual-avs/testpresets/simple.pip"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 3),
+		VISUAL_PARAM_LIST_ENTRY_STRING ("filename", NULL),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendmode", 1),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("mode", 1),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("inblendval", 128),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("outblendval", 128),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("bufferin", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("bufferout", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("ininvert", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("outinvert", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("beat_render", 0),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER("beat_render_frames", 1),
 		
 		VISUAL_PARAM_LIST_END
 	};
@@ -188,7 +196,36 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 
 			case VISUAL_EVENT_PARAM:
 				param = ev->event.param.param;
-
+				if(visual_param_entry_is (param, "enabled")) {
+					priv->pipeline->enabled = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "mode")) {
+					priv->pipeline->mode = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "inblendval")) {
+					priv->pipeline->inblendval = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "outblendval")) {
+					priv->pipeline->outblendval = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "bufferin")) {
+					priv->pipeline->bufferin = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "bufferout")) {
+					priv->pipeline->bufferout = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "ininvert")) {
+					priv->pipeline->ininvert = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "outinvert")) {
+					priv->pipeline->outinvert = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "beat_render")) {
+					priv->pipeline->beat_render = visual_param_entry_get_integer(param);
+				}
+				if(visual_param_entry_is(param, "beat_render_frames")) {
+					priv->pipeline->beat_render_frames = visual_param_entry_get_integer(param);
+				}
 				if(visual_param_entry_is (param, "blendmode")) {
 					
 					priv->pipeline->blendmode = visual_param_entry_get_integer(param);

@@ -520,59 +520,20 @@ int pipeline_container_propagate_event (LVAVSPipelineContainer *container, VisEv
     return VISUAL_OK;
 }
 
-int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, VisAudio *audio)
+static int blendin(int mode) {return ((mode>>8)&31);}
+static void set_blendin(int v, int *mode) { *mode&=~(31<<8); *mode|=(v&31)<<8; }
+static int blendout(int  mode) { return ((mode>>16)&31)^1; }
+static void set_blendout(int v, int *mode) { *mode&=~(31<<16); *mode|=((v^1)&31)<<16; }
+
+static int render_now(LVAVSPipelineContainer *container, VisVideo *video, VisAudio *audio)
 {
-    int i;
-    VisListEntry *le = NULL;
-    LVAVSPipelineElement *element;
-    VisBuffer pcmbuf1;
-    VisBuffer pcmbuf2;
-    VisBuffer spmbuf1;
-    VisBuffer spmbuf2;
-    VisBuffer tmp;
-    unsigned int *fbout;
-    unsigned int *framebuffer;
     LVAVSPipeline *pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline;
 
-    if(video->width != pipeline->dummy_vid->width || video->height != pipeline->dummy_vid->height || video->depth != pipeline->dummy_vid->depth) {
-
-/*
-	visual_video_free_buffer(dummy_vid);
-	visual_video_free_buffer(last_vid);
-	visual_object_unref(VISUAL_OBJECT(dummy_vid));
-	visual_object_unref(VISUAL_OBJECT(last_vid));
-*/
-	if(pipeline->dummy_vid) {
-		visual_object_unref(VISUAL_OBJECT(pipeline->dummy_vid));
-        }
-	if(pipeline->last_vid)
-		visual_object_unref(VISUAL_OBJECT(pipeline->last_vid));
-
-	pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
-        pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
-
-#if 0
-	for(i = 0; i < 16; i++) {
-		VisVideo *vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i];
-/*
-		visual_video_free_buffer(vid);
-		visual_object_unref(VISUAL_OBJECT(vid));
-*/
-		vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
-		LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i] = vid;
-	}
-#endif
-    }
-
-    visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
-
-
-    int s = 0;
+    int s = 0, i;
     int count = visual_list_count(container->members);
     for(i = 0; i < count; i++) {
-        element = visual_list_get(container->members, i);
+        LVAVSPipelineElement *element = visual_list_get(container->members, i);
 	VisVideo *tmpvid;
-        LVAVSPipeline *pipeline = element->pipeline;
 
 	if(s) {
 		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
@@ -609,15 +570,294 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         }
 
 	if(pipeline->swap&1) {
-		//s^=1;
+		s^=1;
 		pipeline->swap = 0;
 	}
 
     }
-        
+
+    return s;
+}
+int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, VisAudio *audio)
+{
+    int i, s;
+    VisListEntry *le = NULL;
+    LVAVSPipelineElement *element;
+    VisBuffer pcmbuf1;
+    VisBuffer pcmbuf2;
+    VisBuffer spmbuf1;
+    VisBuffer spmbuf2;
+    VisBuffer tmp;
+    unsigned int *fbout;
+    unsigned int *framebuffer;
+    LVAVSPipeline *pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline;
+    int w = video->width, h = video->height;
+
+    if(video->width != pipeline->dummy_vid->width || video->height != pipeline->dummy_vid->height || video->depth != pipeline->dummy_vid->depth) {
+
+/*
+	visual_video_free_buffer(dummy_vid);
+	visual_video_free_buffer(last_vid);
+	visual_object_unref(VISUAL_OBJECT(dummy_vid));
+	visual_object_unref(VISUAL_OBJECT(last_vid));
+*/
+	if(pipeline->dummy_vid) {
+		visual_object_unref(VISUAL_OBJECT(pipeline->dummy_vid));
+        }
+	if(pipeline->last_vid)
+		visual_object_unref(VISUAL_OBJECT(pipeline->last_vid));
+
+	pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+        pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+
+#if 0
+	for(i = 0; i < 16; i++) {
+		VisVideo *vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i];
+/*
+		visual_video_free_buffer(vid);
+		visual_object_unref(VISUAL_OBJECT(vid));
+*/
+		vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+		LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i] = vid;
+	}
+#endif
+    }
+
+    visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
+      
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+    int is_preinit = pipeline->isBeat&0x80000000;
 
+/*    if(pipeline->isBeat && beat_render)
+	fake_enabled = beat_render_frames;
+*/
+    s = render_now(container, video, audio);
+
+    if(!is_preinit)
+    {
+        int x = video->width * video->height;
+	unsigned int *tfb=framebuffer;
+	unsigned int *o = fbout;
+        int use_blendin=blendin(pipeline->blendmode);
+	if(use_blendin == 10 && pipeline->use_inblendval >= 255)
+		use_blendin=1;
+
+	switch (use_blendin)
+	{
+		case 1:
+		memcpy(o, tfb, w*h*sizeof(int));
+		break;
+		case 2:
+		mmx_avgblend_block(o,tfb,x);
+		break;
+		case 3:
+			while(x--)
+			{
+				*o=BLEND_MAX(*o, *tfb++);
+				o++;
+			}
+		break;
+		case 4:
+		//mmx_addblend_block(pipeline->blendtable, o, tfb, x);
+		break;
+		case 5:
+			while(x--)
+			{
+				*o=BLEND_SUB(*o,*tfb++);
+				o++;
+			}
+		break;
+		case 6:
+			while(x--)
+			{
+				*o=BLEND_SUB(*tfb++, *o);
+				o++;
+			}
+		break;
+		case 7:
+		{
+			int y=h/2;
+			while(x-- > 0)
+			{
+				memcpy(o,tfb,w*sizeof(int));
+				tfb+=w*2;
+				o+=w*2;
+			}
+		break;
+		}
+		case 8:
+		{
+			int r = 0;
+			int y = h;
+			while(y-- > 0)
+			{
+				uint32_t *out, *in;
+				int x=w/2;
+				out=o+r;
+				in=tfb+r;
+				r^=1;
+				while(x-- > 0)
+				{
+					*out=*in;
+					out+=2;
+					in+=2;
+				}
+				o+=w;
+				tfb+=w;
+			}
+		break;
+		}
+		case 9:
+			while(x--)
+			{
+				*o=*o^*tfb++;
+				o++;
+			}
+		break;
+		case 10:
+			mmx_adjblend_block(pipeline->blendtable,o,tfb,o,x,pipeline->use_inblendval);
+		break;
+		case 11:
+			mmx_mulblend_block(pipeline->blendtable, o,tfb,x);
+		break;
+		case 13:
+			while(x--)
+			{
+				*o=BLEND_MIN(*o,*tfb++);
+				o++;
+			}
+		break;
+		case 12:
+/*
+                                {
+                                        int *buf=(int*)getGlobalBuffer(w,h,bufferin,0);
+                                        if (!buf) break;
+                                        while (x--)
+                                        {
+                                                *o=BLEND_ADJ(*tfb++,*o, depthof(*buf, ininvert));
+                                                o++;
+                                                buf++;
+                                        }
+                                }
+*/
+		break;
+		default:
+		break;
+	}
+    }
+    int x;
+    int line_blend_mode_save=pipeline->blendmode;
+    if(!is_preinit) pipeline->blendmode = 0;
+
+    s = render_now(container, video, audio);
+    if(!is_preinit) pipeline->blendmode = line_blend_mode_save;
+
+    if(!is_preinit)
+    {
+	if(s) visual_mem_copy(framebuffer, fbout, w*h*sizeof(int));
+
+        uint32_t *tfb=s?pipeline->fbout:pipeline->framebuffer;
+	uint32_t *o=pipeline->framebuffer;
+	x=w*h;
+	int use_blendout=blendout(pipeline->blendmode);
+	int use_outblendval = 100;
+	if(use_blendout == 10 && use_outblendval >= 255)
+		use_blendout=1;
+	switch(use_blendout)
+	{
+		case 1:
+		visual_mem_copy(o,tfb,x*sizeof(int));
+		break;
+		case 2:
+		mmx_avgblend_block(o,tfb,x);
+		break;
+		case 3:
+			while(x--)
+			{
+				*o=BLEND_MAX(*o, *tfb++);
+				o++;
+			}
+		break;
+		case 4:
+			mmx_addblend_block(o, tfb, x);
+		break;
+		case 5:
+			while(x--)
+			{
+				*o = BLEND_SUB(*o, *tfb++);
+				o++;
+			}
+		break;
+		case 6:
+			while(x--)
+			{
+				*o=BLEND_SUB(*tfb++, *o);
+				o++;
+			}
+		break;
+		case 7:
+		{
+			int y=h/2;
+			while(y-- > 0)
+			{
+				visual_mem_copy(o, tfb, w*sizeof(int));
+				tfb+=w*2;
+				o+=w*2;
+			}
+		}
+		break;
+		case 8:
+		{
+			int r = 0;
+			int y = h;
+			while(y-- > 0)
+			{
+				uint32_t *out, *in;
+				uint32_t x=w/2;
+				out=o+r;
+				in=tfb+r;
+				r^=1;
+				while(x-- > 0)
+				{
+					*out=*in;
+					out+=2;
+					in+=2;
+				}
+				o+=w;
+				tfb+=2;
+			}
+		}
+		case 9:
+			while(x--)
+			{
+				*o=*o^*tfb++;
+				o++;
+			}
+		break;
+		case 10:
+			mmx_adjblend_block(pipeline->blendtable,o, tfb, o, x, use_outblendval);
+		break;
+		case 11:
+			mmx_mulblend_block(pipeline->blendtable, o, tfb, x);
+		break;
+		case 13:
+			while(x--)
+			{
+				*o=BLEND_MIN(*o, *tfb++);
+				o++;
+			}
+		break;
+		case 12:
+		{
+			//uint32_t *buf = buffer[bufferout]
+		}
+		break;
+		default:
+		break;
+	}
+    } 
+/*
 #ifdef _OPENMP
 #pragma omp parallel for private(i)
 #endif
@@ -626,7 +866,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
     }
     //visual_mem_copy(fbout, framebuffer, video->pitch*video->height);
-
+*/
     visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0.5);
     return VISUAL_OK;
 }
