@@ -532,22 +532,26 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     VisBuffer tmp;
     unsigned int *fbout;
     unsigned int *framebuffer;
+    LVAVSPipeline *pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline;
 
-    VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
-    
-    if(video->width != dummy_vid->width || video->height != dummy_vid->height || video->depth != dummy_vid->depth) {
+    if(video->width != pipeline->dummy_vid->width || video->height != pipeline->dummy_vid->height || video->depth != pipeline->dummy_vid->depth) {
 
-	VisVideo *dummy_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid;
-	VisVideo *last_vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid;
 /*
 	visual_video_free_buffer(dummy_vid);
 	visual_video_free_buffer(last_vid);
 	visual_object_unref(VISUAL_OBJECT(dummy_vid));
 	visual_object_unref(VISUAL_OBJECT(last_vid));
 */
-	LVAVS_PIPELINE_ELEMENT(container)->pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
-	LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
+	if(pipeline->dummy_vid) {
+		visual_object_unref(VISUAL_OBJECT(pipeline->dummy_vid));
+        }
+	if(pipeline->last_vid)
+		visual_object_unref(VISUAL_OBJECT(pipeline->last_vid));
 
+	pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+        pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+
+#if 0
 	for(i = 0; i < 16; i++) {
 		VisVideo *vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i];
 /*
@@ -557,20 +561,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 		vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
 		LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i] = vid;
 	}
+#endif
     }
 
-
-    visual_video_blit_overlay(video, LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid, 0, 0, 0.5);
-
-/*
-    dummy_vid = container->element.pipeline->dummy_vid;
-    VisColor color;
-    visual_color_from_uint32(&color, 0xffff0000);
-    avs_gfx_line_ints (dummy_vid, 0, 0, dummy_vid->width, dummy_vid->height, &color);
-    visual_color_from_uint32(&color, 0xffff00ff);
-    avs_gfx_line_ints (video, 0, video->height / 2, video->width, video->height, &color);
-*/
-
+    //visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
 
 
     int s = 0;
@@ -580,12 +574,12 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	VisVideo *tmpvid;
         LVAVSPipeline *pipeline = element->pipeline;
 
-	if(!s) {
-		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
-		pipeline->fbout = visual_video_get_pixels(video);
-	} else {
+	if(s) {
 		pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
 		pipeline->framebuffer = visual_video_get_pixels(video);
+	} else {
+		pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+		pipeline->fbout = visual_video_get_pixels(video);
 	}
 
         switch (element->type) {
@@ -615,13 +609,12 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
         }
 
 	if(pipeline->swap&1) {
-		s^=1;
+		//s^=1;
 		pipeline->swap = 0;
 	}
 
     }
         
-    LVAVSPipeline *pipeline = container->element.pipeline;
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
@@ -630,10 +623,11 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 #endif
 
     for(i = video->width*video->height - 1; i>=0; i--) {
-        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, 3);
+        //BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
     }
+    visual_mem_copy(fbout, framebuffer, video->pitch*video->height);
 
-    visual_video_blit_overlay(LVAVS_PIPELINE_ELEMENT(container)->pipeline->last_vid, video, 0, 0, 0.5);
+    //visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 1);
     return VISUAL_OK;
 }
 

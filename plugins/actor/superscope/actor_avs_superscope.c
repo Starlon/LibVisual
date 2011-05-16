@@ -163,6 +163,7 @@ int lv_superscope_init (VisPluginData *plugin)
         priv->pal.colors[i].r = 0xff;
         priv->pal.colors[i].g = 0xff;
         priv->pal.colors[i].b = 0xff;
+        priv->pal.colors[i].a = 0xff;
     }
 
     visual_param_entry_set_palette (visual_param_container_get (paramcontainer, "palette"), &priv->pal);
@@ -437,17 +438,17 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
         if (priv->skip >= 0.00001)
             continue;
 
-        int this_color = makeint(priv->blue) | (makeint(priv->green) << 8) | (makeint(priv->red) << 16);
+        uint32_t this_color = makeint(priv->blue) | (makeint(priv->green) << 8) | (makeint(priv->red) << 16) | (255 << 24);
 
         if (priv->drawmode < 0.00001) {
-            if (y >= 0 && y < video->height && x >= 0 && x < video->width)
+            if (y >= 0 && y < video->height && x >= 0 && x < video->width) {
                 BLEND_LINE(buf+x+y*video->width, this_color, pipeline->blendtable, pipeline->blendmode);
+            }
         } else {
             if (a > 0) {
                 if (y >= 0 && y < video->height && x >= 0 && x < video->width &&
                     ly >= 0 && ly < video->height && lx >= 0 && lx < video->width) {
                         VisColor color;
-                        //this_color = 0xffffff;
                         visual_color_from_uint32(&color, this_color);
 
                         avs_gfx_line_ints(video, lx, ly, x, y, &color);

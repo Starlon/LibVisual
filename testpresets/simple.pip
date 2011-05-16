@@ -2,7 +2,6 @@
 
 <pipeline_preset>
  <container_main>
-  <avs_clearscreen></avs_clearscreen>
   <avs_superscope>
     <init type="string">n=32;t=0;</init>
     <frame type="string">t = t - 5;</frame>
@@ -15,8 +14,6 @@
     </point>
   </avs_superscope>
   <avs_stars></avs_stars>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
-  <avs_blur></avs_blur>
+  <avs_water></avs_water>
  </container_main>
 </pipeline_preset>

@@ -187,15 +187,14 @@ int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
     if(isBeat & 0x80000000) return 0;
 
-    trans_render(0,1,priv, priv->pipeline->audiodata,isBeat,framebuffer,fbout,w,h);
-#pragma omp parallel
+//#pragma omp parallel
 {
     int i = 0, num_threads = omp_get_num_threads();
-    #pragma omp for
+//    #pragma omp for
     for(i = num_threads - 1; i>=0; i--)
        trans_render(i, num_threads, priv, priv->pipeline->audiodata, isBeat, framebuffer, fbout, w, h);
 }
-    priv->pipeline->swap = TRUE;
+    priv->pipeline->swap = !!priv->enabled;
     return 0;
 }
 

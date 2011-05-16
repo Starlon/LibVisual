@@ -117,7 +117,7 @@ int lv_clear_init (VisPluginData *plugin)
 	int i;
 
 	static VisParamEntry params[] = {
-		VISUAL_PARAM_LIST_ENTRY_STRING ("enabled", "clear=1"),
+		VISUAL_PARAM_LIST_ENTRY_STRING ("enabled", "clear=1;"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER("test", 1),
 		VISUAL_PARAM_LIST_END
 	};
@@ -131,12 +131,13 @@ int lv_clear_init (VisPluginData *plugin)
 
 	visual_param_container_add_many (paramcontainer, params);
 
+/*
 	entry = visual_param_container_get(paramcontainer, "test");
 	visual_param_entry_min_set_integer(entry, -0xf7);
 	visual_param_entry_max_set_integer(entry, 0xf7);
 	visual_param_entry_set_annotation(entry, "Test and test again damnit yyyyyeaaaaahhhh");
 	visual_param_entry_default_set_integer(entry, 35);
-
+*/
 	priv->ctx = avs_runnable_context_new();
 	priv->vm = avs_runnable_variable_manager_new();
 
@@ -201,16 +202,11 @@ int lv_clear_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
 	run_runnable(priv);
 
-#pragma omp parallel
-{
 	if(priv->clear) {
-		#pragma omp task
 		visual_mem_set(priv->pipeline->fbout, 0, sizeof(int) * video->width * video->height);
-		#pragma omp task
 		visual_mem_set(priv->pipeline->framebuffer, 0, sizeof(int) * video->width * video->height);
 		priv->clear = FALSE;
 	}
-}
 	return 0;
 }
 

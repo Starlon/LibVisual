@@ -33,23 +33,25 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
 #include "lvavs_pipeline.h"
-//#include "calc.h"
+#include "avs.h"
 
 #define REFFECT_MIN 3
 #define REFFECT_MAX 23
 
 #define PI 3.14
+
 #define MAKE_REFFECT(n,x) static void _ref##n(double *r, double *d, double max_d, int *xo, int *yo) { x }
 
 void test(double *r);
 
 typedef void t_reffect(double *r, double *d, double max_d, int *xo, int *yo);
-
+         
 MAKE_REFFECT(3, *r+=0.1-0.2*(*d/max_d); *d*=0.96;)
 MAKE_REFFECT(4, *d*=0.99*(1.0-sin(*r)/32.0); *r+=0.03*sin(*d/max_d * M_PI * 4);)
 MAKE_REFFECT(5, *d*=0.94+(cos(*r*32.0)*0.06);)
@@ -74,25 +76,26 @@ static t_reffect *radial_effects[REFFECT_MAX-REFFECT_MIN+1]=
 
 typedef struct {
     LVAVSPipeline *pipeline;
-    //symbol_dict_t *environment;
-    //expression_t *runnable;
+    AvsRunnableContext *ctx;
+    AvsRunnableVariableManager *vm;
+    AvsRunnable *runnable;
+    AvsNumber d, r, x, y, sw, sh, ph, pw, px, py;
 
     uint8_t *swapbuf, *renderbuf;
 
     uint32_t    *tab;
     uint32_t    width, height;
-    uint32_t    subpixel;
 
+    int *trans_tab, trans_tab_w, trans_tab_h, trans_tab_subpixel;
     int tab_w, tab_h, tab_subpixel;
     int trans_effect;
+    char *effect_exp;
     int effect_exp_ch;
-    int effect;
-    int rectangular;
-    int blend;
+    int effect, blend;
     int sourcemapped;
+    int rectangular;
+    int subpixel;
     int wrap;
-
-    char *code;
 
     int lastWidth;
     int lastHeight;
@@ -147,20 +150,6 @@ static inline int effect_uses_eval(int t)
   return retval;
 }
 
-
-static int scope_load_runnable(MovementPrivate *priv, char *buf)
-{
-    //priv->runnable = expr_compile_string(buf, priv->environment);
-    return 0;
-}
-
-static int scope_run(MovementPrivate *priv)
-{
-    //expr_execute(priv->runnable, priv->environment);
-
-    return 0;
-}
-
 static int max(int x, int y)
 {
     return x > y ? x : y;
@@ -177,12 +166,25 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_movement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout);
+//static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout);
 static void trans_generate_blend_table(MovementPrivate *priv);
-static void trans_begin(MovementPrivate *priv, int width, int height, char *effect, int isBeat);
-static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout);
+//static void trans_begin(MovementPrivate *priv, int width, int height, char *effect, int isBeat);
+//static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
+
+static int load_runnable(MovementPrivate *priv, char *buf) {
+        AvsRunnable *obj = avs_runnable_new(priv->ctx);
+        avs_runnable_set_variable_manager(obj, priv->vm);
+        priv->runnable = obj;
+        avs_runnable_compile(obj, (unsigned char *)buf, strlen(buf));
+        return 0;
+}
+
+static int run_runnable(MovementPrivate *priv) {
+        avs_runnable_execute(priv->runnable);
+        return 0;
+}
 
 const VisPluginInfo *get_plugin_info (int *count);
 
@@ -238,16 +240,15 @@ int lv_movement_init (VisPluginData *plugin)
 	
     priv = visual_mem_new0 (MovementPrivate, 1);
 
-/*
-    priv->environment = dict_new();
+    priv->ctx = avs_runnable_context_new();
+    priv->vm = avs_runnable_variable_manager_new();
+    avs_runnable_variable_bind(priv->vm, "d", &priv->d);
+    avs_runnable_variable_bind(priv->vm, "r", &priv->r);
+    avs_runnable_variable_bind(priv->vm, "x", &priv->x);
+    avs_runnable_variable_bind(priv->vm, "y", &priv->y);
+    avs_runnable_variable_bind(priv->vm, "sw", &priv->sw);
+    avs_runnable_variable_bind(priv->vm, "sh", &priv->sh);
 
-    dict_variable_new(priv->environment, "d", 0);
-    dict_variable_new(priv->environment, "r", 0);
-    dict_variable_new(priv->environment, "x", 0);
-    dict_variable_new(priv->environment, "y", 0);
-    dict_variable_new(priv->environment, "sw", 0);
-    dict_variable_new(priv->environment, "sh", 0);
-*/
     priv->pipeline = (LVAVSPipeline *)visual_object_get_private(VISUAL_OBJECT(plugin));
     visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
@@ -265,10 +266,10 @@ int lv_movement_cleanup (VisPluginData *plugin)
     if (priv->swapbuf != NULL)
         visual_mem_free (priv->swapbuf);
 
-    if(priv->code != NULL)
-        visual_mem_free (priv->code);
+    visual_object_unref(VISUAL_OBJECT(priv->pipeline));
 
-    //visual_object_unref(VISUAL_OBJECT(priv->proxy));
+    if(priv->effect_exp)
+        visual_mem_free(priv->effect_exp);
 
     visual_mem_free (priv);
 
@@ -278,7 +279,7 @@ int lv_movement_cleanup (VisPluginData *plugin)
 int lv_movement_events (VisPluginData *plugin, VisEventQueue *events)
 {
     MovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-    VisParamEntry *param;
+    VisParamEntry *param, *tmp;
     VisEvent ev;
 
     while (visual_event_queue_poll (events, &ev)) {
@@ -291,9 +292,9 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events)
 
                     if (priv->effect != 32767) {
                         if (priv->effect >= 0 && priv->effect < 23) {
-                            visual_param_entry_set_string (
-                                    visual_param_container_get (param->parent, "code"),
-                                    __movement_descriptions[priv->effect].eval_desc);
+                            tmp = visual_param_container_get(param->parent, "code");
+                            visual_param_entry_set_string (tmp, __movement_descriptions[priv->effect].eval_desc);
+                            char *wht = strdup(__movement_descriptions[priv->effect].eval_desc);
                         }
                     }
 
@@ -307,8 +308,10 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events)
                     priv->subpixel = visual_param_entry_get_integer (param);
                 else if (visual_param_entry_is (param, "wrap"))
                     priv->wrap = visual_param_entry_get_integer (param);
-                else if (visual_param_entry_is (param, "code")) 
-                    priv->code = visual_param_entry_get_string (param);
+                else if (visual_param_entry_is (param, "code"))  {
+                    priv->effect_exp = strdup(visual_param_entry_get_string(param));
+                    load_runnable(priv, priv->effect_exp);
+		}
                 break;
 
             default:
@@ -324,51 +327,12 @@ int lv_movement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio
     return 0;
 }
 
-int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
-{
-    MovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-    uint8_t *pixels = visual_video_get_pixels (video);
-    uint8_t *vidbuf, *vidoutbuf;
-    int isBeat = priv->pipeline->isBeat;
-    int i;
 
-    printf("lv_movement_video %p\n", video);
+int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
+int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
+int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
 
-    if (priv->lastWidth != video->width || priv->lastHeight != video->height || priv->lastPitch != video->pitch) {
-
-
-        trans_begin(priv, video->width, video->height, priv->code, isBeat);
-
-        if (priv->swapbuf != NULL)
-            visual_mem_free (priv->swapbuf);
-
-        /* FIXME: would allocate way too much on subregion buffers, think about this. */
-        priv->swapbuf = visual_mem_malloc0 (visual_video_get_size (video));
-        priv->renderbuf = visual_mem_malloc0(video->width * video->height * video->bpp);
-    }
-
-    vidbuf = priv->swapbuf;
-    for (i = 0; i < video->height; i++) {
-        visual_mem_copy (vidbuf, pixels + (video->pitch * i), video->width * video->bpp);
-        vidbuf += video->width * video->bpp;
-    }
-
-
-    trans_generate_table(priv, priv->code, 0, 0, isBeat, (uint32_t *) priv->swapbuf, (uint32_t *) priv->renderbuf);
-
-    visual_mem_set(priv->renderbuf, 0, video->width * video->height * video->bpp);
-    trans_render(priv, (uint32_t *) priv->swapbuf,  (uint32_t *) priv->renderbuf);
-
-    visual_mem_copy(pixels, priv->renderbuf, video->width * video->height * video->bpp);
-
-    priv->lastWidth = video->width;
-    priv->lastHeight = video->height;
-    priv->lastPitch = video->pitch;
-
-    return VISUAL_OK;
-}
-
-static void trans_generate_blend_table(MovementPrivate *priv)
+void trans_generate_blend_table(MovementPrivate *priv)
 {
     int i,j;
 
@@ -378,50 +342,57 @@ static void trans_generate_blend_table(MovementPrivate *priv)
 
 }
 
-static void trans_begin(MovementPrivate *priv, int width, int height, char *effect, int isBeat)
+int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
+    MovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+    uint32_t *framebuffer = priv->pipeline->framebuffer;// = visual_video_get_pixels (video);
+    uint32_t *fbout = priv->pipeline->fbout;
+    uint8_t *vidbuf, *vidoutbuf;
+    int isBeat = priv->pipeline->isBeat;
+    int i;
+    int w = video->width, h = video->height;
+    void *visdata = priv->pipeline->audiodata;
+    trans_generate_blend_table(priv);
+    int this_thread = 0, max_threads = 1;
 
-    if (priv->tab != NULL)
-        visual_mem_free(priv->tab);
-    
-    priv->width = width;
-    priv->height = height;
-    priv->tab = malloc(width * height * sizeof(int));
-
-    priv->subpixel = (priv->subpixel && width*height < (1<<22) &&
-        ((priv->effect >= REFFECT_MIN && priv->effect <= REFFECT_MAX
-        && priv->effect != 1 && priv->effect != 2 && priv->effect != 7
-        )||priv->trans_effect == 32767));
-    
     trans_generate_blend_table(priv);
 
-    if (1 /* !isBeat & 0x80000000 */) {
-        /* ... */
+//#pragma omp parallel
+{
+    max_threads = omp_get_num_threads();
+}
+    smp_begin(priv, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
+    if(isBeat & 0x80000000) return 0;
+
+//#pragma omp parallel for
+    for(this_thread = omp_get_num_threads() - 1; this_thread >= 0; this_thread--) {
+        smp_render(priv, this_thread, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
     }
-    priv->pipeline->swap = 1;
+    priv->pipeline->swap = smp_finish(priv, visdata,isBeat,framebuffer,fbout,w,h);
+    return VISUAL_OK;
 }
 
-static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout)
+int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
 {
-  if (!priv->effect) return;
+  if (!priv->effect) return 0;
 
-  int w = priv->width, h = priv->height;
-
-  if (!priv->tab || priv->tab_w != w || priv->tab_h != h || priv->effect != priv->trans_effect || 
+  if (!priv->trans_tab || priv->trans_tab_w != w || priv->trans_tab_h != h || priv->effect != priv->trans_effect || 
        priv->effect_exp_ch)
   {
     int p;
-    uint32_t *transp,x;
-    priv->tab_w=w; 
-    priv->tab_h=h;
+    int *transp,x;
+    //if (priv->trans_tab) visual_mem_free(priv->trans_tab); //GlobalFree(trans_tab);
+    priv->trans_tab_w=w; 
+    priv->trans_tab_h=h;
+    priv->trans_tab=visual_mem_malloc0(priv->trans_tab_w*priv->trans_tab_h*sizeof(int));
     priv->trans_effect=priv->effect;
-    priv->subpixel=(priv->subpixel && priv->tab_w*priv->tab_h < (1<<22) &&
+    priv->trans_tab_subpixel=(priv->subpixel && priv->trans_tab_w*priv->trans_tab_h < (1<<22) &&
                   ((priv->trans_effect >= REFFECT_MIN && priv->trans_effect <= REFFECT_MAX
                   && priv->trans_effect != 1 && priv->trans_effect != 2 && priv->trans_effect != 7
                   )||priv->trans_effect ==32767));
 
-    /* generate priv->tab */
-    transp=priv->tab;
+    /* generate trans_tab */
+    transp=priv->trans_tab;
     x=w*h;
     p=0;
 
@@ -492,11 +463,11 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
           tmp2= ((w/2) + cos(r)*d + 0.5) + (xo*w)*(1.0/256.0);
           oh=(int)tmp1;
           ow=(int)tmp2;
-          if (priv->subpixel)
+          if (priv->trans_tab_subpixel)
           {
             int xpartial=(int)(32.0*(tmp2-ow));
             int ypartial=(int)(32.0*(tmp1-oh));
-            if (wrap)
+            if (priv->wrap)
             {
               ow%=(w-1);
               oh%=(h-1);
@@ -514,7 +485,7 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
           }
           else 
           {
-            if (wrap)
+            if (priv->wrap)
             {
               ow%=(w);
               oh%=(h);
@@ -535,25 +506,28 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
     }
     else if (priv->trans_effect == 32767 || effect_uses_eval(priv->trans_effect))
     {
+      AvsNumber *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
       double max_d=sqrt((double)(w*w+h*h))/2.0;
       double divmax_d=1.0/max_d;
       int y;
-      double *var_d, *var_r, *var_px, *var_py, *var_pw, *var_ph;
-        
-/*
-      var_d = dict_variable(priv->environment, "d");
-      var_r = dict_variable(priv->environment, "r");
-      var_px = dict_variable(priv->environment, "x");
-      var_py = dict_variable(priv->environment, "y");
-      var_pw = dict_variable(priv->environment, "sw");
-      var_ph = dict_variable(priv->environment, "sh");
-      *var_pw = priv->width;
-      *var_ph = priv->height;
-  */      
-      scope_load_runnable(priv, effect);
-
       int offs=0;
-      int is_rect = priv->trans_effect == 32767 ? rectangular : __movement_descriptions[priv->trans_effect].uses_rect;
+      int is_rect = priv->trans_effect == 32767 ? priv->rectangular : __movement_descriptions[priv->trans_effect].uses_rect;
+      priv->pw=w;
+      priv->ph=h;
+
+      var_d = &priv->d;
+      var_r = &priv->r;
+      var_px = &priv->px;
+      var_py = &priv->py;
+      var_ph = &priv->ph;
+      var_pw = &priv->pw;
+
+      priv->pw = priv->width;
+      priv->ph = priv->height;
+
+      char *t = priv->trans_effect == 32767 ? priv->effect_exp : __movement_descriptions[priv->trans_effect].eval_desc;
+      load_runnable(priv, t);
+
       if (1)         
       {
         double w2=w/2;
@@ -572,23 +546,23 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
             *var_py=yd*ysc;
             *var_d=sqrt(xd*xd+yd*yd)*divmax_d;
             *var_r=atan2(yd,xd) + M_PI*0.5;
-    
-            scope_run(priv);
+
+            run_runnable(priv);    
         
             double tmp1,tmp2;
             if (!is_rect)
             {
-              *var_d *= max_d;
-              *var_r -= M_PI/2.0;
-              tmp1=((h/2) + sin(*var_r)* *var_d);
-              tmp2=((w/2) + cos(*var_r)* *var_d);
+              priv->d *= max_d;
+              priv->r -= M_PI/2.0;
+              tmp1=((h/2) + sin(priv->r)* priv->d);
+              tmp2=((w/2) + cos(priv->r)* priv->d);
             }
             else
             {
               tmp1=((*var_py+1.0)*h2);
               tmp2=((*var_px+1.0)*w2);
             }
-            if (priv->subpixel)
+            if (priv->trans_tab_subpixel)
             {
               oh=(int) tmp1;
               ow=(int) tmp2;
@@ -608,7 +582,7 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
                 if (oh < 0) { ypartial=0; oh=0; }
                 if (oh >= h-1) {ypartial=31; oh=h-2; }
               }
-              *transp++ = (ow+oh*w) | (ypartial<<22) | (xpartial<<27); // FIXME
+              *transp++ = (ow+oh*w) | (ypartial<<22) | (xpartial<<27);
             }
             else
             {
@@ -637,8 +611,8 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
       }
       else 
       {
-        transp=priv->tab;
-        priv->subpixel=0;
+        transp=priv->trans_tab;
+        priv->trans_tab_subpixel=0;
         for (x = 0; x < w*h; x ++)
           *transp++=x;
       }
@@ -651,26 +625,22 @@ static void trans_generate_table(MovementPrivate *priv, char *effect, int rectan
     if ((priv->sourcemapped&2)&&isBeat) priv->sourcemapped^=1;
     if (priv->sourcemapped&1)
     {
-      if (!priv->blend) memset(fbout,0,w*h*sizeof(int));
-      else memcpy(fbout,framebuffer,w*h*sizeof(int));
+      if (!priv->blend) visual_mem_set(fbout,0,w*h*sizeof(int));
+      else visual_mem_copy(fbout,framebuffer,w*h*sizeof(int));
     }
   }
+  return max_threads;
 }
 
+int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+{
+  if (!priv->effect) return 0;
+  
 #define OFFSET_MASK ((1<<22)-1)
 
-static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout)
-{
-  uint32_t *inp = framebuffer;
-  uint32_t *outp = fbout;
-  uint32_t *transp = priv->tab, x;
-
-  int max_threads = 1;
-  int this_thread = 0;
-
-  int w = priv->width, h = priv->height;
-
-  if(!priv->effect) return;
+  unsigned int *inp = (unsigned int *) framebuffer;
+  unsigned int *outp;
+  int *transp, x;
 
   if (max_threads < 1) max_threads=1;
 
@@ -681,20 +651,21 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
   else end_l = ( (this_thread+1) * h ) / max_threads;  
 
   int outh=end_l-start_l;
-  if (outh<1) return;
-
+  if (outh<1) return 0;
 
   int skip_pix=start_l*w;
-  transp=priv->tab;
+  transp=priv->trans_tab;
 
-  outp = fbout;
-  x=(w*outh)/4;
+  outp = (unsigned int *) fbout;
+  x=(w*outh)/4.0;
+
   if (priv->sourcemapped&1)
   {
     inp += skip_pix;
     transp += skip_pix;
-    if (priv->subpixel)
+    if (priv->trans_tab_subpixel)
     {
+      //timingEnter(3);
       while (x--) 
       {
         fbout[transp[0]&OFFSET_MASK]=BLEND_MAX(inp[0],fbout[transp[0]&OFFSET_MASK]);
@@ -704,6 +675,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
         inp+=4;
         transp+=4;
       }
+      //timingLeave(3);
       x = (w*outh)&3;
       if (x>0) while (x--)
       {
@@ -714,6 +686,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
     else
     {
       {
+        //timingEnter(3);
         while (x--) 
         {
           fbout[transp[0]]=BLEND_MAX(inp[0],fbout[transp[0]]);
@@ -723,6 +696,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
           inp+=4;
           transp+=4;
         }
+        //timingLeave(3);
         x = (w*outh)&3;
         if (x>0) while (x--)
         {
@@ -759,8 +733,9 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
     inp += skip_pix;
     outp += skip_pix;
     transp += skip_pix;
-    if (priv->subpixel && priv->blend)
+    if (priv->trans_tab_subpixel&&priv->blend)
     {
+printf("level 1\n");
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
@@ -779,23 +754,24 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp++[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+        outp++[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
         transp++;
         inp++;
       }    
     }
-    else if (priv->subpixel)
+    else if (priv->trans_tab_subpixel)
     {
+printf("level 2\n");
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        outp[0]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
         offs=transp[1]&OFFSET_MASK;
-        outp[1]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3)));
+        outp[1]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3)));
         offs=transp[2]&OFFSET_MASK;
-        outp[2]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3)));
+        outp[2]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3)));
         offs=transp[3]&OFFSET_MASK;
-        outp[3]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3)));
+        outp[3]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3)));
         transp+=4;
         outp+=4;
       }    
@@ -803,14 +779,20 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp++[0]=BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        outp++[0]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
         transp++;
       }    
+    #ifndef NO_MMX
+      __asm emms;
+    #endif
     }
     else if (priv->blend)
     {
+      //timingEnter(3);
       while (x--) 
       {
+	int diff = outp - fbout;
+
         outp[0]=BLEND_AVG(inp[0],framebuffer[transp[0]]);
         outp[1]=BLEND_AVG(inp[1],framebuffer[transp[1]]);
         outp[2]=BLEND_AVG(inp[2],framebuffer[transp[2]]);
@@ -819,6 +801,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
         inp+=4;
         transp+=4;
       }
+      //timingLeave(3);
       x = (w*outh)&3;
       if (x>0) while (x--)
       {
@@ -827,6 +810,8 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
     }
     else
     {
+printf("level 4\n");
+      //timingEnter(4);
       while (x--) 
       {
         outp[0]=framebuffer[transp[0]];
@@ -836,6 +821,7 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
         outp+=4;
         transp+=4;
       }
+      //timingLeave(4);
       x = (w*outh)&3;
       if (x>0) while (x--)
       {
@@ -843,5 +829,13 @@ static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t 
       }
     }
   }
+  return 0;
 }
+
+int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h) // return value is that of render() for fbstuff etc
+{
+  return !!priv->effect;
+}
+
+
 
