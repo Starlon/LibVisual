@@ -735,7 +735,6 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
     transp += skip_pix;
     if (priv->trans_tab_subpixel&&priv->blend)
     {
-printf("level 1\n");
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
@@ -761,7 +760,6 @@ printf("level 1\n");
     }
     else if (priv->trans_tab_subpixel)
     {
-printf("level 2\n");
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
@@ -810,7 +808,6 @@ printf("level 2\n");
     }
     else
     {
-printf("level 4\n");
       //timingEnter(4);
       while (x--) 
       {
