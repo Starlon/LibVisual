@@ -564,7 +564,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 #endif
     }
 
-    //visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
+    visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
 
 
     int s = 0;
@@ -623,11 +623,11 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 #endif
 
     for(i = video->width*video->height - 1; i>=0; i--) {
-        //BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
+        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
     }
-    visual_mem_copy(fbout, framebuffer, video->pitch*video->height);
+    //visual_mem_copy(fbout, framebuffer, video->pitch*video->height);
 
-    //visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 1);
+    visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0.5);
     return VISUAL_OK;
 }
 
