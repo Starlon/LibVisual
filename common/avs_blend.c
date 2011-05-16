@@ -43,7 +43,7 @@ static int  min(int x, int y)
     return x < y ? x : y;
 }
 
-uint32_t  BLEND(uint32_t a, uint32_t b)
+__inline uint32_t  BLEND(uint32_t a, uint32_t b)
 {
 	register uint32_t r,t;
 	r=(a&0xff)+(b&0xff);
@@ -94,7 +94,7 @@ static int FASTMIN(int x, int y)
 
 #endif
 
-uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
+__inline uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
 {
 	register uint32_t t;
   int _a=a&0xff;
@@ -107,7 +107,7 @@ uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
 	return t;
 }
 
-uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
+__inline uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
 {
 #if 1
 	register uint32_t t;
@@ -171,13 +171,13 @@ uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
 #endif
 
 
-uint32_t  BLEND_AVG(uint32_t a, uint32_t b)
+__inline uint32_t  BLEND_AVG(uint32_t a, uint32_t b)
 {
 	return ((a>>1)&~((1<<7)|(1<<15)|(1<<23)))+((b>>1)&~((1<<7)|(1<<15)|(1<<23)));
 }
 
 
-uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
+__inline uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
 {
 	register int r,t;
 	r=(a&0xff)-(b&0xff);
@@ -194,7 +194,7 @@ uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
 #define BLEND_ADJ BLEND_ADJ_NOMMX
 #endif
 
-uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32_t b, int v)
+__inline uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32_t b, int v)
 {
 	register int t;
 	t=blendtable[a&0xFF][v]+blendtable[b&0xFF][0xFF-v];
@@ -203,7 +203,7 @@ uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32
 	return t;
 }
 
-uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b)
+__inline uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b)
 {
 	register int t;
 	t=blendtable[a&0xFF][b&0xFF];
@@ -212,7 +212,7 @@ uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b)
 	return t;
 }
 
-void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[256][256], int mode)
+__inline void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[256][256], int mode)
 {
   switch (mode)
   {

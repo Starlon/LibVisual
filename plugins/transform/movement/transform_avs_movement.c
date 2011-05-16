@@ -357,14 +357,14 @@ int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 
     trans_generate_blend_table(priv);
 
-//#pragma omp parallel
+#pragma omp parallel
 {
     max_threads = omp_get_num_threads();
 }
     smp_begin(priv, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
     if(isBeat & 0x80000000) return 0;
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for(this_thread = omp_get_num_threads() - 1; this_thread >= 0; this_thread--) {
         smp_render(priv, this_thread, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
     }
