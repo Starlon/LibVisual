@@ -595,12 +595,6 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
     if(video->width != pipeline->dummy_vid->width || video->height != pipeline->dummy_vid->height || video->depth != pipeline->dummy_vid->depth) {
 
-/*
-	visual_video_free_buffer(dummy_vid);
-	visual_video_free_buffer(last_vid);
-	visual_object_unref(VISUAL_OBJECT(dummy_vid));
-	visual_object_unref(VISUAL_OBJECT(last_vid));
-*/
 	if(pipeline->dummy_vid) {
 		visual_object_unref(VISUAL_OBJECT(pipeline->dummy_vid));
         }
@@ -610,25 +604,22 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
         pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
 
-#if 0
 	for(i = 0; i < 16; i++) {
-		VisVideo *vid = LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i];
-/*
-		visual_video_free_buffer(vid);
-		visual_object_unref(VISUAL_OBJECT(vid));
-*/
+		VisVideo *vid = pipeline->buffers[i];
+		if(vid)
+			visual_object_unref(VISUAL_OBJECT(vid));
 		vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_NONE);
-		LVAVS_PIPELINE_ELEMENT(container)->pipeline->buffers[i] = vid;
+		pipeline->buffers[i] = vid;
 	}
-#endif
     }
 
     visual_video_blit_overlay(video, pipeline->last_vid, 0, 0, 0.5);
       
     fbout = visual_video_get_pixels(video);
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
-    int is_preinit = pipeline->isBeat&0x80000000;
 
+    int is_preinit = pipeline->isBeat;//(pipeline->isBeat&0x80000000);
+    if(is_preinit != 0) printf("preinit %d\n", is_preinit);
 /*    if(pipeline->isBeat && beat_render)
 	fake_enabled = beat_render_frames;
 */
@@ -646,10 +637,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	switch (use_blendin)
 	{
 		case 1:
-		memcpy(o, tfb, w*h*sizeof(int));
+			visual_mem_copy(o, tfb, w*h*sizeof(int));
 		break;
 		case 2:
-		mmx_avgblend_block(o,tfb,x);
+			mmx_avgblend_block(o,tfb,x);
 		break;
 		case 3:
 			while(x--)
@@ -680,7 +671,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 			int y=h/2;
 			while(x-- > 0)
 			{
-				memcpy(o,tfb,w*sizeof(int));
+				visual_mem_copy(o,tfb,w*sizeof(int));
 				tfb+=w*2;
 				o+=w*2;
 			}
@@ -748,10 +739,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     }
     int x;
     int line_blend_mode_save=pipeline->blendmode;
-    if(!is_preinit) pipeline->blendmode = 0;
+    //if(!is_preinit) pipeline->blendmode = 0;
 
     s = render_now(container, video, audio);
-    if(!is_preinit) pipeline->blendmode = line_blend_mode_save;
+    //if(!is_preinit) pipeline->blendmode = line_blend_mode_save;
 
     if(!is_preinit)
     {
@@ -767,10 +758,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 	switch(use_blendout)
 	{
 		case 1:
-		visual_mem_copy(o,tfb,x*sizeof(int));
+			visual_mem_copy(o,tfb,x*sizeof(int));
 		break;
 		case 2:
-		mmx_avgblend_block(o,tfb,x);
+			mmx_avgblend_block(o,tfb,x);
 		break;
 		case 3:
 			while(x--)
@@ -857,16 +848,8 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 		break;
 	}
     } 
-/*
-#ifdef _OPENMP
-#pragma omp parallel for private(i)
-#endif
 
-    for(i = video->width*video->height - 1; i>=0; i--) {
-        BLEND_LINE(fbout + i, framebuffer[i], pipeline->blendtable, pipeline->blendmode);
-    }
-    //visual_mem_copy(fbout, framebuffer, video->pitch*video->height);
-*/
+    // Save state for next frame.
     visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0.5);
     return VISUAL_OK;
 }

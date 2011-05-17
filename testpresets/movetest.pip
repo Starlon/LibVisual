@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 
 <pipeline_preset>
+ <params>
+   <blendmode type="integer">2</blendmode>
+ </params>
  <container_main>
   <avs_movement>
       <effect type="integer">0</effect>

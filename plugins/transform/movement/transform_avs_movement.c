@@ -290,11 +290,13 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events)
                 if (visual_param_entry_is (param, "effect")) {
                     priv->effect = visual_param_entry_get_integer (param);
 
+                    if(priv->effect == 0) priv->effect = 32767;
+
                     if (priv->effect != 32767) {
                         if (priv->effect >= 0 && priv->effect < 23) {
                             tmp = visual_param_container_get(param->parent, "code");
                             visual_param_entry_set_string (tmp, __movement_descriptions[priv->effect].eval_desc);
-                            char *wht = strdup(__movement_descriptions[priv->effect].eval_desc);
+                            //char *wht = strdup(__movement_descriptions[priv->effect].eval_desc);
                         }
                     }
 

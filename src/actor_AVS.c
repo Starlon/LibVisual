@@ -260,42 +260,19 @@ int act_avs_events (VisPluginData *plugin, VisEventQueue *events)
 						LVAVSPresetElement *blur3;
 						LVAVSPresetElement *blur4;
 						sscope1 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
-						sscope2 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
-						sscope3 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
-						sscope4 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_superscope");
-						blur1 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
-						blur2 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
-						blur3 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
-						blur4 = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_blur");
 						move = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, "avs_movement");
 						preset = lvavs_preset_new ();
 						preset->main = lvavs_preset_container_new ();
 
-						visual_list_add (preset->main->members, sscope1);
+						visual_list_add (preset->main->members, move);
+                                                visual_list_add(preset->main->members, sscope1);
+
 						static VisParamEntry params[] = {
-							VISUAL_PARAM_LIST_ENTRY_STRING("init", "n = 1;"),
+							VISUAL_PARAM_LIST_ENTRY_STRING("init", "n = 1000;"),
 							VISUAL_PARAM_LIST_END
 						};
 						visual_param_container_add_many(sscope1->pcont, params);
-						/*visual_list_add (preset->main->members, sscope2);
-						visual_list_add (preset->main->members, sscope3);
-						visual_list_add (preset->main->members, sscope4);
-						*/
-						//visual_list_add (preset->main->members, blur1);
-						//visual_list_add (preset->main->members, blur2);
-						//visual_list_add (preset->main->members, blur3);
-						//visual_list_add (preset->main->members, move);
-						//visual_list_add (preset->main->members, blur4);
-						//visual_list_add (preset->main->members, blur4);
 
-						static VisParamEntry params2[] = {
-							VISUAL_PARAM_LIST_ENTRY_INTEGER ("clearscreen", 0),
-							VISUAL_PARAM_LIST_END
-						};
-
-						VisParamContainer *pcont = visual_param_container_new();
-						visual_param_container_add_many(pcont, params2);
-						LVAVS_PRESET_ELEMENT(preset->main)->pcont = pcont;
 
 						priv->lvtree = preset;
 					}

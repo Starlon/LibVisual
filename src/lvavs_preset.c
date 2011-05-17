@@ -275,29 +275,10 @@ LVAVSPreset *lvavs_preset_new_from_preset (char *filename)
 			LVAVS_PRESET_ELEMENT(cont)->pcont = pcont;
 			visual_list_add(preset->main->members, cont);
 			cont = lvavs_preset_container_from_xml_node(cont, cur);
-/*
-			for(child = cur->children; child; child = child->next) 
-			{
-      				if (xmlIsBlankNode (child) || child->type != XML_ELEMENT_NODE)
-					continue;
-
-				continue;
-				if(xmlStrcmp(child->name, "container_once") == 0) {
-
-				}
-				for(i = 0; id_to_name_map[i] != NULL; i++)
-					if (xmlStrcmp (child->name,
-						(const xmlChar *) id_to_name_map[i]) == 0) 
-						break;
-
-				if(id_to_name_map[i] == NULL) 
-					continue;
-
-				element = lvavs_preset_element_new(LVAVS_PRESET_ELEMENT_TYPE_PLUGIN, (char*)child->name);
-				if(parse_element(child, element)) 
-					visual_list_add(cont->members, element);
-			}
-*/
+		}
+		if(xmlStrcmp(cur->name, (const xmlChar *)"params") == 0)
+		{
+			parse_element(cur, LVAVS_PRESET_ELEMENT(preset->main));		
 		}
 	}
 	xmlFreeDoc (doc);
