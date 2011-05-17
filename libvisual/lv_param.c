@@ -1110,6 +1110,13 @@ char *visual_param_entry_get_annotation (VisParamEntry *param)
 	return param->annotation;
 }
 
+/**
+ * Set the minimum integer parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_min_set_integer (VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1119,6 +1126,13 @@ int visual_param_entry_min_set_integer (VisParamEntry *param, int integer)
 	return VISUAL_OK;
 }
 
+/**
+ * Set the minimum float parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_min_set_float (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1129,6 +1143,13 @@ int visual_param_entry_min_set_float (VisParamEntry *param, float floating)
 
 }
 
+/**
+ * Set the minimum double parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_min_set_double (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1139,6 +1160,13 @@ int visual_param_entry_min_set_double (VisParamEntry *param, double doubleflt)
 
 }
 
+/**
+ * Get the minimum integer parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the minimum integer parameter from the VisParamEntry.
+ */
 int visual_param_entry_min_get_integer (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0);
@@ -1147,6 +1175,13 @@ int visual_param_entry_min_get_integer (VisParamEntry *param)
 
 }
 
+/**
+ * Get the minimum float parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the minimum float parameter from the VisParamEntry.
+ */
 float visual_param_entry_min_get_float(VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
@@ -1155,6 +1190,13 @@ float visual_param_entry_min_get_float(VisParamEntry *param)
 
 }
 
+/**
+ * Get the minimum double parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the minimum double parameter from the VisParamEntry.
+ */
 double visual_param_entry_min_get_double (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
@@ -1164,6 +1206,13 @@ double visual_param_entry_min_get_double (VisParamEntry *param)
 }
 
 
+/**
+ * Set the maxium integer parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_max_set_integer (VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1173,6 +1222,14 @@ int visual_param_entry_max_set_integer (VisParamEntry *param, int integer)
 	return VISUAL_OK;
 
 }
+
+/**
+ * Set the maxium floating point parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_max_set_float (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1182,6 +1239,14 @@ int visual_param_entry_max_set_float (VisParamEntry *param, float floating)
 	return VISUAL_OK;
 
 }
+
+/**
+ * Set the maxium double precision parameter for VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_max_set_double (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1191,6 +1256,13 @@ int visual_param_entry_max_set_double (VisParamEntry *param, double doubleflt)
 	return VISUAL_OK;
 }
 
+/**
+ * Get the maximum integer parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the maximum integer parameter from the VisParamEntry.
+ */
 int visual_param_entry_max_get_integer (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0);
@@ -1199,6 +1271,13 @@ int visual_param_entry_max_get_integer (VisParamEntry *param)
 
 }
 
+/**
+ * Get the maximum float parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the maximum floating point parameter from the VisParamEntry.
+ */
 float visual_param_entry_max_get_float(VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
@@ -1206,6 +1285,14 @@ float visual_param_entry_max_get_float(VisParamEntry *param)
 	return param->max.floating;
 
 }
+
+/**
+ * Get the maximum double precision parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the maxiumum double precision parameter from the VisParamEntry.
+ */
 double visual_param_entry_max_get_double (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
@@ -1214,6 +1301,32 @@ double visual_param_entry_max_get_double (VisParamEntry *param)
 
 }
 
+/**
+ * Set the default string parameter for the VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
+int visual_param_entry_default_set_string(VisParamEntry *param, char *str)
+{
+	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
+
+    if(param->defaultstring)
+        visual_mem_free(param->defaultstring);
+
+	param->defaultstring = strdup(str);
+
+	return VISUAL_OK;
+}
+
+/**
+ * Set the default integer parameter for the VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_default_set_integer(VisParamEntry *param, int integer)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1221,6 +1334,13 @@ int visual_param_entry_default_set_integer(VisParamEntry *param, int integer)
 	return VISUAL_OK;
 }
 
+/**
+ * Set the default floating point parameter for the VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_default_set_float (VisParamEntry *param, float floating)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1228,6 +1348,13 @@ int visual_param_entry_default_set_float (VisParamEntry *param, float floating)
 	return VISUAL_OK;
 }
 
+/**
+ * Set the default floating point parameter for the VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return VISUAL_OK on sucess, -VISUAL_ERROR_PARAM_NULL on failure.
+ */
 int visual_param_entry_default_set_double (VisParamEntry *param, double doubleflt)
 {
 	visual_log_return_val_if_fail(param != NULL, -VISUAL_ERROR_PARAM_NULL);
@@ -1235,18 +1362,52 @@ int visual_param_entry_default_set_double (VisParamEntry *param, double doublefl
 	return VISUAL_OK;
 }
 
+/**
+ * Get the default string parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the default string parameter from the VisParamEntry.
+ */
+char * visual_param_entry_default_get_string (VisParamEntry *param)
+{
+	visual_log_return_val_if_fail(param != NULL, NULL);
+	return param->defaultstring;
+}
+
+/**
+ * Get the default integer parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the default integer parameter from the VisParamEntry.
+ */
 int visual_param_entry_default_get_integer (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 	return param->defaultnum.integer;
 }
 
+/**
+ * Get the default floating point parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the default floating point parameter from the VisParamEntry.
+ */
 float visual_param_entry_default_get_float(VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);
 	return param->defaultnum.floating;
 }
 
+/**
+ * Get the default double precision parameter from a VisParamEntry.
+ *
+ * @param param Pointer to the VisParamEntry from which the parameter is requested.
+ *
+ * @return Pointer to the default double precision parameter from the VisParamEntry.
+ */
 double visual_param_entry_default_get_double (VisParamEntry *param)
 {
 	visual_log_return_val_if_fail(param != NULL, 0.0);

@@ -148,6 +148,8 @@ struct _VisParamEntry {
 		float floating;
 		double doubleflt;
 	} defaultnum; /**< ParamEntry's default value. */
+
+    char *defaultstring;
 };
 
 /* prototypes */
@@ -211,10 +213,12 @@ int visual_param_entry_max_get_integer (VisParamEntry *param);
 float visual_param_entry_max_get_float(VisParamEntry *param);
 double visual_param_entry_max_get_double (VisParamEntry *param);
 
+int visual_param_entry_default_set_string(VisParamEntry *param, char *str);
 int visual_param_entry_default_set_integer(VisParamEntry *param, int integer);
 int visual_param_entry_default_set_float (VisParamEntry *param, float floating);
 int visual_param_entry_default_set_double (VisParamEntry *param, double doubleflt);
 
+char * visual_param_entry_default_get_string (VisParamEntry *param);
 int visual_param_entry_default_get_integer (VisParamEntry *param);
 float visual_param_entry_default_get_float(VisParamEntry *param);
 double visual_param_entry_default_get_double (VisParamEntry *param);
