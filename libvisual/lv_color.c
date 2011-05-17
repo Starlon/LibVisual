@@ -74,7 +74,7 @@ int visual_color_set_with_alpha (VisColor *color, uint8_t r, uint8_t g, uint8_t 
 	color->r = r;
 	color->g = g;
 	color->b = b;
-        color->a = a;
+    color->a = a;
 
 	return VISUAL_OK;
 }
@@ -258,7 +258,7 @@ int visual_color_from_uint32 (VisColor *color, uint32_t rgb)
 	color->r = colors[0];
 	color->g = colors[1];
 	color->b = colors[2];
-        color->a = 0xff;//colors[3]; FIXME
+    color->a = colors[3];
 
 	return VISUAL_OK;
 }
@@ -283,7 +283,7 @@ uint32_t visual_color_to_uint32 (VisColor *color)
 
 	visual_log_return_val_if_fail (color != NULL, 0);
 
-	colors = (255 << 24) | //FIXME alpha should go here
+	colors = (color->r << 24) | 
 		(color->r << 16) |
 		(color->g << 8) |
 		(color->b);
@@ -300,7 +300,7 @@ uint16_t visual_color_to_uint16 (VisColor *color)
 	colors.r = color->r >> 2;
 	colors.g = color->g >> 3;
 	colors.b = color->b >> 2;
-        colors.a = 0xff>>3;//color->a >> 3; FIXME
+    colors.a = color->a >> 3;
 
 	return *((uint16_t *) &colors);
 }
