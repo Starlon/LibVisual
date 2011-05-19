@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<pipeline_preset>
+ <container_main>
+ 
+ <avs_dmovement>
+    <init type="string"></init>
+    <frame type="string"></frame>
+    <beat type="string"></beat>
+    <preset type="integer">-1</preset>
+    <subpixel type="integer">0</subpixel>
+    <rectcoords type="integer">0</rectcoords>
+    <xres type="integer">10</xres>
+    <yres type="integer">10</yres>
+    <blend type="integer">0</blend>
+    <wrap type="integer">0</wrap>
+    <buffern type="integer">0</buffern>
+    <nomove type="integer">0</nomove>
+ </avs_dmovement>
+
+ <avs_superscope>
+ <init type="string">n = 10;</init>
+ </avs_superscope>
+
+
+ </container_main>
+</pipeline_preset>
