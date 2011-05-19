@@ -60,10 +60,6 @@ typedef struct {
     LVAVSPipeline *pipeline;
 
 
-    char            *point;
-    char            *frame;
-    char            *beat;
-    char            *init;
     int          channel_source;
     int             color_pos;
     VisPalette       pal;
@@ -140,7 +136,7 @@ int lv_superscope_init (VisPluginData *plugin)
     int i;
 
     static VisParamEntry params[] = {
-        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*$PI*4*count; x = cos(r)*d; y = sin(r) * d;"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("point", "d=i+v*0.2; r=t+i*PI*4*count; x = cos(r)*d; y = sin(r) * d;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "t=t-0.01;count=count+1;"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),
         VISUAL_PARAM_LIST_ENTRY_STRING ("init", "n=800;"),
@@ -200,18 +196,6 @@ int lv_superscope_cleanup (VisPluginData *plugin)
 {
     SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
-    if(priv->point != NULL)
-        visual_mem_free(priv->point);
-
-    if(priv->frame != NULL)
-        visual_mem_free(priv->frame);
-
-    if(priv->beat != NULL)
-        visual_mem_free(priv->beat);
-
-    if(priv->init != NULL)
-        visual_mem_free(priv->init);
-
     if(priv->pipeline != NULL)
         visual_object_unref(VISUAL_OBJECT(priv->pipeline));
 
@@ -249,36 +233,20 @@ int lv_superscope_events (VisPluginData *plugin, VisEventQueue *events)
                 param = ev.event.param.param;
 
                 if (visual_param_entry_is (param, "point")) {
-
-                    if(priv->point != NULL)
-                        visual_mem_free(priv->point);
-
-                    priv->point = strdup(visual_param_entry_get_string (param));
-                    scope_load_runnable(priv, SCOPE_RUNNABLE_POINT, priv->point);
+                    char *point = strdup(visual_param_entry_get_string (param));
+                    scope_load_runnable(priv, SCOPE_RUNNABLE_POINT, point);
 
                 } else if (visual_param_entry_is (param, "frame")) {
-
-                    if(priv->frame != NULL)
-                        visual_mem_free(priv->frame);
-
-                    priv->frame = strdup(visual_param_entry_get_string (param));
-                    scope_load_runnable(priv, SCOPE_RUNNABLE_FRAME, priv->frame);
+                    char *frame = strdup(visual_param_entry_get_string (param));
+                    scope_load_runnable(priv, SCOPE_RUNNABLE_FRAME, frame);
 
                 } else if (visual_param_entry_is (param, "beat")) {
-
-                    if(priv->beat != NULL)
-                        visual_mem_free(priv->beat);
-
-                    priv->beat = strdup(visual_param_entry_get_string (param));
-                    scope_load_runnable(priv, SCOPE_RUNNABLE_BEAT, priv->beat);
+                    char *beat = strdup(visual_param_entry_get_string (param));
+                    scope_load_runnable(priv, SCOPE_RUNNABLE_BEAT, beat);
 
                 } else if (visual_param_entry_is (param, "init")) {
-
-                    if(priv->init != NULL)
-                        visual_mem_free(priv->init);
-
-                    priv->init = strdup(visual_param_entry_get_string (param));
-                    scope_load_runnable(priv, SCOPE_RUNNABLE_INIT, priv->init);
+                    char *init = strdup(visual_param_entry_get_string (param));
+                    scope_load_runnable(priv, SCOPE_RUNNABLE_INIT, init);
                     priv->needs_init = TRUE;
 
                 } else if (visual_param_entry_is (param, "channel_source"))
@@ -423,8 +391,8 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
     {
         double r=(a*size)/(double)l;
         double s1=r-(int)r;
-	int val1 = (pcmbuf[(int)r] + 1) / 2.0 * 128;
-	int val2 = (pcmbuf[(int)r+1] + 1) / 2.0  * 128;
+        int val1 = (pcmbuf[(int)r] + 1) / 2.0 * 128;
+        int val2 = (pcmbuf[(int)r+1] + 1) / 2.0  * 128;
         double yr=(val1^xorv)*(1.0-s1)+(val2^xorv)*(s1);
         priv->v = yr/128.0;
         priv->i = (AvsNumber)a/(AvsNumber)(l-1);
