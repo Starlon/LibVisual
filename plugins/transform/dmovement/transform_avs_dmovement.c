@@ -318,7 +318,7 @@ int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
 	DMovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     uint8_t isBeat = priv->pipeline->isBeat;
-    int max_threads = 1;
+    int max_threads = 4;
     int w = video->width, h = video->height;
     void *visdata = priv->pipeline->audiodata;
     int *framebuffer = priv->pipeline->framebuffer;
@@ -326,21 +326,21 @@ int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     int this_thread = 0;
 
 
-//#pragma omp parallel
+#pragma omp parallel
 {
-    //max_threads = omp_get_num_threads();
-    trans_begin(priv, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
+    max_threads = omp_get_num_threads();
 }
+    trans_begin(priv, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
     //if(!isBeat)
     //    return 0;
 
-//#pragma omp parallel
+#pragma omp parallel
 {
-//#pragma omp for
-    //for( this_thread = max_threads - 1; this_thread>=0; this_thread--)
+#pragma omp for private(this_thread)
+    for( this_thread = max_threads - 1; this_thread>=0; this_thread--)
         trans_render(priv, this_thread, max_threads, visdata, isBeat, framebuffer,fbout, w, h);
 }
-    priv->pipeline->swap = !priv->__nomove;//TRUE;//trans_finish(priv, visdata, isBeat, framebuffer, fbout, w, h);
+    priv->pipeline->swap = !priv->__nomove;
 
     return 0;
 }
