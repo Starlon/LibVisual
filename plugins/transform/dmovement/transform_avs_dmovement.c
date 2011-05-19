@@ -392,8 +392,7 @@ int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576]
 
   if (isBeat&0x80000000) return 0;
 
-  uint32_t *fbin = priv->buffern ? framebuffer : 
-    visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  uint32_t *fbin = framebuffer;//priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
   if (!fbin) return 0;
 
   priv->var_w=(double)w;
@@ -496,8 +495,7 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
   int outh=end_l-start_l;
   if (outh<1) return 0;
 
-  uint32_t *fbin =  !priv->buffern ? framebuffer : 
-        visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  uint32_t *fbin =  framebuffer;//!priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
   if (!fbin) return 0;
 
   // yay, the table is generated. now we do a fixed point 
