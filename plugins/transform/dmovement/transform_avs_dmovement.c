@@ -63,17 +63,17 @@ typedef struct {
     uint32_t *m_tab;
     uint32_t *m_wmul;
 
-    uint32_t m_lastw, m_lasth;
-    uint32_t m_lastxres, m_lastyres, m_xres, m_yres;
+    int32_t m_lastw, m_lasth;
+    int32_t m_lastxres, m_lastyres, m_xres, m_yres;
 
-    uint32_t buffern;
+    int32_t buffern;
     int32_t preset;
 
-    uint32_t __subpixel, __rectcoords, __blend, __wrap, __nomove;
-    uint32_t subpixel, rectcoords, blend, wrap, nomove;
-    uint32_t w_adj, h_adj;
+    int32_t __subpixel, __rectcoords, __blend, __wrap, __nomove;
+    int32_t subpixel, rectcoords, blend, wrap, nomove;
+    int32_t w_adj, h_adj;
     int yres, xres;
-    uint8_t needs_init;
+    int8_t needs_init;
 } DMovementPrivate;
 
 typedef struct
@@ -94,11 +94,11 @@ static presetType presets[]=
   {"Random Rotate", 0, 1, 2, 2, "","r = r + dr;","","dr = (rand(100) / 100) * PI;d = d * .95;"},
   {"Random Direction", 1, 1, 2, 2, "speed=.05;dr = (rand(200) / 100) * PI;","x = x + dx;y = y + dy;","dx = cos(dr) * speed;y = sin(dr) * speed;","dr = (rand(200) / 100) * PI;"},
   {"In and Out", 0, 1, 2, 2, "speed=.2;c=0;","d = d * dd;","","c = c + (PI/2);dd = 1 - (sin(c) * speed);"},
-  {"Unspun Kaleida", 0, 1, 33, 33, "c=200;f=0;dt=0;dl=0;beatdiv=8","r=cos(r*dr);","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = 4+(cos(dt)*2);","c=f;f=0;dl=dt"},
-  {"Roiling Gridley", 1, 1, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","x=x+(sin(y*dx) * .03);y=y-(cos(x*dy) * .03);","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dx = 14+(cos(dt)*8);dy = 10+(sin(dt*2)*4);","c=f;f=0;dl=dt"},
-  {"6-Way Outswirl", 0, 0, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","d=d*(1+(cos(r*6) * .05));r=r-(sin(d*dr) * .05);d = d * .98;","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = 18+(cos(dt)*12);","c=f;f=0;dl=dt"},
+  {"Unspun Kaleida", 0, 1, 33, 33, "c=200;f=0;dt=0;dl=0;beatdiv=8","r=cos(r*dr);","f = f + 1;t = ((f * PI * 2)/c)/beatdiv;dt = dl + t;dr = 4+(cos(dt)*2);","c=f;f=0;dl=dt"},
+  {"Roiling Gridley", 1, 1, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","x=x+(sin(y*dx) * .03);y=y-(cos(x*dy) * .03);","f = f + 1;t = ((f * PI * 2)/c)/beatdiv;dt = dl + t;dx = 14+(cos(dt)*8);dy = 10+(sin(dt*2)*4);","c=f;f=0;dl=dt"},
+  {"6-Way Outswirl", 0, 0, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","d=d*(1+(cos(r*6) * .05));r=r-(sin(d*dr) * .05);d = d * .98;","f = f + 1;t = ((f * PI * 2)/c)/beatdiv;dt = dl + t;dr = 18+(cos(dt)*12);","c=f;f=0;dl=dt"},
   {"Wavy", 1, 1, 6, 6, "c=200;f=0;dx=0;dl=0;beatdiv=16;speed=.05","y = y + ((sin((x+dx) * PI))*speed);x = x + .025","f = f + 1;t = ( (f * 2 * 3.1415) / c ) / beatdiv;dx = dl + t;","c = f;f = 0;dl = dx;"},
-  {"Smooth Rotoblitter", 0, 1, 2, 2, "c=200;f=0;dt=0;dl=0;beatdiv=4;speed=.15","r = r + dr;d = d * dd;","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = cos(dt)*speed*2;dd = 1 - (sin(dt)*speed);","c=f;f=0;dl=dt"},
+  {"Smooth Rotoblitter", 0, 1, 2, 2, "c=200;f=0;dt=0;dl=0;beatdiv=4;speed=.15","r = r + dr;d = d * dd;","f = f + 1;t = ((f * PI * 2)/c)/beatdiv;dt = dl + t;dr = cos(dt)*speed*2;dd = 1 - (sin(dt)*speed);","c=f;f=0;dl=dt"},
 };
 
 int lv_dmovement_init (VisPluginData *plugin);
@@ -171,7 +171,7 @@ int lv_dmovement_init (VisPluginData *plugin)
         VISUAL_PARAM_LIST_ENTRY_STRING ("frame", ""),//, "Used to define movement and transformations"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),//, "Expression that gets evaluated on the beat"),
         VISUAL_PARAM_LIST_ENTRY_STRING ("pixel", ""),//, "This is where the shape is defined"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("preset", 3),//, VISUAL_PARAM_LIMIT_INTEGER(-1, 7), "Preset choice"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("preset", -1),//, VISUAL_PARAM_LIMIT_INTEGER(-1, 7), "Preset choice"),
 		VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),//, VISUAL_PARAM_LIMIT_NONE, ""),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectcoords", 0),//, VISUAL_PARAM_LIMIT_BOOLEAN, "Rectangular coordinates"),
         VISUAL_PARAM_LIST_ENTRY_INTEGER ("xres", 16),//, VISUAL_PARAM_LIMIT_INTEGER(2, 256), "Grid size x axis"),
@@ -227,6 +227,12 @@ static void load_preset(VisPluginData *plugin)
 
     param = visual_param_container_get(paramcontainer, "wrap");
     visual_param_entry_set_integer(param, presets[priv->preset].wrap);
+
+    param = visual_param_container_get(paramcontainer, "xres");
+    visual_param_entry_set_integer(param, presets[priv->preset].grid1);
+
+    param = visual_param_container_get(paramcontainer, "yres");
+    visual_param_entry_set_integer(param, presets[priv->preset].grid2);
 
     param = visual_param_container_get(paramcontainer, "init");
     visual_param_entry_set_string(param, presets[priv->preset].init);
@@ -296,8 +302,7 @@ int lv_dmovement_events (VisPluginData *plugin, VisEventQueue *events)
 		}
 	}
 
-    if(priv->preset >= 0) {
-        printf("preset %d\n", priv->preset);
+    if(priv->preset >= 0 && priv->preset < VISUAL_TABLESIZE(presets)) {
         load_preset(plugin);
     }
 
@@ -452,6 +457,7 @@ int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576]
           priv->var_r -= M_PI*0.5;
           tmp1=(int) (dw2 + cos(priv->var_r) * priv->var_d);
           tmp2=(int) (dh2 + sin(priv->var_r) * priv->var_d);
+printf("tmp1 %d tmp2 %d vard %f var_r %f\n", tmp1, tmp2, priv->var_d, priv->var_r);
         }
         else
         {
@@ -669,6 +675,7 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
               {
                 xp %= priv->w_adj; 
                 yp %= priv->h_adj;
+
                 if (xp < 0) xp+=priv->w_adj; 
                 if (yp < 0) yp+=priv->h_adj;
 
@@ -699,335 +706,3 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
 }
 
 
-#if 0
-static void trans_begin(int this_thread, int max_threads, DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, uint32_t *fbout, int w, int h)
-{
-
-    priv->__subpixel = priv->subpixel;
-    priv->__rectcoords = priv->rectcoords;
-    priv->__blend = priv->blend;
-    priv->__wrap = priv->wrap;
-    priv->__nomove = priv->nomove;
-
-    priv->w_adj = (w - 2)<<16;
-    priv->h_adj = (h - 2)<<16;
-    
-    if(priv->xres < 2) priv->xres = 2;
-    if(priv->xres > 256) priv->xres = 256;
-    if(priv->yres < 2) priv->yres = 2;
-    if(priv->yres > 256) priv->yres = 256;
-    
-    if(priv->last_width != w || priv->last_height != h || priv->last_xres != priv->xres || priv->last_yres != priv->yres) {
-        int y;
-        priv->last_xres = priv->xres;
-        priv->last_yres = priv->yres;
-        priv->last_width = w;
-        priv->last_height = h;
-
-        if(priv->wmul != NULL) 
-            visual_mem_free(priv->wmul);
-
-        priv->wmul = visual_mem_malloc0(sizeof(int)*w);
-
-        for(y = 0; y < h; y++) 
-            priv->wmul[y] = y * w;
-
-        if(priv->tab != NULL)
-            visual_mem_free(priv->tab);
-
-        priv->tab = visual_mem_malloc0((priv->xres * priv->yres * 3 + (priv->xres * 6 + 6)*max_threads) * sizeof(int));
-    }
-
-    if(!priv->__subpixel)
-    {
-        priv->w_adj = (w-1)<<16;
-        priv->w_adj = (h-1)<<16;
-    }
-
-    //if(isBeat&0x80000000)
-    //    return;
-
-    priv->var_w = (AvsNumber)w;
-    priv->var_h = (AvsNumber)h;
-    priv->var_b = isBeat?1.0:0.0;
-    priv->var_alpha = 0.5;
-
-    if(priv->needs_init) {
-        priv->needs_init = FALSE;
-        trans_run_runnable(priv, TRANS_RUNNABLE_INIT);
-    }
-    // execute code
-    trans_run_runnable(priv, TRANS_RUNNABLE_FRAME);
-
-    if(isBeat)
-        trans_run_runnable(priv, TRANS_RUNNABLE_BEAT);
-
-    {
-        int32_t x, y;
-        uint32_t *tabptr=priv->tab;
-
-        double xsc = 2.0/w, ysc=2.0/h;
-        double dw2 = ((double)w*32768.0);
-        double dh2 = ((double)h*32768.0);
-        double max_screen_d = sqrt((double)(w*h + w*h)) * 0.5;
-
-        double divmax_d = 1.0/max_screen_d;
-
-        int yc_pos, yc_dpos, xc_pos, xc_dpos;
-
-        max_screen_d *= 65536.0;
-
-        yc_pos = 0;
-        xc_dpos = (w << 16)/(priv->xres-1);
-        yc_dpos = (h << 16)/(priv->yres-1);
-        for(y = 0; y < priv->yres; y++) 
-        {
-            xc_pos = 0;
-            for(x = 0; x < priv->xres; x++)
-            {
-                double xd, yd;
-                int tmp1, tmp2;
-                double va;
-                int a;
-
-                xd = ((double)xc_pos-dw2)*(1.0/65536.0);
-                yd = ((double)yc_pos-dh2)*(1.0/65536.0);
-
-                xc_pos+=xc_dpos;
-
-                priv->var_x = xd*xsc;
-                priv->var_y = yd*ysc;
-                priv->var_d = sqrt(xd*xd + yd*yd)*divmax_d;
-                priv->var_r = atan2(yd, xd) + PI*0.5;
-
-                trans_run_runnable(priv, TRANS_RUNNABLE_PIXEL);
-
-                if(!priv->__rectcoords)
-                {
-                    priv->var_d *= max_screen_d;
-                    priv->var_r -= PI*0.5;
-                    tmp1 = (int) (dw2 + cos(priv->var_r) * priv->var_d);
-                    tmp2 = (int) (dh2 + sin(priv->var_r) * priv->var_d);
-                }
-                else
-                {
-                    tmp1 = (int) ((priv->var_x+1.0)*dw2);
-                    tmp2 = (int) ((priv->var_y+1.0)*dh2);
-                }
-                if(!priv->__wrap)
-                {
-                    if(tmp1 < 0)            tmp1 = 0;
-                    if(tmp1 > priv->w_adj)  tmp1 = priv->w_adj;
-                    if(tmp2 < 0)            tmp2 = 0;
-                    if(tmp2 > priv->h_adj)  tmp2 = priv->h_adj;
-                }   
-
-                *tabptr++ = tmp1;
-                *tabptr++ = tmp2;
-                va = priv->var_alpha;
-                if(va < 0.0) 
-                    va = 0.0;
-                else if (va > 1.0)
-                    va = 1.0;
-                a = (int)(va*255.0*65536.0);
-                *tabptr++ = a;
-            }
-            yc_pos+=yc_dpos;
-        }
-    }
-}
-
-static void trans_render(int this_thread, int max_threads, DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, uint32_t *fbout, int w, int h)
-{
-
-    int start_l = (this_thread * h) / max_threads;
-    int end_l;
-    int ypos = 0;
-
-    if(this_thread >= max_threads - 1) end_l = h;
-    else end_l = ((this_thread+1) * h) / max_threads;
-
-    int outh = end_l-start_l;
-    if(outh<1) return;
-
-    uint32_t *fbin = fb; //!priv->buffern ? fb : 
-
-    {
-        uint32_t *interptab = priv->tab + priv->xres * priv->yres * 3 + this_thread * (priv->xres * 6 + 6);
-        uint32_t *rdtab = priv->tab;
-        unsigned int *in = (unsigned int *)fbin;
-        unsigned int *blendin = (unsigned int *)fb;
-        unsigned int *out = (unsigned int *)fbout;
-        int yseek = 1;
-        int xc_dpos, yc_pos=0, yc_dpos;
-        xc_dpos = (w<<16)/(priv->xres-1);
-        yc_dpos = (h<<16)/(priv->yres-1);
-        int lypos = 0;
-        int yl = end_l;
-        while(yl>0)
-        {
-            yc_pos+=yc_dpos;
-            yseek=(yc_pos>>16)-lypos;
-            if( !yseek ) 
-            {
-                #ifdef HAS_MMX
-                    //__asm emms;
-                #endif
-                return;
-            }
-            lypos = yc_pos >> 16;
-            int l = priv->xres;
-            uint32_t *stab = interptab;
-            int xr3=priv->xres * 3;
-            while(l--)
-            {
-                int tmp1, tmp2, tmp3;
-                tmp1 = rdtab[0];
-                tmp2 = rdtab[1];
-                tmp3 = rdtab[2];
-                stab[0] = tmp1;
-                stab[1] = tmp2;
-                stab[2] = (rdtab[xr3]-tmp1)/yseek;
-                stab[3] = (rdtab[xr3+1]-tmp2)/yseek;
-                stab[4] = tmp3;
-                stab[5] = (rdtab[xr3+2]-tmp3)/yseek;
-                rdtab+=3;
-                stab+=6;
-            }
-
-            if(yseek > yl) yseek = yl;
-            yl-=yseek;
-
-            if(yseek > 0) while(yseek--)
-            {
-                int d_x;
-                int d_y;
-                int d_a;
-                int ap;
-                int seek;
-                uint32_t *seektab = interptab;
-                int xp,yp;
-                int l = w;
-                int lpos = 0;
-                int xc_pos = 0;
-                ypos++;
-                {
-                    while(l>0)
-                    {
-                        xc_pos+=xc_dpos;
-                        seek = (xc_pos>>16)-lpos;
-                        if(!seek)
-                        {
-                            #ifdef HAS_MMX
-                                //__asm emms;
-                            #endif
-                            return;
-                        }
-                        lpos = xc_pos >> 16;
-                        xp = seektab[0];
-                        yp = seektab[1];
-                        ap = seektab[4];
-                        d_a = (seektab[10]-ap)/seek;
-                        d_x = (seektab[6]-xp)/seek;
-                        d_y = (seektab[7]-yp)/seek;
-                        seektab[0] += seektab[2];
-                        seektab[1] += seektab[3];
-                        seektab[4] += seektab[5];
-                        seektab += 6;
-
-                        if(seek > l) 
-                            seek = l;
-
-                        l -= seek;
-                        if(seek > 0 && ypos <= start_l)
-                        {
-                            blendin+=seek;
-                            if(priv->__nomove) in+=seek;
-                            else out+=seek;
-
-                            seek = 0;
-                        }
-
-                        if (seek > 0)
-                        {
-#define CHECK
-#define NORMAL_LOOP(Z) while ((seek--)) { Z; xp+=d_x; yp+=d_y; }
-
-#define WRAPPING_LOOPS(Z) \
-    NORMAL_LOOP(if (xp < 0) xp += priv->w_adj;  \
-                else if (xp >= priv->w_adj) xp-=priv->w_adj;  \
-                if (yp < 0) yp += priv->h_adj;  \
-                else if (yp >= priv->h_adj) yp-=priv->h_adj;  \
-                Z)
-
-#define CLAMPED_LOOPS(Z) \
-    NORMAL_LOOP(if (xp < 0) xp=0; \
-                else if (xp >= priv->w_adj) xp=priv->w_adj-1; \
-                if (yp < 0) yp=0; \
-                else if (yp >= priv->h_adj) yp=priv->h_adj-1; \
-                Z)
-
-#define LOOPS(DO)  \
-                if (priv->__blend && priv->__subpixel) DO(CHECK *out++=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, BLEND4_16(priv->pipeline->blendtable, in+(xp>>16)+(priv->wmul[yp>>16]),w,xp,yp),*blendin++,ap>>16); ap+=d_a) \
-                else if (priv->__blend) DO(CHECK *out++=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, in[(xp>>16)+(priv->wmul[yp>>16])],*blendin++,ap>>16); ap+=d_a) \
-                else if (priv->__subpixel) DO(CHECK *out++=BLEND4_16(priv->pipeline->blendtable, in+(xp>>16)+(priv->wmul[yp>>16]),w,xp,yp)) \
-                else DO(CHECK *out++=in[(xp>>16)+(priv->wmul[yp>>16])])
-
-                            if(priv->__nomove)
-                            {
-                                if(fbin != fb) while(seek--)
-                                {
-                                    *blendin=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, *in++, *blendin, ap>>16);
-                                    ap+=d_a;
-                                    blendin++;
-                                }
-                                else while( seek--)
-                                {
-                                    *blendin=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, 0, *blendin, ap>>16);
-                                    ap+=d_a;
-                                    blendin++;
-                                }
-                            }
-                            else if (!priv->__wrap)
-                            {
-                                if(xp < 0) xp = 0;
-                                else if (xp >= priv->w_adj) xp=priv->w_adj-1;
-                                if(yp < 0) yp = 0;
-                                else if (yp >= priv->h_adj) yp=priv->h_adj-1;
-
-                                LOOPS(CLAMPED_LOOPS)
-                            }
-                            else
-                            {
-                                xp %= priv->w_adj;
-                                yp %= priv->h_adj;
-                                if(xp < 0) xp+=priv->w_adj;
-                                if(yp < 0) yp+=priv->h_adj;
-
-                                if(d_x <= -priv->w_adj) d_x = -priv->w_adj + 1;
-                                else if (d_x >= priv->w_adj) d_x = priv->w_adj - 1;
-
-                                if(d_y <= -priv->h_adj) d_y = -priv->h_adj + 1;
-                                else if (d_y >= priv->h_adj) d_y = priv->h_adj - 1;
-
-                                LOOPS(WRAPPING_LOOPS)
-                            }
-                        } // if seek>0
-                    }
-                    seektab[0] += seektab[2];
-                    seektab[1] += seektab[3];
-                    seektab[4] += seektab[5];
-                }
-            }
-        }
-
-    }
-
-#ifdef HAVE_MMX
-    //__asm emms;
-#endif
-
-   return 0;
-}
-
-#endif
