@@ -313,7 +313,7 @@ __inline uint32_t BLEND4(unsigned char blendtable[256][256], uint32_t *p1, uint3
 }
 
 
-__inline uint32_t BLEND4_16(unsigned char **blendtable, uint32_t *p1, uint32_t w, int xp, int yp)
+__inline uint32_t BLEND4_16(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;

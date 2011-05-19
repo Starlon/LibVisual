@@ -619,7 +619,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
 
     int is_preinit = pipeline->isBeat;//(pipeline->isBeat&0x80000000);
-    if(is_preinit != 0) printf("preinit %d\n", is_preinit);
+
 /*    if(pipeline->isBeat && beat_render)
 	fake_enabled = beat_render_frames;
 */
@@ -739,10 +739,10 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     }
     int x;
     int line_blend_mode_save=pipeline->blendmode;
-    //if(!is_preinit) pipeline->blendmode = 0;
+    if(!is_preinit) pipeline->blendmode = 0;
 
     s = render_now(container, video, audio);
-    //if(!is_preinit) pipeline->blendmode = line_blend_mode_save;
+    if(!is_preinit) pipeline->blendmode = line_blend_mode_save;
 
     if(!is_preinit)
     {
@@ -850,6 +850,7 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     } 
 
     // Save state for next frame.
+    visual_video_blit_overlay(video, pipeline->dummy_vid, 0, 0, 0.5);
     visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0.5);
     return VISUAL_OK;
 }

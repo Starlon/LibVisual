@@ -33,11 +33,13 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <omp.h>
 
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
 #include "avs.h"
+#include "lvavs_pipeline.h"
 
 AvsNumber PI = M_PI;
 
@@ -51,30 +53,26 @@ enum trans_runnable {
 };
 
 typedef struct {
-    AvsGlobalProxy *proxy;
+    LVAVSPipeline *pipeline;
 
     AvsRunnableContext *ctx;
     AvsRunnableVariableManager *vm;
     AvsRunnable *runnable[4];
     AvsNumber var_d, var_b, var_r, var_x, var_y, var_w, var_h, var_alpha;
 
-    uint8_t *swapbuf, *renderbuf;
+    uint32_t *m_tab;
+    uint32_t *m_wmul;
 
-    char *init, *pixel, *frame, *beat;
+    uint32_t m_lastw, m_lasth;
+    uint32_t m_lastxres, m_lastyres, m_xres, m_yres;
 
-    uint32_t *tab;
-    uint32_t *wmul;
-
-    uint32_t last_width, last_height, last_pitch;
-    uint32_t last_xres, last_yres, xres, yres;
     uint32_t buffern;
-    uint32_t subpixel, rectcoords, blend, wrap, nomove;
     int32_t preset;
 
     uint32_t __subpixel, __rectcoords, __blend, __wrap, __nomove;
+    uint32_t subpixel, rectcoords, blend, wrap, nomove;
     uint32_t w_adj, h_adj;
-    uint32_t XRES, YRES;
-    uint32_t width, height;
+    int yres, xres;
     uint8_t needs_init;
 } DMovementPrivate;
 
@@ -93,14 +91,14 @@ typedef struct
 
 static presetType presets[]=
 {
-  {"Random Rotate", 0, 1, 2, 2, "","r = r + dr;","","dr = (rand(100) / 100) * $PI;\r\nd = d * .95;"},
-  {"Random Direction", 1, 1, 2, 2, "speed=.05;dr = (rand(200) / 100) * $PI;","x = x + dx;\r\ny = y + dy;","dx = cos(dr) * speed;\r\ndy = sin(dr) * speed;","dr = (rand(200) / 100) * $PI;"},
-  {"In and Out", 0, 1, 2, 2, "speed=.2;c=0;","d = d * dd;","","c = c + ($PI/2);\r\ndd = 1 - (sin(c) * speed);"},
-  {"Unspun Kaleida", 0, 1, 33, 33, "c=200;f=0;dt=0;dl=0;beatdiv=8","r=cos(r*dr);","f = f + 1;\r\nt = ((f * $pi * 2)/c)/beatdiv;\r\ndt = dl + t;\r\ndr = 4+(cos(dt)*2);","c=f;f=0;dl=dt"},
-  {"Roiling Gridley", 1, 1, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","x=x+(sin(y*dx) * .03);\r\ny=y-(cos(x*dy) * .03);","f = f + 1;\r\nt = ((f * $pi * 2)/c)/beatdiv;\r\ndt = dl + t;\r\ndx = 14+(cos(dt)*8);\r\ndy = 10+(sin(dt*2)*4);","c=f;f=0;dl=dt"},
-  {"6-Way Outswirl", 0, 0, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","d=d*(1+(cos(r*6) * .05));\r\nr=r-(sin(d*dr) * .05);\r\nd = d * .98;","f = f + 1;\r\nt = ((f * $pi * 2)/c)/beatdiv;\r\ndt = dl + t;\r\ndr = 18+(cos(dt)*12);","c=f;f=0;dl=dt"},
-  {"Wavy", 1, 1, 6, 6, "c=200;f=0;dx=0;dl=0;beatdiv=16;speed=.05","y = y + ((sin((x+dx) * $PI))*speed);\r\nx = x + .025","f = f + 1;\r\nt = ( (f * 2 * 3.1415) / c ) / beatdiv;\r\ndx = dl + t;","c = f;\r\nf = 0;\r\ndl = dx;"},
-  {"Smooth Rotoblitter", 0, 1, 2, 2, "c=200;f=0;dt=0;dl=0;beatdiv=4;speed=.15","r = r + dr;\r\nd = d * dd;","f = f + 1;\r\nt = ((f * $pi * 2)/c)/beatdiv;\r\ndt = dl + t;\r\ndr = cos(dt)*speed*2;\r\ndd = 1 - (sin(dt)*speed);","c=f;f=0;dl=dt"},
+  {"Random Rotate", 0, 1, 2, 2, "","r = r + dr;","","dr = (rand(100) / 100) * PI;d = d * .95;"},
+  {"Random Direction", 1, 1, 2, 2, "speed=.05;dr = (rand(200) / 100) * PI;","x = x + dx;y = y + dy;","dx = cos(dr) * speed;y = sin(dr) * speed;","dr = (rand(200) / 100) * PI;"},
+  {"In and Out", 0, 1, 2, 2, "speed=.2;c=0;","d = d * dd;","","c = c + (PI/2);dd = 1 - (sin(c) * speed);"},
+  {"Unspun Kaleida", 0, 1, 33, 33, "c=200;f=0;dt=0;dl=0;beatdiv=8","r=cos(r*dr);","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = 4+(cos(dt)*2);","c=f;f=0;dl=dt"},
+  {"Roiling Gridley", 1, 1, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","x=x+(sin(y*dx) * .03);y=y-(cos(x*dy) * .03);","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dx = 14+(cos(dt)*8);dy = 10+(sin(dt*2)*4);","c=f;f=0;dl=dt"},
+  {"6-Way Outswirl", 0, 0, 32, 32, "c=200;f=0;dt=0;dl=0;beatdiv=8","d=d*(1+(cos(r*6) * .05));r=r-(sin(d*dr) * .05);d = d * .98;","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = 18+(cos(dt)*12);","c=f;f=0;dl=dt"},
+  {"Wavy", 1, 1, 6, 6, "c=200;f=0;dx=0;dl=0;beatdiv=16;speed=.05","y = y + ((sin((x+dx) * PI))*speed);x = x + .025","f = f + 1;t = ( (f * 2 * 3.1415) / c ) / beatdiv;dx = dl + t;","c = f;f = 0;dl = dx;"},
+  {"Smooth Rotoblitter", 0, 1, 2, 2, "c=200;f=0;dt=0;dl=0;beatdiv=4;speed=.15","r = r + dr;d = d * dd;","f = f + 1;t = ((f * $pi * 2)/c)/beatdiv;dt = dl + t;dr = cos(dt)*speed*2;dd = 1 - (sin(dt)*speed);","c=f;f=0;dl=dt"},
 };
 
 int lv_dmovement_init (VisPluginData *plugin);
@@ -109,11 +107,12 @@ int lv_dmovement_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_dmovement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, uint32_t *fbout);
-static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, uint32_t *fbout);
+static int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
+static int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
+const VisPluginInfo *get_plugin_info (int *count);
 const VisPluginInfo *get_plugin_info (int *count)
 {
 	static const VisTransformPlugin transform[] = {{
@@ -146,7 +145,7 @@ const VisPluginInfo *get_plugin_info (int *count)
 	return info;
 }
 
-int trans_load_runnable(DMovementPrivate *priv, TransRunnable runnable, char *buf)
+static int trans_load_runnable(DMovementPrivate *priv, TransRunnable runnable, char *buf)
 {
     AvsRunnable *obj = avs_runnable_new(priv->ctx);
     avs_runnable_set_variable_manager(obj, priv->vm);
@@ -155,7 +154,7 @@ int trans_load_runnable(DMovementPrivate *priv, TransRunnable runnable, char *bu
     return 0;
 }
 
-int trans_run_runnable(DMovementPrivate *priv, TransRunnable runnable)
+static int trans_run_runnable(DMovementPrivate *priv, TransRunnable runnable)
 {
     avs_runnable_execute(priv->runnable[runnable]);
     return 0;
@@ -167,31 +166,31 @@ int lv_dmovement_init (VisPluginData *plugin)
 	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
 	int i;
 
-	static VisParamEntryProxy params[] = {
-		VISUAL_PARAM_LIST_ENTRY_STRING ("init", "", "Set intial variable values here"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "", "Used to define movement and transformations"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "", "Expression that gets evaluated on the beat"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("pixel", "", "This is where the shape is defined"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("preset", -1, VISUAL_PARAM_LIMIT_INTEGER(-1, 7), "Preset choice"),
-		VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1, VISUAL_PARAM_LIMIT_NONE, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectcoords", 1, VISUAL_PARAM_LIMIT_BOOLEAN, "Rectangular coordinates"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("xres", 20, VISUAL_PARAM_LIMIT_INTEGER(2, 256), "Grid size x axis"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("yres", 20, VISUAL_PARAM_LIMIT_INTEGER(2, 256), "Grid size y axis"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 1, VISUAL_PARAM_LIMIT_BOOLEAN, "Blend"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 1, VISUAL_PARAM_LIMIT_BOOLEAN, "Wrap"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("buffern", 0, VISUAL_PARAM_LIMIT_INTEGER(0, 8), "Source buffer"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("nomove", 0, VISUAL_PARAM_LIMIT_BOOLEAN, "No movement (just blend)"),
+	static VisParamEntry params[] = {
+		VISUAL_PARAM_LIST_ENTRY_STRING ("init", ""),//, "Set intial variable values here"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", ""),//, "Used to define movement and transformations"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", ""),//, "Expression that gets evaluated on the beat"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("pixel", ""),//, "This is where the shape is defined"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("preset", 3),//, VISUAL_PARAM_LIMIT_INTEGER(-1, 7), "Preset choice"),
+		VISUAL_PARAM_LIST_ENTRY_INTEGER ("subpixel", 1),//, VISUAL_PARAM_LIMIT_NONE, ""),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("rectcoords", 0),//, VISUAL_PARAM_LIMIT_BOOLEAN, "Rectangular coordinates"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("xres", 16),//, VISUAL_PARAM_LIMIT_INTEGER(2, 256), "Grid size x axis"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("yres", 16),//, VISUAL_PARAM_LIMIT_INTEGER(2, 256), "Grid size y axis"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0),//, VISUAL_PARAM_LIMIT_BOOLEAN, "Blend"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("wrap", 0),//, VISUAL_PARAM_LIMIT_BOOLEAN, "Wrap"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("buffern", 0),//, VISUAL_PARAM_LIMIT_INTEGER(0, 8), "Source buffer"),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("nomove", 0),//, VISUAL_PARAM_LIMIT_BOOLEAN, "No movement (just blend)"),
 		VISUAL_PARAM_LIST_END
 	};
 
 	priv = visual_mem_new0 (DMovementPrivate, 1);
 
-    priv->proxy = AVS_GLOBAL_PROXY(visual_object_get_private(VISUAL_OBJECT(plugin)));
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    priv->pipeline = LVAVS_PIPELINE(visual_object_get_private(VISUAL_OBJECT(plugin)));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
 	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-	visual_param_container_add_many_proxy (paramcontainer, params);
+	visual_param_container_add_many (paramcontainer, params);
 
     priv->ctx = avs_runnable_context_new();
     priv->vm = avs_runnable_variable_manager_new();
@@ -212,17 +211,12 @@ int lv_dmovement_cleanup (VisPluginData *plugin)
 {
 	DMovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
-    visual_mem_free(priv->init);
-    visual_mem_free(priv->pixel);
-    visual_mem_free(priv->frame);
-    visual_mem_free(priv->beat);
-
 	visual_mem_free (priv);
 
 	return 0;
 }
 
-void load_preset(VisPluginData *plugin)
+static void load_preset(VisPluginData *plugin)
 {
 	DMovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
@@ -248,6 +242,8 @@ void load_preset(VisPluginData *plugin)
 
     param = visual_param_container_get(paramcontainer, "preset");
     visual_param_entry_set_integer(param, -1);
+
+    visual_plugin_events_pump(plugin);
 }
 
 int lv_dmovement_events (VisPluginData *plugin, VisEventQueue *events)
@@ -262,18 +258,18 @@ int lv_dmovement_events (VisPluginData *plugin, VisEventQueue *events)
 			case VISUAL_EVENT_PARAM:
 				param = ev.event.param.param;
 			    if (visual_param_entry_is (param, "init")) {
-					priv->init = (str = visual_param_entry_get_string (param)) ? str : "";
-                    trans_load_runnable(priv, TRANS_RUNNABLE_INIT, priv->init);
+					char *init = visual_param_entry_get_string (param);
+                    trans_load_runnable(priv, TRANS_RUNNABLE_INIT, init);
                     priv->needs_init = TRUE;
 				} else if (visual_param_entry_is (param, "frame")) {
-					priv->frame = (str = visual_param_entry_get_string (param)) ? str : "";
-                    trans_load_runnable(priv, TRANS_RUNNABLE_FRAME, priv->frame);
+					char *frame = visual_param_entry_get_string (param);
+                    trans_load_runnable(priv, TRANS_RUNNABLE_FRAME, frame);
 				} else if (visual_param_entry_is (param, "beat")) {
-					priv->beat = (str = visual_param_entry_get_string (param)) ? str : "";
-                    trans_load_runnable(priv, TRANS_RUNNABLE_BEAT, priv->beat);
+					char *beat = visual_param_entry_get_string (param);
+                    trans_load_runnable(priv, TRANS_RUNNABLE_BEAT, beat);
 				} else if (visual_param_entry_is (param, "pixel")) {
-					priv->pixel = (str = visual_param_entry_get_string (param)) ? str : "";
-                    trans_load_runnable(priv, TRANS_RUNNABLE_PIXEL, priv->pixel);
+					char *pixel = visual_param_entry_get_string (param);
+                    trans_load_runnable(priv, TRANS_RUNNABLE_PIXEL, pixel);
 				} else if (visual_param_entry_is (param, "preset"))
 					priv->preset = visual_param_entry_get_integer (param);
 				else if (visual_param_entry_is (param, "subpixel"))
@@ -316,57 +312,398 @@ int lv_dmovement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audi
 int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
 	DMovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-	uint8_t *pixels = visual_video_get_pixels (video);
-    uint8_t *vidbuf, vidoutbuf;
-    int i;
-    uint8_t isBeat = visual_audio_is_beat(audio, VISUAL_BEAT_ALGORITHM_ADV);
+    uint8_t isBeat = priv->pipeline->isBeat;
+    int max_threads = 1;
+    int w = video->width, h = video->height;
+    void *visdata = priv->pipeline->audiodata;
+    uint32_t *framebuffer = priv->pipeline->framebuffer;
+    uint32_t *fbout = priv->pipeline->fbout;
+    int this_thread = 0;
 
-    printf("lv_dmovement_video\n");
 
-    return 0;
-    if(priv->last_width != video->width || priv->last_height != video->height || priv->last_pitch != video->pitch) {
-        //trans_initalize(priv, video->width, video->height);
-
-        if(priv->swapbuf != NULL)
-            visual_mem_free(priv->swapbuf);
-        if(priv->renderbuf != NULL)
-            visual_mem_free(priv->renderbuf);
-
-        priv->swapbuf = visual_mem_malloc0(visual_video_get_size(video));
-        priv->renderbuf = visual_mem_malloc0(video->width * video->height * video->bpp);
-    }
-
-    vidbuf = priv->swapbuf;
-    for (i = 0; i < video->height; i++) {
-        visual_mem_copy (vidbuf, pixels + (video->pitch * i), video->width * video->bpp);
-        vidbuf += video->width * video->bpp;
-    }
-
-    visual_mem_set(priv->renderbuf, 0, video->width * video->height * video->bpp);
-
-    priv->last_width = priv->width = video->width;
-    priv->last_height = priv->height = video->height;
-    priv->last_pitch = video->pitch;
-
-    trans_begin(priv, isBeat, (uint32_t *) pixels, (uint32_t *)priv->renderbuf);
-
+//#pragma omp parallel
+{
+    //max_threads = omp_get_num_threads();
+    trans_begin(priv, max_threads, visdata, isBeat, framebuffer, fbout, w, h);
+}
     //if(!isBeat)
     //    return 0;
 
-    trans_render(priv, isBeat, (uint32_t *) pixels, (uint32_t *)priv->renderbuf);
+//#pragma omp parallel
+{
+//#pragma omp for
+    //for( this_thread = max_threads - 1; this_thread>=0; this_thread--)
+        trans_render(priv, this_thread, max_threads, visdata, isBeat, framebuffer,fbout, w, h);
+}
+    priv->pipeline->swap = !priv->__nomove;//TRUE;//trans_finish(priv, visdata, isBeat, framebuffer, fbout, w, h);
 
-    for(i = 0; i < video->height; i++) {
-        visual_mem_copy( pixels, priv->renderbuf + (i * video->width * video->bpp), video->width * video->bpp);
-        pixels += video->pitch;
-    }
     return 0;
 }
 
-static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, uint32_t *fbout)
+///////////////////////////////////////
+
+
+int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
 {
-    printf("trans_begin\n");
-    int thread = 0;
-    int max_threads = 1;
+  priv->__subpixel=priv->subpixel;
+  priv->__rectcoords=priv->rectcoords;
+  priv->__blend=priv->blend;
+  priv->__wrap=priv->wrap;
+  priv->__nomove=priv->nomove;
+
+  priv->w_adj=(w-2)<<16;
+  priv->h_adj=(h-2)<<16;
+  priv->xres=priv->m_xres+1;
+  priv->yres=priv->m_yres+1;
+
+  if (priv->xres < 2) priv->xres=2;
+  if (priv->xres > 256) priv->xres=256;
+  if (priv->yres < 2) priv->yres=2;
+  if (priv->yres > 256) priv->yres=256;
+
+  if (priv->m_lasth != h || priv->m_lastw != w || !priv->m_tab || !priv->m_wmul || 
+    priv->m_lastxres != priv->xres || priv->m_lastyres != priv->yres)
+  {
+    int y;
+    priv->m_lastxres = priv->xres;
+    priv->m_lastyres = priv->yres;
+    priv->m_lastw=w;
+    priv->m_lasth=h;
+
+    if(priv->m_wmul) 
+        visual_mem_free(priv->m_wmul);
+
+    priv->m_wmul = visual_mem_malloc(sizeof(int)*h);
+
+    for (y = 0; y < h; y ++) 
+        priv->m_wmul[y]=y*w;
+
+    if (priv->m_tab) 
+        visual_mem_free(priv->m_tab);
+
+    priv->m_tab= visual_mem_malloc((priv->xres*priv->yres*3 + (priv->xres*6 + 6)*max_threads)*sizeof(int));
+  }
+
+  if (!priv->__subpixel)
+  {
+    priv->w_adj=(w-1)<<16;
+    priv->h_adj=(h-1)<<16;
+  }
+
+  if (isBeat&0x80000000) return 0;
+
+  uint32_t *fbin = priv->buffern ? framebuffer : 
+    visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  if (!fbin) return 0;
+
+  priv->var_w=(double)w;
+  priv->var_h=(double)h;
+  priv->var_b=isBeat?1.0:0.0;
+  priv->var_alpha=0.5;
+  if(priv->needs_init) {
+    priv->needs_init = FALSE;
+    trans_run_runnable(priv, TRANS_RUNNABLE_INIT);
+  }
+  trans_run_runnable(priv, TRANS_RUNNABLE_FRAME);
+
+  if (isBeat)
+    trans_run_runnable(priv, TRANS_RUNNABLE_BEAT);
+
+  {
+    int x;
+    int y;
+    uint32_t *tabptr=priv->m_tab;
+
+    double xsc=2.0/w,ysc=2.0/h;
+    double dw2=((double)w*32768.0);
+    double dh2=((double)h*32768.0);
+    double max_screen_d=sqrt((double)(w*w+h*h))*0.5;
+    
+    double divmax_d=1.0/max_screen_d;
+
+    max_screen_d *= 65536.0;
+
+    int yc_pos, yc_dpos, xc_pos, xc_dpos;
+    yc_pos=0;
+    xc_dpos = (w<<16)/(priv->xres-1);
+    yc_dpos = (h<<16)/(priv->yres-1);
+    for (y = 0; y < priv->yres; y ++)
+    {
+      xc_pos=0;
+      for (x = 0; x < priv->xres; x ++)
+      {
+        double xd,yd;
+        
+        xd=((double)xc_pos-dw2)*(1.0/65536.0);
+        yd=((double)yc_pos-dh2)*(1.0/65536.0);
+
+        xc_pos+=xc_dpos;
+
+        priv->var_x=xd*xsc;
+        priv->var_y=yd*ysc;
+        priv->var_d=sqrt(xd*xd+yd*yd)*divmax_d;
+        priv->var_r=atan2(yd,xd) + M_PI*0.5;
+
+        trans_run_runnable(priv, TRANS_RUNNABLE_PIXEL);
+
+        int tmp1,tmp2;
+        if (!priv->__rectcoords)
+        {
+          priv->var_d *= max_screen_d;
+          priv->var_r -= M_PI*0.5;
+          tmp1=(int) (dw2 + cos(priv->var_r) * priv->var_d);
+          tmp2=(int) (dh2 + sin(priv->var_r) * priv->var_d);
+        }
+        else
+        {
+          tmp1=(int) ((priv->var_x+1.0)*dw2);
+          tmp2=(int) ((priv->var_y+1.0)*dh2);
+        }
+        if (!priv->__wrap)
+        {
+          if (tmp1 < 0) tmp1=0;
+          if (tmp1 > priv->w_adj) tmp1=priv->w_adj;
+          if (tmp2 < 0) tmp2=0;
+          if (tmp2 > priv->h_adj) tmp2=priv->h_adj;
+        }
+        *tabptr++ = tmp1;
+        *tabptr++ = tmp2;
+        double va=priv->var_alpha;
+        if (va < 0.0) va=0.0;
+        else if (va > 1.0) va=1.0;
+        int a=(int)(va*255.0*65536.0);
+        *tabptr++ = a;
+      }
+      yc_pos+=yc_dpos;
+    }
+  }
+
+  return max_threads;
+}
+
+
+int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+{
+  if (max_threads < 1) max_threads=1;
+
+  int start_l = ( this_thread * h ) / max_threads;
+  int end_l;
+  int ypos=0;
+
+  if (this_thread >= max_threads - 1) end_l = h;
+  else end_l = ( (this_thread+1) * h ) / max_threads;  
+
+  int outh=end_l-start_l;
+  if (outh<1) return 0;
+
+  uint32_t *fbin =  !priv->buffern ? framebuffer : 
+        visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  if (!fbin) return 0;
+
+  // yay, the table is generated. now we do a fixed point 
+  // interpolation of the whole thing and pray.
+
+  {
+    LVAVSPipeline *pipeline = priv->pipeline;
+    uint32_t *interptab=priv->m_tab+priv->xres*priv->yres*3 + this_thread * (priv->xres*6+6);
+    uint32_t *rdtab=priv->m_tab;
+    unsigned int *in=(unsigned int *)fbin;
+    unsigned int *blendin=(unsigned int *)framebuffer;
+    unsigned int *out=(unsigned int *)fbout;
+    int yseek=1;
+    int xc_dpos, yc_pos=0, yc_dpos;
+    xc_dpos=(w<<16)/(priv->xres-1);
+    yc_dpos=(h<<16)/(priv->yres-1);
+    int lypos=0;
+    int yl=end_l;
+    while (yl>0)
+    {
+      yc_pos+=yc_dpos;   
+      yseek=(yc_pos>>16)-lypos;
+      if (!yseek) 
+      {
+        #ifndef NO_MMX
+          //__asm emms;
+        #endif
+        return 0;
+      }
+      lypos=yc_pos>>16;
+      int l=priv->xres;
+      uint32_t *stab=interptab;
+      int xr3=priv->xres*3;
+      while (l--)
+      {
+        int tmp1, tmp2,tmp3;
+        tmp1=rdtab[0];
+        tmp2=rdtab[1];
+        tmp3=rdtab[2];
+        stab[0]=tmp1;
+        stab[1]=tmp2;
+        stab[2]=(rdtab[xr3]-tmp1)/yseek;
+        stab[3]=(rdtab[xr3+1]-tmp2)/yseek;
+        stab[4]=tmp3;
+        stab[5]=(rdtab[xr3+2]-tmp3)/yseek;
+        rdtab+=3;
+        stab+=6;
+      }
+
+      if (yseek > yl) yseek=yl;
+      yl-=yseek;
+
+      if (yseek > 0) while (yseek--)
+      {
+        int d_x;
+        int d_y;
+        int d_a;
+        int ap;
+        int seek;
+        uint32_t *seektab=interptab;
+        int xp,yp;
+        int l=w;
+        int lpos=0;
+        int xc_pos=0;
+        ypos++;
+        {
+          while (l>0)
+          {
+            xc_pos+=xc_dpos;
+            seek=(xc_pos>>16)-lpos;
+            if (!seek) 
+            {
+              #ifndef NO_MMX
+                //__asm emms;
+              #endif
+              return 0;
+            }
+            lpos=xc_pos>>16;
+            xp=seektab[0];
+            yp=seektab[1];
+            ap=seektab[4];
+            d_a=(seektab[10]-ap)/(seek);
+            d_x=(seektab[6]-xp)/(seek);
+            d_y=(seektab[7]-yp)/(seek);
+            seektab[0] += seektab[2];
+            seektab[1] += seektab[3];
+            seektab[4] += seektab[5];
+            seektab+=6;
+        
+            if (seek>l) seek=l;
+            l-=seek;
+            if (seek > 0 && ypos <= start_l)
+            {
+              blendin+=seek;
+              if (priv->__nomove) in+=seek;
+              else out+=seek;
+
+              seek=0;
+            }
+            if (seek>0)
+            {
+
+  #define CHECK
+              //__docheck(xp,yp,m_lastw,m_lasth,d_x,d_y);
+  // normal loop
+  #define NORMAL_LOOP(Z) while ((seek--)) { Z; xp+=d_x; yp+=d_y; }
+
+  #if 0
+              // this would be faster, but seems like it might be less reliable:
+  #define WRAPPING_LOOPS(Z) \
+    if (d_x <= 0 && d_y <= 0) NORMAL_LOOP(if (xp < 0) xp += priv->w_adj; if (yp < 0) yp += priv->h_adj; Z) \
+    else if (d_x <= 0) NORMAL_LOOP(if (xp < 0) xp += priv->w_adj; if (yp >= priv->h_adj) yp-=priv->h_adj; Z) \
+    else if (d_y <= 0) NORMAL_LOOP(if (xp >= priv->w_adj) xp-=priv->w_adj; if (yp < 0) yp += priv->h_adj; Z) \
+    else NORMAL_LOOP(if (xp >= priv->w_adj) xp-=priv->w_adj; if (yp >= priv->h_adj) yp-=priv->h_adj; Z)
+
+  #define CLAMPED_LOOPS(Z) \
+    if (d_x <= 0 && d_y <= 0) NORMAL_LOOP(if (xp < 0) xp=0; if (yp < 0) yp=0; Z) \
+    else if (d_x <= 0) NORMAL_LOOP(if (xp < 0) xp=0; if (yp >= priv->h_adj) yp=priv->h_adj-1; Z) \
+    else if (d_y <= 0) NORMAL_LOOP(if (xp >= priv->w_adj) xp=priv->w_adj-1; if (yp < 0) yp=0; Z) \
+    else NORMAL_LOOP(if (xp >= priv->w_adj) xp=priv->w_adj-1; if (yp >= priv->h_adj) yp=priv->h_adj-1; Z)
+
+  #else     // slower, more reliable loops
+
+  // wrapping loop
+  #define WRAPPING_LOOPS(Z) \
+    NORMAL_LOOP(if (xp < 0) xp += priv->w_adj;  \
+                else if (xp >= priv->w_adj) xp-=priv->w_adj;  \
+                if (yp < 0) yp += priv->h_adj;  \
+                else if (yp >= priv->h_adj) yp-=priv->h_adj;  \
+                Z)
+
+  #define CLAMPED_LOOPS(Z) \
+    NORMAL_LOOP(if (xp < 0) xp=0; \
+                else if (xp >= priv->w_adj) xp=priv->w_adj-1; \
+                if (yp < 0) yp=0; \
+                else if (yp >= priv->h_adj) yp=priv->h_adj-1; \
+                Z)
+
+  #endif
+
+  #define LOOPS(DO)  \
+                if (priv->__blend && priv->__subpixel) DO(CHECK *out++=BLEND_ADJ(pipeline->blendtable, BLEND4_16(pipeline->blendtable, in+(xp>>16)+(priv->m_wmul[yp>>16]),w,xp,yp),*blendin++,ap>>16); ap+=d_a) \
+                else if (priv->__blend) DO(CHECK *out++=BLEND_ADJ(pipeline->blendtable, in[(xp>>16)+(priv->m_wmul[yp>>16])],*blendin++,ap>>16); ap+=d_a) \
+                else if (priv->__subpixel) DO(CHECK *out++=BLEND4_16(pipeline->blendtable, in+(xp>>16)+(priv->m_wmul[yp>>16]),w,xp,yp)) \
+                else DO(CHECK *out++=in[(xp>>16)+(priv->m_wmul[yp>>16])])
+
+              if (priv->__nomove)
+              {
+                if (fbin != framebuffer) while (seek--)
+                {
+                  *blendin=BLEND_ADJ(pipeline->blendtable, *in++,*blendin,ap>>16); ap+=d_a;
+                  blendin++;
+                }
+                else while (seek--)
+                {
+                  *blendin=BLEND_ADJ(pipeline->blendtable, 0,*blendin,ap>>16); ap+=d_a;
+                  blendin++;
+                }
+              }
+              else if (!priv->__wrap)
+              {
+                // this might not really be necessary b/c of the clamping in the loop, but I'm sick of crashes
+                if (xp < 0) xp=0;
+                else if (xp >= priv->w_adj) xp=priv->w_adj-1;
+                if (yp < 0) yp=0;
+                else if (yp >= priv->h_adj) yp=priv->h_adj-1;
+
+                LOOPS(CLAMPED_LOOPS)
+              }
+              else // __wrap
+              {
+                xp %= priv->w_adj; 
+                yp %= priv->h_adj;
+                if (xp < 0) xp+=priv->w_adj; 
+                if (yp < 0) yp+=priv->h_adj;
+
+                if (d_x <= -priv->w_adj) d_x=-priv->w_adj+1;
+                else if (d_x >= priv->w_adj) d_x=priv->w_adj-1; 
+
+                if (d_y <= -priv->h_adj) d_y=-priv->h_adj+1;
+                else if (d_y >= priv->h_adj) d_y=priv->h_adj-1;
+
+                LOOPS(WRAPPING_LOOPS)
+              }
+            } // if seek>0
+          }
+          // adjust final (rightmost elem) part of seektab
+          seektab[0] += seektab[2];
+          seektab[1] += seektab[3];
+          seektab[4] += seektab[5];
+        }
+      }
+    }
+  }
+
+
+#ifndef NO_MMX
+  __asm emms;
+#endif
+    return 0;  
+}
+
+
+#if 0
+static void trans_begin(int this_thread, int max_threads, DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, uint32_t *fbout, int w, int h)
+{
 
     priv->__subpixel = priv->subpixel;
     priv->__rectcoords = priv->rectcoords;
@@ -374,29 +711,28 @@ static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, 
     priv->__wrap = priv->wrap;
     priv->__nomove = priv->nomove;
 
-    priv->w_adj = (priv->width - 2)<<16;
-    priv->h_adj = (priv->height - 2)<<16;
+    priv->w_adj = (w - 2)<<16;
+    priv->h_adj = (h - 2)<<16;
     
     if(priv->xres < 2) priv->xres = 2;
     if(priv->xres > 256) priv->xres = 256;
     if(priv->yres < 2) priv->yres = 2;
     if(priv->yres > 256) priv->yres = 256;
     
-    if(priv->last_xres != priv->xres || priv->last_yres != priv->yres || 
-            priv->last_width != priv->width || priv->last_height != priv->height || 
-            !priv->tab || !priv->wmul ) {
+    if(priv->last_width != w || priv->last_height != h || priv->last_xres != priv->xres || priv->last_yres != priv->yres) {
         int y;
         priv->last_xres = priv->xres;
         priv->last_yres = priv->yres;
-        priv->last_width = priv->width;
-        priv->last_height = priv->height;
+        priv->last_width = w;
+        priv->last_height = h;
 
         if(priv->wmul != NULL) 
             visual_mem_free(priv->wmul);
-        priv->wmul = visual_mem_malloc0(sizeof(int)*priv->height);
 
-        for(y = 0; y < priv->height; y++) 
-            priv->wmul[y] = y * priv->width;
+        priv->wmul = visual_mem_malloc0(sizeof(int)*w);
+
+        for(y = 0; y < h; y++) 
+            priv->wmul[y] = y * w;
 
         if(priv->tab != NULL)
             visual_mem_free(priv->tab);
@@ -406,15 +742,15 @@ static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, 
 
     if(!priv->__subpixel)
     {
-        priv->w_adj = (priv->width-1)<<16;
-        priv->w_adj = (priv->height-1)<<16;
+        priv->w_adj = (w-1)<<16;
+        priv->w_adj = (h-1)<<16;
     }
 
-    if(isBeat&0x80000000)
-        return;
+    //if(isBeat&0x80000000)
+    //    return;
 
-    priv->var_w = (AvsNumber)priv->width;
-    priv->var_h = (AvsNumber)priv->height;
+    priv->var_w = (AvsNumber)w;
+    priv->var_h = (AvsNumber)h;
     priv->var_b = isBeat?1.0:0.0;
     priv->var_alpha = 0.5;
 
@@ -432,10 +768,10 @@ static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, 
         int32_t x, y;
         uint32_t *tabptr=priv->tab;
 
-        double xsc = 2.0/priv->width, ysc=2.0/priv->height;
-        double dw2 = ((double)priv->width*32768.0);
-        double dh2 = ((double)priv->height*32768.0);
-        double max_screen_d = sqrt((double)(priv->width*priv->width + priv->height*priv->height)) * 0.5;
+        double xsc = 2.0/w, ysc=2.0/h;
+        double dw2 = ((double)w*32768.0);
+        double dh2 = ((double)h*32768.0);
+        double max_screen_d = sqrt((double)(w*h + w*h)) * 0.5;
 
         double divmax_d = 1.0/max_screen_d;
 
@@ -444,8 +780,8 @@ static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, 
         max_screen_d *= 65536.0;
 
         yc_pos = 0;
-        xc_dpos = (priv->width << 16)/(priv->xres-1);
-        yc_dpos = (priv->height << 16)/(priv->yres-1);
+        xc_dpos = (w << 16)/(priv->xres-1);
+        yc_dpos = (h << 16)/(priv->yres-1);
         for(y = 0; y < priv->yres; y++) 
         {
             xc_pos = 0;
@@ -503,27 +839,21 @@ static void trans_begin(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fbin, 
     }
 }
 
-static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, uint32_t *fbout)
+static void trans_render(int this_thread, int max_threads, DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, uint32_t *fbout, int w, int h)
 {
-    printf("trans_render\n");
 
-    int max_threads = 1;
-    int this_thread = 0;
-
-    int start_l = (this_thread * priv->height) / max_threads;
+    int start_l = (this_thread * h) / max_threads;
     int end_l;
     int ypos = 0;
 
-    if(this_thread >= max_threads - 1) end_l = priv->height;
-    else end_l = ((this_thread+1) * priv->height) / max_threads;
+    if(this_thread >= max_threads - 1) end_l = h;
+    else end_l = ((this_thread+1) * h) / max_threads;
 
     int outh = end_l-start_l;
     if(outh<1) return;
 
-    uint32_t *fbin = !priv->buffern ? fb : 
-        (uint32_t *)avs_get_global_buffer(priv->proxy, priv->width, priv->height, priv->buffern-1, 0)->buffer;
+    uint32_t *fbin = fb; //!priv->buffern ? fb : 
 
-    printf("buffern = %d\n", priv->buffern);
     {
         uint32_t *interptab = priv->tab + priv->xres * priv->yres * 3 + this_thread * (priv->xres * 6 + 6);
         uint32_t *rdtab = priv->tab;
@@ -532,8 +862,8 @@ static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, u
         unsigned int *out = (unsigned int *)fbout;
         int yseek = 1;
         int xc_dpos, yc_pos=0, yc_dpos;
-        xc_dpos = (priv->width<<16)/(priv->xres-1);
-        yc_dpos = (priv->height<<16)/(priv->yres-1);
+        xc_dpos = (w<<16)/(priv->xres-1);
+        yc_dpos = (h<<16)/(priv->yres-1);
         int lypos = 0;
         int yl = end_l;
         while(yl>0)
@@ -579,7 +909,7 @@ static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, u
                 int seek;
                 uint32_t *seektab = interptab;
                 int xp,yp;
-                int l = priv->width;
+                int l = w;
                 int lpos = 0;
                 int xc_pos = 0;
                 ypos++;
@@ -640,22 +970,22 @@ static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, u
                 Z)
 
 #define LOOPS(DO)  \
-                if (priv->__blend && priv->__subpixel) DO(CHECK *out++=BLEND_ADJ(priv->proxy, BLEND4_16(priv->proxy, in+(xp>>16)+(priv->wmul[yp>>16]),priv->width,xp,yp),*blendin++,ap>>16); ap+=d_a) \
-                else if (priv->__blend) DO(CHECK *out++=BLEND_ADJ(priv->proxy, in[(xp>>16)+(priv->wmul[yp>>16])],*blendin++,ap>>16); ap+=d_a) \
-                else if (priv->__subpixel) DO(CHECK *out++=BLEND4_16(priv->proxy, in+(xp>>16)+(priv->wmul[yp>>16]),priv->width,xp,yp)) \
+                if (priv->__blend && priv->__subpixel) DO(CHECK *out++=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, BLEND4_16(priv->pipeline->blendtable, in+(xp>>16)+(priv->wmul[yp>>16]),w,xp,yp),*blendin++,ap>>16); ap+=d_a) \
+                else if (priv->__blend) DO(CHECK *out++=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, in[(xp>>16)+(priv->wmul[yp>>16])],*blendin++,ap>>16); ap+=d_a) \
+                else if (priv->__subpixel) DO(CHECK *out++=BLEND4_16(priv->pipeline->blendtable, in+(xp>>16)+(priv->wmul[yp>>16]),w,xp,yp)) \
                 else DO(CHECK *out++=in[(xp>>16)+(priv->wmul[yp>>16])])
 
                             if(priv->__nomove)
                             {
                                 if(fbin != fb) while(seek--)
                                 {
-                                    *blendin=BLEND_ADJ(priv->proxy, *in++, *blendin, ap>>16);
+                                    *blendin=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, *in++, *blendin, ap>>16);
                                     ap+=d_a;
                                     blendin++;
                                 }
                                 else while( seek--)
                                 {
-                                    *blendin=BLEND_ADJ(priv->proxy, 0, *blendin, ap>>16);
+                                    *blendin=BLEND_ADJ_NOMMX(priv->pipeline->blendtable, 0, *blendin, ap>>16);
                                     ap+=d_a;
                                     blendin++;
                                 }
@@ -698,5 +1028,8 @@ static void trans_render(DMovementPrivate *priv, uint8_t isBeat, uint32_t *fb, u
 #ifdef HAVE_MMX
     //__asm emms;
 #endif
+
+   return 0;
 }
 
+#endif

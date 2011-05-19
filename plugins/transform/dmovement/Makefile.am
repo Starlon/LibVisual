@@ -13,7 +13,8 @@ AM_CFLAGS = @LIBVISUAL_CFLAGS@
 INCLUDES = $(all_includes) \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/common \
-	-I$(top_srcdir)/visscript
+	-I$(top_srcdir)/visscript \
+	-I$(top_srcdir)/src
 
 transform_avs_dmovement_la_LDFLAGS = -rpath $(libdir) -module -avoid-version 
 
