@@ -60,8 +60,8 @@ typedef struct {
     AvsRunnable *runnable[4];
     AvsNumber var_d, var_b, var_r, var_x, var_y, var_w, var_h, var_alpha;
 
-    uint32_t *m_tab;
-    uint32_t *m_wmul;
+    int *m_tab;
+    int *m_wmul;
 
     int32_t m_lastw, m_lasth;
     int32_t m_lastxres, m_lastyres, m_xres, m_yres;
@@ -107,8 +107,8 @@ int lv_dmovement_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_dmovement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-static int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
-static int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
+static int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h);
+static int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -321,8 +321,8 @@ int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     int max_threads = 1;
     int w = video->width, h = video->height;
     void *visdata = priv->pipeline->audiodata;
-    uint32_t *framebuffer = priv->pipeline->framebuffer;
-    uint32_t *fbout = priv->pipeline->fbout;
+    int *framebuffer = priv->pipeline->framebuffer;
+    int *fbout = priv->pipeline->fbout;
     int this_thread = 0;
 
 
@@ -348,7 +348,7 @@ int lv_dmovement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 ///////////////////////////////////////
 
 
-int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   priv->__subpixel=priv->subpixel;
   priv->__rectcoords=priv->rectcoords;
@@ -397,7 +397,7 @@ int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576]
 
   if (isBeat&0x80000000) return 0;
 
-  uint32_t *fbin = framebuffer;//priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  int *fbin = framebuffer;//priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
   if (!fbin) return 0;
 
   priv->var_w=(double)w;
@@ -416,7 +416,7 @@ int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576]
   {
     int x;
     int y;
-    uint32_t *tabptr=priv->m_tab;
+    int *tabptr=priv->m_tab;
 
     double xsc=2.0/w,ysc=2.0/h;
     double dw2=((double)w*32768.0);
@@ -457,7 +457,6 @@ int trans_begin(DMovementPrivate *priv, int max_threads, char visdata[2][2][576]
           priv->var_r -= M_PI*0.5;
           tmp1=(int) (dw2 + cos(priv->var_r) * priv->var_d);
           tmp2=(int) (dh2 + sin(priv->var_r) * priv->var_d);
-printf("tmp1 %d tmp2 %d vard %f var_r %f\n", tmp1, tmp2, priv->var_d, priv->var_r);
         }
         else
         {
@@ -487,7 +486,7 @@ printf("tmp1 %d tmp2 %d vard %f var_r %f\n", tmp1, tmp2, priv->var_d, priv->var_
 }
 
 
-int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   if (max_threads < 1) max_threads=1;
 
@@ -501,7 +500,7 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
   int outh=end_l-start_l;
   if (outh<1) return 0;
 
-  uint32_t *fbin =  framebuffer;//!priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
+  int *fbin =  framebuffer;//!priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern-1]);
   if (!fbin) return 0;
 
   // yay, the table is generated. now we do a fixed point 
@@ -509,11 +508,11 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
 
   {
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *interptab=priv->m_tab+priv->xres*priv->yres*3 + this_thread * (priv->xres*6+6);
-    uint32_t *rdtab=priv->m_tab;
-    unsigned int *in=(unsigned int *)fbin;
-    unsigned int *blendin=(unsigned int *)framebuffer;
-    unsigned int *out=(unsigned int *)fbout;
+    int *interptab=priv->m_tab+priv->xres*priv->yres*3 + this_thread * (priv->xres*6+6);
+    int *rdtab=priv->m_tab;
+    int *in=(int *)fbin;
+    int *blendin=(int *)framebuffer;
+    int *out=(int *)fbout;
     int yseek=1;
     int xc_dpos, yc_pos=0, yc_dpos;
     xc_dpos=(w<<16)/(priv->xres-1);
@@ -533,7 +532,7 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
       }
       lypos=yc_pos>>16;
       int l=priv->xres;
-      uint32_t *stab=interptab;
+      int *stab=interptab;
       int xr3=priv->xres*3;
       while (l--)
       {
@@ -561,7 +560,7 @@ int trans_render(DMovementPrivate *priv, int this_thread, int max_threads, char 
         int d_a;
         int ap;
         int seek;
-        uint32_t *seektab=interptab;
+        int *seektab=interptab;
         int xp,yp;
         int l=w;
         int lpos=0;

@@ -4,10 +4,11 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <math.h>
 
 #include "avs.h"
 
-#define PI 3.14159
+#define PI M_PI
 #define E 2.71828
 #define PHI 1.618033
 

@@ -130,8 +130,8 @@ static int lvavs_pipeline_container_dtor (VisObject *object)
 LVAVSPipeline *lvavs_pipeline_new ()
 {
     LVAVSPipeline *pipeline;
-    int i;
     VisColor *col = visual_color_black();
+    int i,j;
     
 
     pipeline = visual_mem_new0 (LVAVSPipeline, 1);
@@ -141,8 +141,11 @@ LVAVSPipeline *lvavs_pipeline_new ()
     pipeline->last_vid = visual_video_new_with_buffer(0, 0, 1);
     
     for(i = 0; i < sizeof(pipeline->buffers) / sizeof(VisVideo); i++) {
-    pipeline->buffers[i] = visual_video_new_with_buffer(0, 0, 1);
+        pipeline->buffers[i] = visual_video_new_with_buffer(0, 0, 1);
     }
+    for (j=0;j<256;j++)
+        for (i=0;i<256;i++)
+            pipeline->blendtable[i][j] = (unsigned char)((i / 255.0) * (float)j);
 
     /* Do the VisObject initialization */
     visual_object_set_allocated (VISUAL_OBJECT (pipeline), TRUE);
@@ -532,15 +535,15 @@ static int render_now(LVAVSPipelineContainer *container, VisVideo *video, VisAud
     int count = visual_list_count(container->members);
     for(i = 0; i < count; i++) {
         LVAVSPipelineElement *element = visual_list_get(container->members, i);
-    VisVideo *tmpvid;
+        VisVideo *tmpvid;
 
-    if(s) {
-        pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
-        pipeline->fbout = visual_video_get_pixels(video);
-    } else {
-        pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
-        pipeline->framebuffer = visual_video_get_pixels(video);
-    }
+        if(s) {
+            pipeline->framebuffer = visual_video_get_pixels(pipeline->dummy_vid);
+            pipeline->fbout = visual_video_get_pixels(video);
+        } else {
+            pipeline->fbout = visual_video_get_pixels(pipeline->dummy_vid);
+            pipeline->framebuffer = visual_video_get_pixels(video);
+        }
 
         switch (element->type) {
             case LVAVS_PIPELINE_ELEMENT_TYPE_ACTOR:
@@ -568,10 +571,10 @@ static int render_now(LVAVSPipelineContainer *container, VisVideo *video, VisAud
                 break;
         }
 
-    if(pipeline->swap&1) {
-        s^=1;
-        pipeline->swap = 0;
-    }
+        if(pipeline->swap&1) {
+            s^=1;
+            pipeline->swap = 0;
+        }
 
     }
 
@@ -579,7 +582,7 @@ static int render_now(LVAVSPipelineContainer *container, VisVideo *video, VisAud
 }
 int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, VisAudio *audio)
 {
-    int i, s;
+    int i, s = 0;
     VisListEntry *le = NULL;
     LVAVSPipelineElement *element;
     VisBuffer pcmbuf1;
@@ -587,20 +590,21 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     VisBuffer spmbuf1;
     VisBuffer spmbuf2;
     VisBuffer tmp;
-    unsigned int *fbout;
-    unsigned int *framebuffer;
+    int *fbout;
+    int *framebuffer;
     LVAVSPipeline *pipeline = LVAVS_PIPELINE_ELEMENT(container)->pipeline;
     int w = video->width, h = video->height;
 
     if(video->width != pipeline->dummy_vid->width || video->height != pipeline->dummy_vid->height || video->depth != pipeline->dummy_vid->depth) {
 
-        if(pipeline->dummy_vid) {
+        if(pipeline->dummy_vid)
             visual_object_unref(VISUAL_OBJECT(pipeline->dummy_vid));
-            }
+
         if(pipeline->last_vid)
             visual_object_unref(VISUAL_OBJECT(pipeline->last_vid));
     
         pipeline->dummy_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
+
         pipeline->last_vid = visual_video_scale_depth_new(video, video->width, video->height, video->depth, VISUAL_VIDEO_COMPOSITE_TYPE_SRC);
         
         for(i = 0; i < 16; i++) {
@@ -627,114 +631,114 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
     if(!is_preinit)
     {
         int x = video->width * video->height;
-        unsigned int *tfb=framebuffer;
-        unsigned int *o = fbout;
+        int *tfb=framebuffer;
+        int *o = fbout;
         int use_blendin=blendin(pipeline->blendmode);
         if(use_blendin == 10 && pipeline->use_inblendval >= 255)
             use_blendin=1;
 
-    switch (use_blendin)
-    {
-        case 1:
-            visual_mem_copy(o, tfb, w*h*sizeof(int));
-        break;
-        case 2:
-            mmx_avgblend_block(o,tfb,x);
-        break;
-        case 3:
-            while(x--)
-            {
-                *o=BLEND_MAX(*o, *tfb++);
-                o++;
-            }
-        break;
-        case 4:
-        //mmx_addblend_block(pipeline->blendtable, o, tfb, x);
-        break;
-        case 5:
-            while(x--)
-            {
-                *o=BLEND_SUB(*o,*tfb++);
-                o++;
-            }
-        break;
-        case 6:
-            while(x--)
-            {
-                *o=BLEND_SUB(*tfb++, *o);
-                o++;
-            }
-        break;
-        case 7:
+        switch (use_blendin)
         {
-            int y=h/2;
-            while(x-- > 0)
+            case 1:
+                visual_mem_copy(o, tfb, w*h*sizeof(int));
+            break;
+            case 2:
+                mmx_avgblend_block(o,tfb,x);
+            break;
+            case 3:
+                while(x--)
+                {
+                    *o=BLEND_MAX(*o, *tfb++);
+                    o++;
+                }
+            break;
+            case 4:
+            //mmx_addblend_block(pipeline->blendtable, o, tfb, x);
+            break;
+            case 5:
+                while(x--)
+                {
+                    *o=BLEND_SUB(*o,*tfb++);
+                    o++;
+                }
+            break;
+            case 6:
+                while(x--)
+                {
+                    *o=BLEND_SUB(*tfb++, *o);
+                    o++;
+                }
+            break;
+            case 7:
             {
-                visual_mem_copy(o,tfb,w*sizeof(int));
-                tfb+=w*2;
-                o+=w*2;
-            }
-        break;
-        }
-        case 8:
-        {
-            int r = 0;
-            int y = h;
-            while(y-- > 0)
-            {
-                uint32_t *out, *in;
-                int x=w/2;
-                out=o+r;
-                in=tfb+r;
-                r^=1;
+                int y=h/2;
                 while(x-- > 0)
                 {
-                    *out=*in;
-                    out+=2;
-                    in+=2;
+                    visual_mem_copy(o,tfb,w*sizeof(int));
+                    tfb+=w*2;
+                    o+=w*2;
                 }
-                o+=w;
-                tfb+=w;
+            break;
             }
-        break;
+            case 8:
+            {
+                int r = 0;
+                int y = h;
+                while(y-- > 0)
+                {
+                    int *out, *in;
+                    int x=w/2;
+                    out=o+r;
+                    in=tfb+r;
+                    r^=1;
+                    while(x-- > 0)
+                    {
+                        *out=*in;
+                        out+=2;
+                        in+=2;
+                    }
+                    o+=w;
+                    tfb+=w;
+                }
+            break;
+            }
+            case 9:
+                while(x--)
+                {
+                    *o=*o^*tfb++;
+                    o++;
+                }
+            break;
+            case 10:
+                mmx_adjblend_block(pipeline->blendtable,o,tfb,o,x,pipeline->use_inblendval);
+            break;
+            case 11:
+                mmx_mulblend_block(pipeline->blendtable, o,tfb,x);
+            break;
+            case 13:
+                while(x--)
+                {
+                    *o=BLEND_MIN(*o,*tfb++);
+                    o++;
+                }
+            break;
+            case 12:
+    /*
+                                    {
+                                            int *buf=(int*)getGlobalBuffer(w,h,bufferin,0);
+                                            if (!buf) break;
+                                            while (x--)
+                                            {
+                                                    *o=BLEND_ADJ(*tfb++,*o, depthof(*buf, ininvert));
+                                                    o++;
+                                                    buf++;
+                                            }
+                                    }
+    */
+            break;
+            default:
+            break;
         }
-        case 9:
-            while(x--)
-            {
-                *o=*o^*tfb++;
-                o++;
-            }
-        break;
-        case 10:
-            mmx_adjblend_block(pipeline->blendtable,o,tfb,o,x,pipeline->use_inblendval);
-        break;
-        case 11:
-            mmx_mulblend_block(pipeline->blendtable, o,tfb,x);
-        break;
-        case 13:
-            while(x--)
-            {
-                *o=BLEND_MIN(*o,*tfb++);
-                o++;
-            }
-        break;
-        case 12:
-/*
-                                {
-                                        int *buf=(int*)getGlobalBuffer(w,h,bufferin,0);
-                                        if (!buf) break;
-                                        while (x--)
-                                        {
-                                                *o=BLEND_ADJ(*tfb++,*o, depthof(*buf, ininvert));
-                                                o++;
-                                                buf++;
-                                        }
-                                }
-*/
-        break;
-        default:
-        break;
-    }
     }
     int x;
     int line_blend_mode_save=pipeline->blendmode;
@@ -745,111 +749,111 @@ int pipeline_container_run (LVAVSPipelineContainer *container, VisVideo *video, 
 
     if(!is_preinit)
     {
-    if(s) visual_mem_copy(framebuffer, fbout, w*h*sizeof(int));
+        if(s) visual_mem_copy(framebuffer, fbout, w*h*sizeof(int));
 
-        uint32_t *tfb=s?fbout:framebuffer;
-    uint32_t *o=framebuffer;
-    x=w*h;
-    int use_blendout=blendout(pipeline->blendmode);
-    int use_outblendval = 100;
-    if(use_blendout == 10 && use_outblendval >= 255)
-        use_blendout=1;
-    switch(use_blendout)
-    {
-        case 1:
-            visual_mem_copy(o,tfb,x*sizeof(int));
-        break;
-        case 2:
-            mmx_avgblend_block(o,tfb,x);
-        break;
-        case 3:
-            while(x--)
-            {
-                *o=BLEND_MAX(*o, *tfb++);
-                o++;
-            }
-        break;
-        case 4:
-            mmx_addblend_block(o, tfb, x);
-        break;
-        case 5:
-            while(x--)
-            {
-                *o = BLEND_SUB(*o, *tfb++);
-                o++;
-            }
-        break;
-        case 6:
-            while(x--)
-            {
-                *o=BLEND_SUB(*tfb++, *o);
-                o++;
-            }
-        break;
-        case 7:
+        int *tfb=s?fbout:framebuffer;
+        int *o=framebuffer;
+        x=w*h;
+        int use_blendout=blendout(pipeline->blendmode);
+        int use_outblendval = 100;
+        if(use_blendout == 10 && use_outblendval >= 255)
+            use_blendout=1;
+        switch(use_blendout)
         {
-            int y=h/2;
-            while(y-- > 0)
-            {
-                visual_mem_copy(o, tfb, w*sizeof(int));
-                tfb+=w*2;
-                o+=w*2;
-            }
-        }
-        break;
-        case 8:
-        {
-            int r = 0;
-            int y = h;
-            while(y-- > 0)
-            {
-                uint32_t *out, *in;
-                uint32_t x=w/2;
-                out=o+r;
-                in=tfb+r;
-                r^=1;
-                while(x-- > 0)
+            case 1:
+                visual_mem_copy(o,tfb,x*sizeof(int));
+            break;
+            case 2:
+                mmx_avgblend_block(o,tfb,x);
+            break;
+            case 3:
+                while(x--)
                 {
-                    *out=*in;
-                    out+=2;
-                    in+=2;
+                    *o=BLEND_MAX(*o, *tfb++);
+                    o++;
                 }
-                o+=w;
-                tfb+=2;
-            }
-        }
-        case 9:
-            while(x--)
+            break;
+            case 4:
+                mmx_addblend_block(o, tfb, x);
+            break;
+            case 5:
+                while(x--)
+                {
+                    *o = BLEND_SUB(*o, *tfb++);
+                    o++;
+                }
+            break;
+            case 6:
+                while(x--)
+                {
+                    *o=BLEND_SUB(*tfb++, *o);
+                    o++;
+                }
+            break;
+            case 7:
             {
-                *o=*o^*tfb++;
-                o++;
+                int y=h/2;
+                while(y-- > 0)
+                {
+                    visual_mem_copy(o, tfb, w*sizeof(int));
+                    tfb+=w*2;
+                    o+=w*2;
+                }
             }
-        break;
-        case 10:
-            mmx_adjblend_block(pipeline->blendtable,o, tfb, o, x, use_outblendval);
-        break;
-        case 11:
-            mmx_mulblend_block(pipeline->blendtable, o, tfb, x);
-        break;
-        case 13:
-            while(x--)
+            break;
+            case 8:
             {
-                *o=BLEND_MIN(*o, *tfb++);
-                o++;
+                int r = 0;
+                int y = h;
+                while(y-- > 0)
+                {
+                    int *out, *in;
+                    int x=w/2;
+                    out=o+r;
+                    in=tfb+r;
+                    r^=1;
+                    while(x-- > 0)
+                    {
+                        *out=*in;
+                        out+=2;
+                        in+=2;
+                    }
+                    o+=w;
+                    tfb+=2;
+                }
             }
-        break;
-        case 12:
-        {
-            //uint32_t *buf = buffer[bufferout]
+            case 9:
+                while(x--)
+                {
+                    *o=*o^*tfb++;
+                    o++;
+                }
+            break;
+            case 10:
+                mmx_adjblend_block(pipeline->blendtable,o, tfb, o, x, use_outblendval);
+            break;
+            case 11:
+                mmx_mulblend_block(pipeline->blendtable, o, tfb, x);
+            break;
+            case 13:
+                while(x--)
+                {
+                    *o=BLEND_MIN(*o, *tfb++);
+                    o++;
+                }
+            break;
+            case 12:
+            {
+                //uint32_t *buf = buffer[bufferout]
+            }
+            break;
+            default:
+            break;
         }
-        break;
-        default:
-        break;
-    }
     } 
 
     // Save state for next frame.
-    visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0.5);
+    visual_video_blit_overlay(pipeline->last_vid, video, 0, 0, 0);
     return VISUAL_OK;
 }
 

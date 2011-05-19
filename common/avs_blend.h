@@ -33,20 +33,20 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config.h"
 #include "avs_globals.h"
 
-uint32_t  BLEND(uint32_t a, uint32_t b);
-uint32_t  BLEND_MAX(uint32_t a, uint32_t b);
-uint32_t  BLEND_MIN(uint32_t a, uint32_t b);
-uint32_t  BLEND_AVG(uint32_t a, uint32_t b);
-uint32_t  BLEND_SUB(uint32_t a, uint32_t b);
-uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32_t b, int v);
+int  BLEND(int a, int b);
+int  BLEND_MAX(int a, int b);
+int  BLEND_MIN(int a, int b);
+int  BLEND_AVG(int a, int b);
+int  BLEND_SUB(int a, int b);
+int  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], int a, int b, int v);
 #define BLEND_ADJ BLEND_ADJ_NOMMX
-uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b);
-void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[256][256], int mode);
-uint32_t BLEND4(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp);
-uint32_t BLEND4_16(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp);
-void mmx_mulblend_block(unsigned char blendtable[256][256], uint32_t *output, uint32_t *input, int l);
-void mmx_adjblend_block(unsigned char blendtable[256][256], uint32_t *o, uint32_t *in1, uint32_t *in2, int len, int v);
-void mmx_addblend_block(uint32_t *output, uint32_t *input, int l);
-void mmx_avgblend_block(uint32_t *output, uint32_t *input, int l);
+int  BLEND_MUL(unsigned char blendtable[256][256], int a, int b);
+void BLEND_LINE(int *fb, int color, unsigned char blendtable[256][256], int mode);
+int BLEND4(unsigned char blendtable[256][256], int *p1, int w, int xp, int yp);
+int BLEND4_16(unsigned char blendtable[256][256], int *p1, int w, int xp, int yp);
+void mmx_mulblend_block(unsigned char blendtable[256][256], int *output, int *input, int l);
+void mmx_adjblend_block(unsigned char blendtable[256][256], int *o, int *in1, int *in2, int len, int v);
+void mmx_addblend_block(int *output, int *input, int l);
+void mmx_avgblend_block(int *output, int *input, int l);
 
 #endif

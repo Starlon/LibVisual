@@ -43,9 +43,9 @@ static int  min(int x, int y)
     return x < y ? x : y;
 }
 
-__inline uint32_t  BLEND(uint32_t a, uint32_t b)
+__inline int  BLEND(int a, int b)
 {
-	register uint32_t r,t;
+	register int r,t;
 	r=(a&0xff)+(b&0xff);
 	t=min(r,0xff);
 	r=(a&0xff00)+(b&0xff00);
@@ -94,9 +94,9 @@ static int FASTMIN(int x, int y)
 
 #endif
 
-__inline uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
+__inline int  BLEND_MAX(int a, int b)
 {
-	register uint32_t t;
+	register int t;
   int _a=a&0xff;
   int _b=b&0xff;
 	t=FASTMAX(_a,_b);
@@ -107,10 +107,10 @@ __inline uint32_t  BLEND_MAX(uint32_t a, uint32_t b)
 	return t;
 }
 
-__inline uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
+__inline int  BLEND_MIN(int a, int b)
 {
 #if 1
-	register uint32_t t;
+	register int t;
   int _a=a&0xff;
   int _b=b&0xff;
 	t=FASTMIN(_a,_b);
@@ -171,13 +171,13 @@ __inline uint32_t  BLEND_MIN(uint32_t a, uint32_t b)
 #endif
 
 
-__inline uint32_t  BLEND_AVG(uint32_t a, uint32_t b)
+__inline int  BLEND_AVG(int a, int b)
 {
 	return ((a>>1)&~((1<<7)|(1<<15)|(1<<23)))+((b>>1)&~((1<<7)|(1<<15)|(1<<23)));
 }
 
 
-__inline uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
+__inline int  BLEND_SUB(int a, int b)
 {
 	register int r,t;
 	r=(a&0xff)-(b&0xff);
@@ -194,7 +194,7 @@ __inline uint32_t  BLEND_SUB(uint32_t a, uint32_t b)
 #define BLEND_ADJ BLEND_ADJ_NOMMX
 #endif
 
-__inline uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t a, uint32_t b, int v)
+__inline int  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], int a, int b, int v)
 {
 	register int t;
 	t=blendtable[a&0xFF][v]+blendtable[b&0xFF][0xFF-v];
@@ -203,7 +203,7 @@ __inline uint32_t  BLEND_ADJ_NOMMX(unsigned char blendtable[256][256], uint32_t 
 	return t;
 }
 
-__inline uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uint32_t b)
+__inline int  BLEND_MUL(unsigned char blendtable[256][256], int a, int b)
 {
 	register int t;
 	t=blendtable[a&0xFF][b&0xFF];
@@ -212,7 +212,7 @@ __inline uint32_t  BLEND_MUL(unsigned char blendtable[256][256], uint32_t a, uin
 	return t;
 }
 
-__inline void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[256][256], int mode)
+__inline void BLEND_LINE(int *fb, int color, unsigned char blendtable[256][256], int mode)
 {
   switch (mode)
   {
@@ -229,7 +229,7 @@ __inline void BLEND_LINE(uint32_t *fb, uint32_t color, unsigned char blendtable[
   }
 }
 
-__inline uint32_t BLEND4(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp)
+__inline int BLEND4(unsigned char blendtable[256][256], int *p1, int w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -313,7 +313,7 @@ __inline uint32_t BLEND4(unsigned char blendtable[256][256], uint32_t *p1, uint3
 }
 
 
-__inline uint32_t BLEND4_16(unsigned char blendtable[256][256], uint32_t *p1, uint32_t w, int xp, int yp)
+__inline int BLEND4_16(unsigned char blendtable[256][256], int *p1, int w, int xp, int yp)
 {
 #ifdef NO_MMX
   register int t;
@@ -401,7 +401,7 @@ __inline uint32_t BLEND4_16(unsigned char blendtable[256][256], uint32_t *p1, ui
 #endif
 }
 
-__inline void mmx_avgblend_block(uint32_t *output, uint32_t *input, int l)
+__inline void mmx_avgblend_block(int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -452,7 +452,7 @@ mmx_avgblend_loop:
 }
 
 
-__inline void mmx_addblend_block(uint32_t *output, uint32_t *input, int l)
+__inline void mmx_addblend_block(int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -489,7 +489,7 @@ mmx_addblend_loop:
 #endif
 }
 
-__inline void mmx_mulblend_block(unsigned char blendtable[256][256], uint32_t *output, uint32_t *input, int l)
+__inline void mmx_mulblend_block(unsigned char blendtable[256][256], int *output, int *input, int l)
 {
 #ifdef NO_MMX
   while (l--)
@@ -534,7 +534,7 @@ mmx_mulblend_loop:
 #endif
 }
 
-void __inline mmx_adjblend_block(unsigned char blendtable[256][256], uint32_t *o, uint32_t *in1, uint32_t *in2, int len, int v)
+void __inline mmx_adjblend_block(unsigned char blendtable[256][256], int *o, int *in1, int *in2, int len, int v)
 {
 #ifdef NO_MMX
   while (len--)

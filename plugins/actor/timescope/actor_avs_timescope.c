@@ -200,7 +200,7 @@ int lv_timescope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audio
 {
     TimescopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *framebuffer = visual_video_get_pixels(video);
+    int *framebuffer = visual_video_get_pixels(video);
     int w = video->width;
     int h = video->height;
 

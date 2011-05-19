@@ -37,21 +37,29 @@
 #include <libvisual/libvisual.h>
 
 #include "avs_common.h"
+#include "lvavs_pipeline.h"
 #include "avs.h"
 
 AvsNumber PI = M_PI;
 
+typedef enum trans_runnable TransRunnable;
+
+enum trans_runnable {
+    RUNNABLE_INIT,
+    RUNNABLE_BEAT,
+    RUNNABLE_FRAME
+};
+
 typedef struct {
-    AVSGlobalProxy *proxy;
+    LVAVSPipeline *pipeline;
 
     AvsRunnableContext *ctx;
     AvsRunnableVariableManager *vm;
     AvsRunnable *runnable[4];
-    AvsVariable var_x, int var_y, int var_isBeat, int var_isLongBeat, int var_bi;
+    AvsNumber var_x, var_y, var_isBeat, var_isLongBeat, var_bi;
 
     // params
-    int enabled, onbeat, durFrames, depth, depth2, blend, blendavg, showlight, invert, oldstyle, buffern;
-    char *code1, code2, code3;
+    int enabled, depth, depth2, onbeat, durFrames, thisDepth, blend, blendavg, nF, showlight, initted, invert, oldstyle, buffern;
 
 } BumpPrivate;
 
@@ -61,73 +69,76 @@ int lv_bump_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_bump_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_bump_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
+int bump_render(BumpPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
+
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
 const VisPluginInfo *get_plugin_info (int *count)
 {
-	static const VisTransformPlugin transform[] = {{
-		.palette = lv_bump_palette,
-		.video = lv_bump_video,
-		.vidoptions.depth =
-			VISUAL_VIDEO_DEPTH_32BIT,
-		.requests_audio = TRUE
-	}};
+    static const VisTransformPlugin transform[] = {{
+        .palette = lv_bump_palette,
+        .video = lv_bump_video,
+        .vidoptions.depth =
+            VISUAL_VIDEO_DEPTH_32BIT,
+        .requests_audio = TRUE
+    }};
 
-	static const VisPluginInfo info[] = {{
-		.type = VISUAL_PLUGIN_TYPE_TRANSFORM,
+    static const VisPluginInfo info[] = {{
+        .type = VISUAL_PLUGIN_TYPE_TRANSFORM,
 
-		.plugname = "avs_bump",
-		.name = "Libvisual AVS Transform: bump element",
-		.author = "",
-		.version = "0.1",
-		.about = "The Libvisual AVS Transform: bump element",
-		.help = "This is the bump element for the libvisual AVS system",
+        .plugname = "avs_bumpmap",
+        .name = "Libvisual AVS Transform: bump element",
+        .author = "",
+        .version = "0.1",
+        .about = "The Libvisual AVS Transform: bump element",
+        .help = "This is the bump element for the libvisual AVS system",
 
-		.init = lv_bump_init,
-		.cleanup = lv_bump_cleanup,
-		.events = lv_bump_events,
+        .init = lv_bump_init,
+        .cleanup = lv_bump_cleanup,
+        .events = lv_bump_events,
 
-		.plugin = VISUAL_OBJECT (&transform[0])
-	}};
+        .plugin = VISUAL_OBJECT (&transform[0])
+    }};
 
-	*count = sizeof (info) / sizeof (*info);
+    *count = sizeof (info) / sizeof (*info);
 
-	return info;
+    return info;
 }
 
 int lv_bump_init (VisPluginData *plugin)
 {
-	BumpPrivate *priv;
-	VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
-	int i;
+printf("---------------------\n");
+    BumpPrivate *priv;
+    VisParamContainer *paramcontainer = visual_plugin_get_params (plugin);
+    int i;
 
-	static VisParamEntryProxy params[] = {
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1, VISUAL_PARAM_LIMIT_BOOLEAN, "Enable Bump"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("onbeat", 0, VISUAL_PARAM_LIMIT_BOOLEAN, "OnBeat"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("durFrames", 15, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("depth", 30, VISUAL_PARAM_LIMIT_NONE, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("depth2", 100, VISUAL_PARAM_LIMIT_NONE, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendavg", 0, VISUAL_PARAM_LIMIT_NONE, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("showlight", 0, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("invert", 0, VISUAL_PARAM_LIMIT_BOOLEAN, "Invert depth"),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("oldstyle", 0, VISUAL_PARAM_LIMIT_BOOLEAN, ""),
-        VISUAL_PARAM_LIST_ENTRY_INTEGER ("buffern", 0, VISUAL_PARAM_LIMIT_INTEGER(0, 9), "Depth buffer"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "t=0;", "Init code will be executed each time the window size is changed or when the effect loads"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", "", "Frame code is executed before rendering a new frame"),
-        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "x=0.5+cos(t)*0.3;y=0.5+sin(t)*0.3;t=t+0.1;", "Beat code is executed when a beat is detected"),
+    static VisParamEntry params[] = {
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("enabled", 1), //bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("onbeat", 0), //bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("durFrames", 15), //bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("depth", 30),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("depth2", 100),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blend", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("blendavg", 0),
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("showlight", 0),//bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("invert", 0),//bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("oldstyle", 0),//bool
+        VISUAL_PARAM_LIST_ENTRY_INTEGER ("buffern", 0),// VISUAL_PARAM_LIMIT_INTEGER(0, 9), "Depth buffer"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("init", "t=0;"),//, "Init code will be executed each time the window size is changed or when the effect loads"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("frame", ""),//, "Frame code is executed before rendering a new frame"),
+        VISUAL_PARAM_LIST_ENTRY_STRING ("beat", "x=0.5+cos(t)*0.3;y=0.5+sin(t)*0.3;t=t+0.1;"),//, "Beat code is executed when a beat is detected"),
 
-		VISUAL_PARAM_LIST_END
-	};
+        VISUAL_PARAM_LIST_END
+    };
 
-	priv = visual_mem_new0 (BumpPrivate, 1);
+    priv = visual_mem_new0 (BumpPrivate, 1);
 
-    priv->proxy = AVS_GLOBAL_PROXY(visual_object_get_private(VISUAL_OBJECT(plugin)));
-    visual_object_ref(VISUAL_OBJECT(priv->proxy));
+    priv->pipeline = LVAVS_PIPELINE(visual_object_get_private(VISUAL_OBJECT(plugin)));
+    visual_object_ref(VISUAL_OBJECT(priv->pipeline));
 
-	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
+    visual_object_set_private (VISUAL_OBJECT (plugin), priv);
 
-	visual_param_container_add_many_proxy (paramcontainer, params);
+    visual_param_container_add_many (paramcontainer, params);
 
     priv->ctx = avs_runnable_context_new();
     priv->vm = avs_runnable_variable_manager_new();
@@ -138,21 +149,21 @@ int lv_bump_init (VisPluginData *plugin)
     avs_runnable_variable_bind(priv->vm, "islbeat", &priv->var_isLongBeat);
     avs_runnable_variable_bind(priv->vm, "bi", &priv->var_bi);
 
-	return 0;
+    return 0;
 }
 
 int lv_bump_cleanup (VisPluginData *plugin)
 {
-	BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+    BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
 
-    visual_object_unref(VISUAL_OBJECT(priv->proxy));
+    visual_object_unref(VISUAL_OBJECT(priv->pipeline));
 
-	visual_mem_free (priv);
+    visual_mem_free (priv);
 
-	return 0;
+    return 0;
 }
 
-int trans_load_runnable(BlitPrivate *priv, TransRunnable runnable, char *buf)
+static int trans_load_runnable(BumpPrivate *priv, TransRunnable runnable, char *buf)
 {
     AvsRunnable *obj = avs_runnable_new(priv->ctx);
     avs_runnable_set_variable_manager(obj, priv->vm);
@@ -161,7 +172,7 @@ int trans_load_runnable(BlitPrivate *priv, TransRunnable runnable, char *buf)
     return 0;
 }
 
-int trans_run_runnable(BlitPrivate *priv, TransRunnable runnable)
+static int trans_run_runnable(BumpPrivate *priv, TransRunnable runnable)
 {
     avs_runnable_execute(priv->runnable[runnable]);
     return 0;
@@ -169,36 +180,59 @@ int trans_run_runnable(BlitPrivate *priv, TransRunnable runnable)
 
 int lv_bump_events (VisPluginData *plugin, VisEventQueue *events)
 {
-	BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-	VisParamEntry *param;
-	VisEvent ev;
+    BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+    VisParamEntry *param;
+    VisEvent ev;
 
-	while (visual_event_queue_poll (events, &ev)) {
-		switch (ev.type) {
-			case VISUAL_EVENT_PARAM:
-				param = ev.event.param.param;
+    while (visual_event_queue_poll (events, &ev)) {
+        switch (ev.type) {
+            case VISUAL_EVENT_PARAM:
+                param = ev.event.param.param;
                 if (visual_param_entry_is (param, "enabled"))
                     priv->enabled = visual_param_entry_get_integer(param);
-                else if (visual_param_entry_is (param, "roundmode"))
-                    priv->roundmode = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "onbeat"))
+                    priv->onbeat = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "durFrames"))
+                    priv->durFrames = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "depth"))
+                    priv->depth = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "depth2"))
+                    priv->depth2 = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "blend"))
+                    priv->blend = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "blendavg"))
+                    priv->blendavg = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "showlight"))
+                    priv->showlight = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "invert"))
+                    priv->invert = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "oldstyle"))
+                    priv->oldstyle = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "buffern"))
+                    priv->buffern = visual_param_entry_get_integer(param);
+                if (visual_param_entry_is (param, "init"))
+                    trans_load_runnable(priv, RUNNABLE_INIT, visual_param_entry_get_string(param));
+                if (visual_param_entry_is (param, "frame"))
+                    trans_load_runnable(priv, RUNNABLE_FRAME, visual_param_entry_get_string(param));
+                if (visual_param_entry_is (param, "beat"))
+                    trans_load_runnable(priv, RUNNABLE_BEAT, visual_param_entry_get_string(param));
+                break;
 
-				break;
+            default:
+                break;
+        }
+    }
 
-			default:
-				break;
-		}
-	}
-
-	return 0;
+    return 0;
 }
 
 int lv_bump_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio)
 {
-	return 0;
+    return 0;
 }
 
-#define min(a, b) if( a < b )? a : b;
-#define max(a, b) if( a > b )? a : b;
+#define min(a, b) ( a < b )? a : b
+#define max(a, b) ( a > b )? a : b
 #define abs(x) (( x ) >= 0 ? ( x ) : - ( x ))
 
 static int __inline depthof(int c, int i)
@@ -227,101 +261,81 @@ static int __inline setdepth0(int c)
 
 int lv_bump_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
-	BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-	uint8_t *pixels = visual_video_get_pixels (video);
-    uint8_t isBeat = priv->proxy->isBeat;
+    BumpPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+    int *framebuffer = priv->pipeline->framebuffer;
+    int *fbout = priv->pipeline->fbout;
+    uint8_t isBeat = priv->pipeline->isBeat;
+    void *visdata = priv->pipeline->audiodata;
+    int w = video->width, h = video->height;
 
+    bump_render(priv, visdata, isBeat, framebuffer, fbout, w, h);
+
+    priv->pipeline->swap = 1;
     return 0;
 }
 
-int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, int w, int h, int onBeat)
+int bump_render(BumpPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
-  int cx,cy;
+    int cx,cy;
     int curbuf;
 
-    if (!enabled) return 0;
+    if (!priv->enabled) return 0;
 
-  if (need_recompile) 
-  {
-    EnterCriticalSection(&rcs);
-    if (!var_bi || g_reset_vars_on_recompile)
-    {
-      clearVars();
-      var_x = registerVar("x");
-      var_y = registerVar("y");
-      var_isBeat = registerVar("isbeat");
-      var_isLongBeat = registerVar("islbeat");
-      var_bi = registerVar("bi");
-      *var_bi = 1.0;
-      initted=0;
-    }
+    if (isBeat&0x80000000) return 0;
 
-    need_recompile=0;
-
-    freeCode(codeHandle);
-    freeCode(codeHandleBeat);
-    freeCode(codeHandleInit);
-    codeHandle = compileCode(code1.get());
-    codeHandleBeat = compileCode(code2.get());
-    codeHandleInit = compileCode(code3.get());
-
-    LeaveCriticalSection(&rcs);
-  }
-  if (isBeat&0x80000000) return 0;
-
-    int *depthbuffer = !buffern ? framebuffer : (int *)getGlobalBuffer(w,h,buffern-1,0);
+    int *depthbuffer = !priv->buffern ? framebuffer : visual_video_get_pixels(priv->pipeline->buffers[priv->buffern - 1]);
     if (!depthbuffer) return 0;
 
     curbuf = (depthbuffer==framebuffer);
 
-    if (!initted)
-  {
-        executeCode(codeHandleInit,visdata);
-    initted=1;
+    if (!priv->initted)
+    {
+        trans_run_runnable(priv, RUNNABLE_INIT);
+        priv->initted=1;
     }
 
-    executeCode(codeHandle,visdata);
-    if (isBeat) executeCode(codeHandleBeat,visdata);
+    trans_run_runnable(priv, RUNNABLE_FRAME);
+    if (isBeat) trans_run_runnable(priv, RUNNABLE_BEAT);
 
     if (isBeat)
-        *var_isBeat=-1;
+        priv->var_isBeat=-1;
     else
-        *var_isBeat=1;
-    if (nF)
-        *var_isLongBeat=-1;
+        priv->var_isBeat=1;
+    if (priv->nF)
+        priv->var_isLongBeat=-1;
     else
-        *var_isLongBeat=1;
+        priv->var_isLongBeat=1;
 
-    if (onbeat && isBeat)
+    if (priv->onbeat && isBeat)
     {
-    thisDepth=depth2;
-    nF = durFrames;
+        priv->thisDepth=priv->depth2;
+        priv->nF = priv->durFrames;
     }
-    else if (!nF) thisDepth = depth;
+    else if (!priv->nF) priv->thisDepth = priv->depth;
 
-    memset(fbout, 0, w*h*4); // previous effects may have left fbout in a mess
+    memset(fbout, 0, w*h*sizeof(int)); // previous effects may have left fbout in a mess
 
-    if (oldstyle)
-        {
-        cx = (int)(*var_x/100.0*w);
-        cy = (int)(*var_y/100.0*h);
-        }
+    if (priv->oldstyle)
+    {
+        cx = (int)(priv->var_x/100.0*w);
+        cy = (int)(priv->var_y/100.0*h);
+    }
     else
-        {
-        cx = (int)(*var_x*w);
-        cy = (int)(*var_y*h);
-        }
+    {
+        cx = (int)(priv->var_x*w);
+        cy = (int)(priv->var_y*h);
+    }
     cx = max(0, min(w, cx));
     cy = max(0, min(h, cy));
-    if (showlight) fbout[cx+cy*w]=0xFFFFFF;
+    if (priv->showlight) fbout[cx+cy*w]=0xFFFFFF;
 
-    if (var_bi) 
-        {
-        *var_bi = min(max(*var_bi, 0), 1);
-        thisDepth = (int)(thisDepth * *var_bi);
-        }
+    if (priv->var_bi) 
+    {
+        priv->var_bi = min(max(priv->var_bi, 0), 1);
+        priv->thisDepth = (int)(priv->thisDepth * priv->var_bi);
+    }
 
-  int thisDepth_scaled=(thisDepth<<8)/100;
+  int thisDepth_scaled=(priv->thisDepth<<8)/100;
     depthbuffer += w+1;
     framebuffer += w+1;
     fbout += w+1;
@@ -332,7 +346,7 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
     {
     int j=w-2;
         int lx=1-cx;
-    if (blend)
+    if (priv->blend)
     {
       while (j--)
           {
@@ -344,8 +358,8 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
               if (!curbuf || (curbuf && (m1||p1||mw||pw)))
               {
           int coul1,coul2;
-                  coul1=depthof(p1, invert)-depthof(m1, invert)-lx;
-                  coul2=depthof(pw, invert)-depthof(mw, invert)-ly;
+                  coul1=depthof(p1, priv->invert)-depthof(m1, priv->invert)-lx;
+                  coul2=depthof(pw, priv->invert)-depthof(mw, priv->invert)-ly;
                   coul1=127-abs(coul1);
                   coul2=127-abs(coul2);
                   if (coul1<=0||coul2<=0)
@@ -360,7 +374,7 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
               lx++;
           }
     }
-    else if (blendavg)
+    else if (priv->blendavg)
     {
       while (j--)
           {
@@ -372,8 +386,8 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
               if (!curbuf || (curbuf && (m1||p1||mw||pw)))
               {
           int coul1,coul2;
-                  coul1=depthof(p1, invert)-depthof(m1, invert)-lx;
-                  coul2=depthof(pw, invert)-depthof(mw, invert)-ly;
+                  coul1=depthof(p1, priv->invert)-depthof(m1, priv->invert)-lx;
+                  coul2=depthof(pw, priv->invert)-depthof(mw, priv->invert)-ly;
                   coul1=127-abs(coul1);
                   coul2=127-abs(coul2);
                   if (coul1<=0||coul2<=0)
@@ -400,8 +414,8 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
               if (!curbuf || (curbuf && (m1||p1||mw||pw)))
               {
           int coul1,coul2;
-                  coul1=depthof(p1, invert)-depthof(m1, invert)-lx;
-                  coul2=depthof(pw, invert)-depthof(mw, invert)-ly;
+                  coul1=depthof(p1, priv->invert)-depthof(m1, priv->invert)-lx;
+                  coul2=depthof(pw, priv->invert)-depthof(mw, priv->invert)-ly;
                   coul1=127-abs(coul1);
                   coul2=127-abs(coul2);
                   if (coul1<=0||coul2<=0)
@@ -422,15 +436,16 @@ int bump_render(BumpPrivate *priv, float *data, int *framebuffer, int *fbout, in
         ly++;
     }
 
-  if (nF)
-    {
-      nF--;
-      if (nF)
-        {
-          int a = abs(depth - depth2) / durFrames;
-          thisDepth += a * (depth2 > depth ? -1 : 1);
-        }
-    }
+  if (priv->nF)
+  {
+      priv->nF--;
+      if (priv->nF)
+      {
+          int a = abs(priv->depth - priv->depth2) / priv->durFrames;
+          priv->thisDepth += a * (priv->depth2 > priv->depth ? -1 : 1);
+      }
+  }
 
+  return 0;
 }
 

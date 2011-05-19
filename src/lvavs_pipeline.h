@@ -39,6 +39,7 @@ extern "C" {
 #define LVAVS_PIPELINE_ELEMENT(obj)			(VISUAL_CHECK_CAST ((obj), LVAVSPipelineElement))
 #define LVAVS_PIPELINE_CONTAINER(obj)			(VISUAL_CHECK_CAST ((obj), LVAVSPipelineContainer))
 
+#define LVAVS_MAX_BUFFERS 16
 
 typedef struct _LVAVSPipeline LVAVSPipeline;
 typedef struct _LVAVSPipelineRenderState LVAVSPipelineRenderState;
@@ -78,7 +79,7 @@ struct _LVAVSPipeline {
 
 	VisVideo			*target;
 
-	VisVideo			*buffers[16];
+	VisVideo			*buffers[LVAVS_MAX_BUFFERS];
 
 	VisVideo *dummy_vid;
         VisVideo *last_vid;
@@ -95,9 +96,9 @@ struct _LVAVSPipeline {
 
 	int linewidth;
 
-	unsigned int *fbout;
+	int *fbout;
 
-	unsigned int *framebuffer;
+	int *framebuffer;
 
 	int swap; // whether to swap buffers -- fbout<->framebuffer
 

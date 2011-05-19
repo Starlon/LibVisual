@@ -312,7 +312,7 @@ int lv_superscope_render (VisPluginData *plugin, VisVideo *video, VisAudio *audi
 {
     SuperScopePrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
     LVAVSPipeline *pipeline = priv->pipeline;
-    uint32_t *buf = pipeline->framebuffer;
+    int *buf = pipeline->framebuffer;
     int isBeat;
     int i;
 

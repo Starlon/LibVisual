@@ -184,6 +184,21 @@ else
 fi
 
 # The AVS elements.
+AC_ARG_ENABLE([avs_bump],
+	      AC_HELP_STRING([--disable-bump],
+			     [Do not build the AVS trans bump plugin @<:@default=enabled@:>@]),
+	      [avs_bump=$enableval],
+	      [avs_bump=yes])
+AC_MSG_CHECKING([whether to build AVS trans bump plugin])
+if test x$avs_bump = xyes; then
+  AC_MSG_RESULT([yes])
+  build_trans="$build_trans bump"
+  AC_SUBST([AVS_BUMP], ['transform_avs_bump.la'])
+else
+  AC_MSG_RESULT([no])
+fi
+
+# The AVS elements.
 AC_ARG_ENABLE([avs_movement],
 	      AC_HELP_STRING([--disable-movement],
 			     [Do not build the AVS trans movement plugin @<:@default=enabled@:>@]),
@@ -430,6 +445,7 @@ AC_CONFIG_FILES([
         plugins/transform/water/Makefile
         plugins/actor/timescope/Makefile
         plugins/actor/stars/Makefile
+    plugins/transform/bump/Makefile
 	visscript/Makefile
 ])
 

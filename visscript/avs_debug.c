@@ -15,6 +15,7 @@ void message(const VisLogVerboseness level, const char *format, ...)
     char *debug = "VisScript DEBUG: ";
     char *error = "VisScript ERROR: ";
 
+return;
     va_start(ap, format);
     vsnprintf(buffer, sizeof(buffer), format, ap);
     va_end(ap);

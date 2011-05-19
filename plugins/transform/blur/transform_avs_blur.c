@@ -71,7 +71,7 @@ int lv_blur_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_blur_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
 
-void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
+void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -186,15 +186,15 @@ int lv_blur_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 	return 0;
 }
 
-void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h)
+void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   if (!priv->enabled) return;
 
   int roundmode = priv->roundmode;
   int enabled = priv->enabled;
 
-  unsigned int *f = (unsigned int *) framebuffer;
-  unsigned int *of = (unsigned int *) fbout;
+  int *f = (int *) framebuffer;
+  int *of = (int *) fbout;
 
   int start_l = ( this_thread * h ) / max_threads;
   int end_l;
@@ -221,7 +221,7 @@ void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visda
     // top line
     if (at_top)
     {
-      unsigned int *f2=f+w;
+      int *f2=f+w;
       int x;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x03030303; adj_tl2 = 0x04040404; }
@@ -260,8 +260,8 @@ void smp_render(int this_thread, int max_threads, BlurPrivate *priv, float visda
       while (y--)
       {
         int x;
-        unsigned int *f2=f+w;
-        unsigned int *f3=f-w;
+        int *f2=f+w;
+        int *f3=f-w;
       
         // left edge
         *of++=DIV_2(f[0])+DIV_8(f[0])+DIV_8(f[1])+DIV_8(f2[0])+DIV_8(f3[0])+adj_tl1; f++; f2++; f3++;
@@ -419,7 +419,7 @@ mmx_light_blur_loop:
     // bottom block
     if (at_bottom)
     {
-      unsigned int *f2=f-w;
+      int *f2=f-w;
       int x;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x03030303; adj_tl2 = 0x04040404; }
@@ -452,7 +452,7 @@ mmx_light_blur_loop:
   {
     // top line
     if (at_top) {
-      unsigned int *f2=f+w;
+      int *f2=f+w;
       int x;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x02020202; adj_tl2 = 0x01010101; }
@@ -492,8 +492,8 @@ mmx_light_blur_loop:
       while (y--)
       {
         int x;
-        unsigned int *f2=f+w;
-        unsigned int *f3=f-w;
+        int *f2=f+w;
+        int *f3=f-w;
       
         // left edge
         *of++=DIV_2(f[1])+DIV_4(f2[0])+DIV_4(f3[0]) + adj_tl1; f++; f2++; f3++;
@@ -627,7 +627,7 @@ mmx_heavy_blur_loop:
     // bottom block
     if (at_bottom)
     {
-      unsigned int *f2=f-w;
+      int *f2=f-w;
       int x;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x02020202; adj_tl2 = 0x01010101; }
@@ -661,7 +661,7 @@ mmx_heavy_blur_loop:
     // top line
     if (at_top) 
     {
-      unsigned int *f2=f+w;
+      int *f2=f+w;
       int x;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x02020202; adj_tl2 = 0x03030303; }
@@ -700,8 +700,8 @@ mmx_heavy_blur_loop:
       while (y--)
       {
         int x;
-        unsigned int *f2=f+w;
-        unsigned int *f3=f-w;
+        int *f2=f+w;
+        int *f3=f-w;
       
         // left edge
         *of++=DIV_4(f[0])+DIV_4(f[1])+DIV_4(f2[0])+DIV_4(f3[0])+adj_tl1; f++; f2++; f3++;
@@ -841,7 +841,7 @@ mmx_normal_blur_loop:
     // bottom block
     if (at_bottom)
     {
-      unsigned int *f2=f-w;
+      int *f2=f-w;
       int adj_tl=0, adj_tl2=0;
       if (roundmode) { adj_tl = 0x02020202; adj_tl2 = 0x03030303; }
       int x;

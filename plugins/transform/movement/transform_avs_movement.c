@@ -83,8 +83,8 @@ typedef struct {
 
     uint8_t *swapbuf, *renderbuf;
 
-    uint32_t    *tab;
-    uint32_t    width, height;
+    int *tab;
+    int width, height;
 
     int *trans_tab, trans_tab_w, trans_tab_h, trans_tab_subpixel;
     int tab_w, tab_h, tab_subpixel;
@@ -166,10 +166,7 @@ int lv_movement_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_movement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-//static void trans_generate_table(MovementPrivate *priv, char *effect, int rectangular, int wrap, int isBeat, uint32_t *framebuffer, uint32_t *fbout);
 static void trans_generate_blend_table(MovementPrivate *priv);
-//static void trans_begin(MovementPrivate *priv, int width, int height, char *effect, int isBeat);
-//static void trans_render(MovementPrivate *priv, uint32_t *framebuffer, uint32_t *fbout);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -330,9 +327,9 @@ int lv_movement_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio
 }
 
 
-int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
-int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
-int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h);
+int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
+int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
+int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
 
 void trans_generate_blend_table(MovementPrivate *priv)
 {
@@ -347,8 +344,8 @@ void trans_generate_blend_table(MovementPrivate *priv)
 int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
 {
     MovementPrivate *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
-    uint32_t *framebuffer = priv->pipeline->framebuffer;// = visual_video_get_pixels (video);
-    uint32_t *fbout = priv->pipeline->fbout;
+    int *framebuffer = priv->pipeline->framebuffer;// = visual_video_get_pixels (video);
+    int *fbout = priv->pipeline->fbout;
     uint8_t *vidbuf, *vidoutbuf;
     int isBeat = priv->pipeline->isBeat;
     int i;
@@ -374,7 +371,7 @@ int lv_movement_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     return VISUAL_OK;
 }
 
-int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   if (!priv->effect) return 0;
 
@@ -634,14 +631,14 @@ int smp_begin(MovementPrivate *priv, int max_threads, float visdata[2][2][1024],
   return max_threads;
 }
 
-int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   if (!priv->effect) return 0;
   
 #define OFFSET_MASK ((1<<22)-1)
 
-  unsigned int *inp = (unsigned int *) framebuffer;
-  unsigned int *outp;
+  int *inp = (int *) framebuffer;
+  int *outp;
   int *transp, x;
 
   if (max_threads < 1) max_threads=1;
@@ -658,7 +655,7 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
   int skip_pix=start_l*w;
   transp=priv->trans_tab;
 
-  outp = (unsigned int *) fbout;
+  outp = (int *) fbout;
   x=(w*outh)/4.0;
 
   if (priv->sourcemapped&1)
@@ -740,13 +737,13 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+        outp[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable, framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
         offs=transp[1]&OFFSET_MASK;
-        outp[1]=BLEND_AVG(inp[1],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3))));
+        outp[1]=BLEND_AVG(inp[1],BLEND4(priv->pipeline->blendtable, framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3))));
         offs=transp[2]&OFFSET_MASK;
-        outp[2]=BLEND_AVG(inp[2],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3))));
+        outp[2]=BLEND_AVG(inp[2],BLEND4(priv->pipeline->blendtable, framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3))));
         offs=transp[3]&OFFSET_MASK;
-        outp[3]=BLEND_AVG(inp[3],BLEND4(priv->pipeline->blendtable, (unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3))));
+        outp[3]=BLEND_AVG(inp[3],BLEND4(priv->pipeline->blendtable, (int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3))));
         transp+=4;
         outp+=4;
         inp+=4;
@@ -755,7 +752,7 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp++[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
+        outp++[0]=BLEND_AVG(inp[0],BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3))));
         transp++;
         inp++;
       }    
@@ -765,13 +762,13 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp[0]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        outp[0]=BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
         offs=transp[1]&OFFSET_MASK;
-        outp[1]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3)));
+        outp[1]=BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[1]>>24)&(31<<3)),((transp[1]>>19)&(31<<3)));
         offs=transp[2]&OFFSET_MASK;
-        outp[2]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3)));
+        outp[2]=BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[2]>>24)&(31<<3)),((transp[2]>>19)&(31<<3)));
         offs=transp[3]&OFFSET_MASK;
-        outp[3]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3)));
+        outp[3]=BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[3]>>24)&(31<<3)),((transp[3]>>19)&(31<<3)));
         transp+=4;
         outp+=4;
       }    
@@ -779,7 +776,7 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
       while (x--)
       {
         int offs=transp[0]&OFFSET_MASK;
-        outp++[0]=BLEND4(priv->pipeline->blendtable,(unsigned int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
+        outp++[0]=BLEND4(priv->pipeline->blendtable,(int *)framebuffer+offs,w,((transp[0]>>24)&(31<<3)),((transp[0]>>19)&(31<<3)));
         transp++;
       }    
     #ifndef NO_MMX
@@ -831,7 +828,7 @@ int smp_render(MovementPrivate *priv, int this_thread, int max_threads, float vi
   return 0;
 }
 
-int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h) // return value is that of render() for fbstuff etc
+int smp_finish(MovementPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h) // return value is that of render() for fbstuff etc
 {
   return !!priv->effect;
 }

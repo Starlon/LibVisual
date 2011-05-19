@@ -47,7 +47,7 @@ typedef struct {
     int enabled;
 
     // Others
-    uint32_t *lastframe;
+    int *lastframe;
     int lastframe_len;
 
 } WaterPrivate;
@@ -58,8 +58,8 @@ int lv_water_events (VisPluginData *plugin, VisEventQueue *events);
 int lv_water_palette (VisPluginData *plugin, VisPalette *pal, VisAudio *audio);
 int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio);
 
-int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, unsigned int *framebuffer, unsigned int *fbout, int w, int h);
-int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat);
+int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h);
+int trans_begin(WaterPrivate *priv, int *fbin, int *fbout, int w, int h, int isBeat);
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR
 
@@ -177,9 +177,9 @@ int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     int8_t isBeat = priv->pipeline->isBeat;
     int w = video->width;
     int h = video->height;
-    uint32_t *framebuffer = priv->pipeline->framebuffer;
-    uint32_t *fbout = priv->pipeline->fbout;
-    uint32_t *fbin=framebuffer;
+    int *framebuffer = priv->pipeline->framebuffer;
+    int *fbout = priv->pipeline->fbout;
+    int *fbin=framebuffer;
 
     visual_mem_copy(framebuffer, fbout, h * video->pitch);
 
@@ -198,7 +198,7 @@ int lv_water_video (VisPluginData *plugin, VisVideo *video, VisAudio *audio)
     return 0;
 }
 
-int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int h, int isBeat)
+int trans_begin(WaterPrivate *priv, int *fbin, int *fbout, int w, int h, int isBeat)
 {
   if (!priv->enabled) return 0;
 
@@ -206,19 +206,19 @@ int trans_begin(WaterPrivate *priv, uint32_t *fbin, uint32_t *fbout, int w, int 
   {
     if (priv->lastframe) visual_mem_free(priv->lastframe);
     priv->lastframe_len=w*h;
-    priv->lastframe = visual_mem_new0(uint32_t, sizeof(uint32_t) * w * h);
+    priv->lastframe = visual_mem_new0(int, sizeof(int) * w * h);
   }
 
   return 0;
 }
 
-int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, uint32_t *framebuffer, uint32_t *fbout, int w, int h)
+int trans_render(int this_thread, int max_threads, WaterPrivate *priv, float visdata[2][2][1024], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
   if (!priv->enabled) return 0;
 
-  unsigned int *f = (unsigned int *) framebuffer;
-  unsigned int *of = (unsigned int *) fbout;
-  unsigned int *lfo = (unsigned int *) priv->lastframe;
+  int *f = (int *) framebuffer;
+  int *of = (int *) fbout;
+  int *lfo = (int *) priv->lastframe;
 
   int start_l = ( this_thread * h ) / max_threads;
   int end_l;
