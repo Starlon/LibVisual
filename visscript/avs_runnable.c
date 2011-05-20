@@ -19,7 +19,6 @@ static int vm_dtor(VisObject *object) {
     AvsRunnableVariable *var = NULL;
     AvsRunnableVariable *tmp = NULL;
     for(var = tmp = manager->variables; tmp && var; var = tmp->next) {
-printf("wtf damn\n");
         tmp = var->next;
         visual_object_unref(VISUAL_OBJECT(var));
     }
@@ -51,7 +50,6 @@ static int runnable_variable_dtor (VisObject *obj)
 {
     AvsRunnableVariable *var = VISUAL_CHECK_CAST(obj, AvsRunnableVariable);
 
-printf("wtf damnit\n");
     return VISUAL_OK;
 }
 
@@ -73,7 +71,6 @@ printf("wtf damnit\n");
  */
 AvsRunnableVariable * avs_runnable_variable_create(AvsRunnableVariableManager *manager, char *name, AvsNumber value)
 {
-printf("nnnnn %s %f %p\n", name, value, manager);
 
 	AvsRunnableVariable *var = visual_mem_new0(AvsRunnableVariable, 1);
     visual_object_initialize(VISUAL_OBJECT(var), TRUE, runnable_variable_dtor);
