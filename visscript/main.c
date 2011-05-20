@@ -33,6 +33,7 @@ int main(int argc, char **argv)
     char *script = "foo=3*0.2; bar=foo*10; baz=foo*bar;";
     Private *priv;
     AvsRunnableVariable *var = NULL;
+    AvsILTreeNode *node, *tmp_node;
     priv = visual_mem_new0 (Private, 1);
 
     priv->ctx = avs_runnable_context_new();
@@ -46,6 +47,13 @@ int main(int argc, char **argv)
 
     printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
 
+/*
+    for(node = tmp_node = avs_il_tree_base(&priv->ctx->assembler.tree); tmp_node; node = tmp_node)
+    {
+        tmp_node = node->next;
+        visual_mem_free(node);
+    }
+  */   
     visual_object_unref(VISUAL_OBJECT(priv->vm));
     visual_object_unref(VISUAL_OBJECT(priv->ctx));
     visual_object_unref(VISUAL_OBJECT(priv->runnable));
