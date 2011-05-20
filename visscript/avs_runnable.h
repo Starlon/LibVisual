@@ -25,6 +25,7 @@ enum _AvsRunnableVariableFlag {
 };
 
 struct _AvsRunnableVariable {
+    VisObject object;
 	char			*name;
 	AvsNumber		local_value;
 	AvsNumber		*value;
@@ -34,6 +35,7 @@ struct _AvsRunnableVariable {
 };
 
 struct _AvsRunnableVariableManager {
+    VisObject object;
 	AvsRunnableVariable	*variables;
 };
 

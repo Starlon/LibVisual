@@ -12,6 +12,21 @@
 #define E 2.71828
 #define PHI 1.618033
 
+#define AVS_VARIABLE_MANAGER(obj)   (VISUAL_CHECK_CAST((obj), AvsRunnableVariableManager))
+
+static int vm_dtor(VisObject *object) {
+    AvsRunnableVariableManager *manager = AVS_VARIABLE_MANAGER(object);
+    AvsRunnableVariable *var = NULL;
+    AvsRunnableVariable *tmp = NULL;
+    for(var = tmp = manager->variables; tmp && var; var = tmp->next) {
+printf("wtf damn\n");
+        tmp = var->next;
+        visual_object_unref(VISUAL_OBJECT(var));
+    }
+
+    return VISUAL_OK;
+}
+
 /**
  * 	Create a new variable manager, used for sharing variables between
  * 	runnable objects.
@@ -20,8 +35,9 @@
  */
 AvsRunnableVariableManager * avs_runnable_variable_manager_new()
 {
-	AvsRunnableVariableManager *manager = malloc(sizeof(AvsRunnableVariableManager));
-	memset(manager, 0, sizeof(AvsRunnableVariableManager));
+	AvsRunnableVariableManager *manager = visual_mem_new0(AvsRunnableVariableManager, 1);//malloc(sizeof(AvsRunnableVariableManager));
+
+    visual_object_initialize(VISUAL_OBJECT(manager), TRUE, vm_dtor);
 
     // Every manager should have these variables
     avs_runnable_variable_create(manager, "PI", PI);
@@ -30,6 +46,15 @@ AvsRunnableVariableManager * avs_runnable_variable_manager_new()
 
 	return manager;
 }
+
+static int runnable_variable_dtor (VisObject *obj)
+{
+    AvsRunnableVariable *var = VISUAL_CHECK_CAST(obj, AvsRunnableVariable);
+
+printf("wtf damnit\n");
+    return VISUAL_OK;
+}
+
 
 /**
  * 	Create a new variable with name @a name and a 
@@ -48,7 +73,10 @@ AvsRunnableVariableManager * avs_runnable_variable_manager_new()
  */
 AvsRunnableVariable * avs_runnable_variable_create(AvsRunnableVariableManager *manager, char *name, AvsNumber value)
 {
+printf("nnnnn %s %f %p\n", name, value, manager);
+
 	AvsRunnableVariable *var = visual_mem_new0(AvsRunnableVariable, 1);
+    visual_object_initialize(VISUAL_OBJECT(var), TRUE, runnable_variable_dtor);
 
 	var->name = name;
 	var->local_value = value;

@@ -416,6 +416,17 @@ int avs_il_emit_marker(
  */
 int avs_il_runnable_cleanup(AvsILAssemblerContext *ctx, AvsRunnable *obj)
 {
+/*
+    AvsILTreeNode *node = NULL;
+
+    for(node = ctx->tree.base->base; node != ctx->tree.base->end; node = node->next)
+    {
+        visual_mem_free(node);
+    }
+
+    if(node)
+        visual_mem_free(node);
+*/
 	return VISUAL_OK;
 }
 

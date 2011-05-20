@@ -30,24 +30,26 @@ extern AvsNumber _rand(AvsNumber val);
 
 int main(int argc, char **argv)
 {
-	printf("rand %f\n", (double)_rand(50.0));
-/*
     char *script = "foo=3*0.2; bar=foo*10; baz=foo*bar;";
     Private *priv;
+    AvsRunnableVariable *var = NULL;
     priv = visual_mem_new0 (Private, 1);
 
     priv->ctx = avs_runnable_context_new();
     priv->vm = avs_runnable_variable_manager_new();
-
     avs_runnable_variable_bind(priv->vm, "foo", &priv->foo);
     avs_runnable_variable_bind(priv->vm, "bar", &priv->bar);
     avs_runnable_variable_bind(priv->vm, "baz", &priv->baz);
-  
     load_runnable(priv, script);
 
     run(priv);
 
     printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
-*/
+
+    visual_object_unref(VISUAL_OBJECT(priv->vm));
+    visual_object_unref(VISUAL_OBJECT(priv->ctx));
+    visual_object_unref(VISUAL_OBJECT(priv->runnable));
+    visual_mem_free(priv);
+
     return 0;
 }
