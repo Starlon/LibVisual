@@ -89,12 +89,24 @@ int avs_il_tree_reset(AvsILTreeContext *ctx)
 int avs_il_tree_cleanup(AvsILTreeContext *ctx)
 {
     AvsILTreeNode *node, *tmp_node;
+    ILInstruction *instruction, *tmp_instruction;
+    int i;
 
 	/* Cleanup instruction stack */
 	visual_object_unref(VISUAL_OBJECT(ctx->ixstack));
 
     for(node = tmp_node = ctx->base; tmp_node; node = tmp_node)
     {
+
+            for(i = 0; i < 3; i++)
+            {
+                for(instruction = node->insn.base; instruction; instruction = tmp_instruction)
+                {
+                    avs_il_register_dereference(instruction->reg[i]);
+                    tmp_instruction = instruction->next;
+                }
+            }
+
         tmp_node = node->next;
         visual_mem_free(node);
     }

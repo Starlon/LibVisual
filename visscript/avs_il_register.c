@@ -90,6 +90,7 @@ ILRegister * avs_il_register_load_from_argument(AvsILAssemblerContext *ctx, AvsR
 void avs_il_register_dereference(ILRegister *reg)
 {
 	reg->ref--;
+printf("reg: %d %p\n", reg->ref, reg);
     if(reg->ref <= 0)
         free(reg);
 }

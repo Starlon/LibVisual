@@ -12,7 +12,7 @@ struct _AvsRunnableContext {
 	AvsLexerContext		lexer;
 	AvsParserContext	parser;
 	AvsCompilerContext	compiler;
-	AvsILAssemblerContext	assembler;
+	AvsILAssemblerContext	assembler; //assembler->tree->base
 	ILCoreContext		core;
 };
 
