@@ -371,6 +371,12 @@ IL_CORE_COMPILE(avs_x86_compiler_compile)
 	return 0;
 }
 
+int avs_x86_compiler_cleanup(ILCoreContext *core)
+{
+    visual_mem_free(core->ctx);
+    return 0;
+}
+
 IL_CORE_INIT(avs_x86_compiler_init)
 {
 	X86GlobalData *gd = visual_mem_malloc0(sizeof(X86GlobalData));
@@ -388,5 +394,6 @@ ILCore il_core_x86 =
 	.name		=	"X86 Bytecode",
 	.init		=	avs_x86_compiler_init,
 	.compile	=	avs_x86_compiler_compile,
+    .cleanup    =   avs_x86_compiler_cleanup,
 };
 

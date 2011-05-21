@@ -18,7 +18,7 @@ static int vm_dtor(VisObject *object) {
     AvsRunnableVariableManager *manager = AVS_VARIABLE_MANAGER(object);
     AvsRunnableVariable *var = NULL;
     AvsRunnableVariable *tmp = NULL;
-    for(var = tmp = manager->variables; tmp && var; var = tmp->next) {
+    for(var = tmp = manager->variables; var; var = tmp) {
         tmp = var->next;
         visual_object_unref(VISUAL_OBJECT(var));
     }
@@ -293,6 +293,7 @@ static int context_dtor(VisObject *object)
 	avs_parser_cleanup(&ctx->parser);
 	avs_compiler_cleanup(&ctx->compiler);
 	avs_il_cleanup(&ctx->assembler);
+    avs_il_core_context_cleanup(&ctx->core);
 	return VISUAL_OK;
 }
 
@@ -319,7 +320,7 @@ static int context_ctor(AvsRunnableContext *ctx)
  */
 int avs_runnable_context_init(AvsRunnableContext *ctx)
 {
-	visual_object_initialize(VISUAL_OBJECT(ctx), FALSE, context_dtor);
+	visual_object_initialize(VISUAL_OBJECT(ctx), TRUE, context_dtor);
 	return context_ctor(ctx);
 }
 

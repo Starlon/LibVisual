@@ -104,8 +104,8 @@ ILInstruction *avs_il_instruction_emit_triplet(AvsILAssemblerContext *ctx, AvsRu
 
 ILInstruction *avs_il_instruction_create(AvsILAssemblerContext *ctx, AvsRunnable *obj)
 {
+    static int count = 0;
 	ILInstruction *insn;
-
 	insn = malloc(sizeof(ILInstruction));
 	memset(insn, 0, sizeof(ILInstruction));
 	return insn;

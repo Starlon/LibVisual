@@ -181,7 +181,7 @@ static float getvis(unsigned char *visdata, int bc, int bw, int ch, int xorv)
 
 #define MAXSIZE 2304
 
-unsigned char *get_pcm_data(VisAudio *audio)
+static unsigned char *get_pcm_data(VisAudio *audio)
 {
     VisBuffer buf;
     float pcmbuf[MAXSIZE];

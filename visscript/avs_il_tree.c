@@ -67,10 +67,31 @@ void avs_il_tree_add(AvsILTreeContext *ctx, ILInstruction *insn)
  */
 int avs_il_tree_reset(AvsILTreeContext *ctx)
 {
+    AvsILTreeNode *node, *tmp_node;
+    ILInstruction *instruction, *tmp_instruction;
+    int i = 0;
 	/* Reset instruction stack */
 	avs_stack_reset(ctx->ixstack);
 
+    for(node = tmp_node = ctx->base; node; node = tmp_node)
+    {
+
+            for(instruction = node->insn.base; instruction; instruction = tmp_instruction)
+            {
+                for(i = 0; i < 3; i++)
+                {
+                    avs_il_register_dereference(instruction->reg[i]);
+                    tmp_instruction = instruction->next;
+                }
+                free(instruction);
+            }
+
+        tmp_node = node->next;
+        visual_mem_free(node);
+    }
+
 	/* Reset tree pointers */
+    
 	ctx->base = ctx->currentlevel = ctx->current = NULL;
 	
 	/* Allocate base tree node */
@@ -95,18 +116,22 @@ int avs_il_tree_cleanup(AvsILTreeContext *ctx)
 	/* Cleanup instruction stack */
 	visual_object_unref(VISUAL_OBJECT(ctx->ixstack));
 
-    for(node = tmp_node = ctx->base; tmp_node; node = tmp_node)
+    for(node = tmp_node = ctx->base; node; node = tmp_node)
     {
 
-            for(i = 0; i < 3; i++)
+            for(instruction = node->insn.base; instruction; instruction = tmp_instruction)
             {
-                for(instruction = node->insn.base; instruction; instruction = tmp_instruction)
+                for(i = 0; i < 3; i++)
                 {
                     avs_il_register_dereference(instruction->reg[i]);
                     tmp_instruction = instruction->next;
                 }
+                free(instruction);
             }
 
+printf("---------------------- %p %p %p\n %p %p %p %p\n", 
+    ctx->base, ctx->current, ctx->currentlevel,
+    node->base, node->end, node->prev, node->next);
         tmp_node = node->next;
         visual_mem_free(node);
     }

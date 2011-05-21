@@ -100,7 +100,7 @@ static inline void reduce_rule(AvsParserContext *px, AvsRunnable *obj, AvsParser
 	}
 }
 
-void report_error(AvsParserContext *px, int token, AvsParserErrorState *es)
+static void report_error(AvsParserContext *px, int token, AvsParserErrorState *es)
 {
 	char *p;
 	int xt;

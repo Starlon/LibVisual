@@ -9,7 +9,8 @@ typedef struct _AvsILCore ILCore;
 
 typedef int (*ILCoreVirtualInit)(ILCoreContext *);
 typedef int (*ILCoreVirtualCompile)(ILCoreContext *, AvsILTreeContext *, AvsRunnable *);
-		
+typedef int (*ILCoreVirtualCleanup)(ILCoreContext *);
+	
 struct _AvsILCoreContext {
 	ILCore		*core;
 	void		*ctx;
@@ -19,6 +20,7 @@ struct _AvsILCore {
 	char			*name;	
 	ILCoreVirtualInit	init;
 	ILCoreVirtualCompile	compile;
+    ILCoreVirtualCleanup    cleanup;    
 };
 
 #define IL_CORE_INIT(fn) \
@@ -31,6 +33,7 @@ struct _AvsILCore {
 int avs_il_core_compile(ILCoreContext *ctx, AvsILTreeContext *tree, AvsRunnable *obj);
 int avs_il_core_init(ILCoreContext *ctx);
 int avs_il_core_context_init(ILCoreContext *ctx);
+int avs_il_core_context_cleanup(ILCoreContext *ctx);
 ILCoreContext *avs_il_core_context_create(void);
 
 

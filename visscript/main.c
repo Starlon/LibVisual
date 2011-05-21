@@ -1,6 +1,7 @@
 #include <libvisual/libvisual.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <libvisual/libvisual.h>
 
 #include "avs.h"
 
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
     Private *priv;
     AvsRunnableVariable *var = NULL;
     AvsILTreeNode *node, *tmp_node;
+    AvsRunnable *run1, *run2, *run3;
     priv = visual_mem_new0 (Private, 1);
 
     priv->ctx = avs_runnable_context_new();
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
 
     run(priv);
 
-    printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
+    //printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
 
 /*
     for(node = tmp_node = avs_il_tree_base(&priv->ctx->assembler.tree); tmp_node; node = tmp_node)
@@ -54,9 +56,6 @@ int main(int argc, char **argv)
         visual_mem_free(node);
     }
   */   
-    visual_object_unref(VISUAL_OBJECT(priv->vm));
-    visual_object_unref(VISUAL_OBJECT(priv->ctx));
-    visual_object_unref(VISUAL_OBJECT(priv->runnable));
     visual_mem_free(priv);
 
     return 0;

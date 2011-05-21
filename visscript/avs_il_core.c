@@ -53,6 +53,12 @@ int avs_il_core_context_init(ILCoreContext *ctx)
 	return VISUAL_OK;
 }
 
+int avs_il_core_context_cleanup(ILCoreContext *ctx)
+{
+    ctx->core->cleanup(ctx);
+    return VISUAL_OK;
+}
+
 ILCoreContext * avs_il_core_context_create(void)
 {
 	return create_context(get_core());
