@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
     run(priv);
 
-    //printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
+    printf("foo: %f, bar: %f, baz: %f\n", priv->foo, priv->bar, priv->baz);
 
 /*
     for(node = tmp_node = avs_il_tree_base(&priv->ctx->assembler.tree); tmp_node; node = tmp_node)

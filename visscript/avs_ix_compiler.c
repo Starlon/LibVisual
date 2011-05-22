@@ -315,7 +315,7 @@ static int compile_opcode(IXGlobalData *gd, IXRunnableData *rd, ILInstruction *i
 	return 0;
 }
 
-IL_CORE_COMPILE(avs_ix_compiler_compile)
+static IL_CORE_COMPILE(avs_ix_compiler_compile)
 {
 	IXGlobalData *gd;
 	IXRunnableData *rd;
@@ -340,7 +340,7 @@ IL_CORE_COMPILE(avs_ix_compiler_compile)
 	return 0;
 }
 
-IL_CORE_INIT(avs_ix_compiler_init)
+static IL_CORE_INIT(avs_ix_compiler_init)
 {
 	IXGlobalData *gd = malloc(sizeof(IXGlobalData));
 	

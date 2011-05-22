@@ -17,7 +17,7 @@ static void dump_tree(IXOpcode *root)
 	IXOpcode *op;
 
 	for (op=root; op != NULL; op = op->next) {
-		fprintf(stderr, "disas: 0x%08x:\t%-12s", op, names[op->opcode]);
+		fprintf(stderr, "disas: 0x%08x:\t%-12s", (int)op, names[op->opcode]);
 		switch (op->opcode) {
 			case IXOpcodeNop:
 			case IXOpcodeInvalid:
@@ -29,7 +29,7 @@ static void dump_tree(IXOpcode *root)
 
 			case IXOpcodeNegate:
 				fprintf(stderr, "Rd(0x%08x), Rs0(0x%08x, %.2f)",
-						op->reg[0], op->reg[1], *op->reg[1]);
+						(int)op->reg[0], (int)op->reg[1], *op->reg[1]);
 				break;
 
 			case IXOpcodeAssign:
@@ -41,28 +41,28 @@ static void dump_tree(IXOpcode *root)
 			case IXOpcodeAnd:
 			case IXOpcodeOr:
 				fprintf(stderr, "Rd(0x%08x), Rs0(0x%08x, %.2f), Rs1(0x%08x, %.2f)", 
-						op->reg[0], op->reg[1], *op->reg[1], op->reg[2], *op->reg[2]);
+						(int)op->reg[0], (int)op->reg[1], *op->reg[1], (int)op->reg[2], *op->reg[2]);
 				break;
 			
 			case IXOpcodeCmp:
 				fprintf(stderr, "Rs0(0x%08x, %.2f), Rs1(0x%08x, %.2f)",
-						op->reg[0], *op->reg[0], op->reg[1], *op->reg[1]);
+						(int)op->reg[0], *op->reg[0], (int)op->reg[1], *op->reg[1]);
 				break;
 				
 			case IXOpcodeJmp:
 			case IXOpcodeJmpNz:
 			case IXOpcodeJmpZ:
-				fprintf(stderr, "*0x%08x", op->ex.jmp.dest);
+				fprintf(stderr, "*0x%08x", (int)op->ex.jmp.dest);
 				break;
 
 			case IXOpcodeLoadRef:
 				fprintf(stderr, "Rf(0x%08x), Rd(0x%08x, %.2f), Rs(0x%08x, %.2f)",
-						op->ex.ref, op->reg[0], *op->reg[0], op->reg[1], *op->reg[1]);
+						(int)op->ex.ref, (int)op->reg[0], *op->reg[0], (int)op->reg[1], *op->reg[1]);
 				break;	
 				
 			case IXOpcodeStoreRef:
 				fprintf(stderr, "Rf(0x%08x, 0x%08x), Rd(0x%08x, %.2f), Rs(0x%08x, %.2f)",
-						op->ex.ref, op->ex.ref->ref, op->reg[0], *op->reg[0], op->reg[1], *op->reg[1]);
+						(int)op->ex.ref, (int)op->ex.ref->ref, (int)op->reg[0], *op->reg[0], (int)op->reg[1], *op->reg[1]);
 				break;
 				
 		}
@@ -186,9 +186,9 @@ int avs_ix_machine_run(AvsRunnable *obj)
 	IXMachineState state;
 	IXOpcode *ip;
 	
-	//avs_debug(print("IX: Runnable data: %p", obj));
-	//dump_tree(rd->base);
-//	avs_debug(print("IX: Running..."));
+	avs_debug(print("IX: Runnable data: %p", obj));
+	dump_tree(rd->base);
+	avs_debug(print("IX: Running..."));
 
 	memset(&state, 0, sizeof(IXMachineState));
 	state.runnable = obj;
@@ -198,6 +198,6 @@ int avs_ix_machine_run(AvsRunnable *obj)
 		opcode_handler[ip->opcode](&state, ip);
 	}
 	
-//	avs_debug(print("IX: Halting..."));
+	avs_debug(print("IX: Halting..."));
 	return VISUAL_OK;
 }

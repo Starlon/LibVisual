@@ -87,7 +87,7 @@ __inline
 __attribute__ ((__gnu_inline__))
 #endif
 #endif
-AvsBuiltinFunctionToken *
+static AvsBuiltinFunctionToken *
 in_word_set (str, len)
      register const char *str;
      register unsigned int len;
