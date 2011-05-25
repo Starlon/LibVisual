@@ -1599,7 +1599,6 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
 
     visual_time_get(now);
 
-    //p = data;
     if(algo == VISUAL_BEAT_ALGORITHM_ADV)
     {
         for(x = 1; x < BEAT_ADV_SIZE; x++)

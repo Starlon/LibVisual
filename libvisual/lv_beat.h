@@ -91,7 +91,7 @@ typedef enum {
 } VisBeatAlgorithm;
 
 struct _VisBeatType {
-    long TC;
+    clock_t TC;
     int type;
 };
 
