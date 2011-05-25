@@ -126,6 +126,8 @@ static inline unsigned long long visual_timer_tsc_get_returned ()
 	return ((unsigned long long) hi << 32) | lo;
 }
 
+#define visual_time_get_now() (clock() / (float)CLOCKS_PER_SEC * 1000)
+
 VISUAL_END_DECLS
 
 #endif /* _LV_TIME_H */

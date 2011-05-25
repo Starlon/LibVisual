@@ -181,7 +181,7 @@ int visual_beat_init(VisBeat *beat)
     beat->cfg_smartbeatresetnewsong = TRUE;
     beat->cfg_smartbeatonlysticky = FALSE;
     beat->lastTC = 0;
-    beat->startTC = clock() / CLOCKS_PER_SEC * 60000;
+    beat->startTC = visual_time_get_now();//clock() / (float)CLOCKS_PER_SEC * 60000;
     beat->txt = visual_mem_malloc0(256);
     beat->TCHist = visual_mem_malloc0(beat->TCHistSize*sizeof(VisBeatType));
     beat->smoother = visual_mem_malloc0(beat->smSize * sizeof(int));
@@ -428,6 +428,7 @@ int visual_beat_reset_adapt(VisBeat *beat)
     beat->predictionLastTC = 0;
     beat->halfCount=0;
     beat->doubleCount=0;
+    beat->lastTC= visual_time_get_now();//clock() / (float)CLOCKS_PER_SEC * 60000;
     beat->TCHistSize = 8;
     beat->predictionBpm=0;
     beat->bestConfidence=0;
@@ -479,14 +480,14 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
 
     visual_time_get(&now);
 
-    TCNow = clock() / CLOCKS_PER_SEC * 60000;
+    TCNow = visual_time_get_now();//clock() / (float)CLOCKS_PER_SEC * 60000;
 
     if (isBeat) // Show the beat received from AVS
         beat_slider_step(beat, VISUAL_BEAT_SLIDE_IN, &beat->inSlide);
 
     if (beat_song_changed(beat))
     {
-        beat->bestConfidence=0;//(int)((float)beat->bestConfidence*0.5);
+        beat->bestConfidence=(int)((float)beat->bestConfidence*0.5);
         beat->sticked=0;
         beat->stickyConfidenceCount=0;
         if (beat->cfg_smartbeatresetnewsong)

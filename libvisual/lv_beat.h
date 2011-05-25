@@ -63,6 +63,7 @@ VISUAL_BEGIN_DECLS
 
 #define BEAT_REAL    1
 #define BEAT_GUESSED 2
+
 #define BEAT_MAX_BPM 170
 #define BEAT_MIN_BPM 60
 
