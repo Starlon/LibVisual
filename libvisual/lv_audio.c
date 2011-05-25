@@ -1686,7 +1686,7 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
    }
 */
 
-    return b;
+    if(!getenv("LVSHOWBEATS")) return b;
 
     printf("Beat info: %s, isBeat: %d, refined: %d\n", visual_beat_get_info(audio->beat), audio_beat, b);
 

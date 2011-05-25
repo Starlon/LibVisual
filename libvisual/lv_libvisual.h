@@ -36,7 +36,7 @@ VISUAL_BEGIN_DECLS
 
 /* prototypes */
 const char *visual_get_version (void);
-int visual_get_api_version ();
+int visual_get_api_version (void);
 
 VisParamContainer *visual_get_params (void);
 VisUIWidget *visual_get_userinterface (void);

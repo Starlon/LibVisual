@@ -59,17 +59,17 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lv_time.h"
 
 int beat_song_changed(VisBeat *beat);
-void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint32_t TC, int type, int i);
+void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, clock_t TC, int type, int i);
 void beat_double_beat(VisBeat *beat);
 void beat_half_beat(VisBeat *beat);
-int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int type);
+int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, clock_t TC, int type);
 int beat_ready_to_learn(VisBeat *beat);
 int beat_ready_to_guess(VisBeat *beat);
 void beat_new_bpm(VisBeat *beat, int thisBpm);
 int beat_get_bpm(VisBeat *beat);
 void beat_calc_bpm(VisBeat *beat);
 void beat_slider_step(VisBeat *beat, int Ctl, int *slide);
-int beat_get_time_offset_since_start(VisBeat *beat, long TC);
+int beat_get_time_offset_since_start(VisBeat *beat, clock_t TC);
 
 #define min(a, b) a < b ? a : b;
 #define max(a, b) a > b ? a : b;
@@ -180,9 +180,8 @@ int visual_beat_init(VisBeat *beat)
     beat->cfg_smartbeatsticky = TRUE;
     beat->cfg_smartbeatresetnewsong = TRUE;
     beat->cfg_smartbeatonlysticky = FALSE;
-    visual_time_init(&beat->lastTC);
-    visual_time_init(&beat->startTC);
-    visual_time_get(&beat->startTC);
+    beat->lastTC = 0;
+    beat->startTC = clock() / CLOCKS_PER_SEC * 1000;
     beat->txt = visual_mem_malloc0(256);
     beat->TCHist = visual_mem_malloc0(beat->TCHistSize*sizeof(VisBeatType));
     beat->smoother = visual_mem_malloc0(beat->smSize * sizeof(int));
@@ -438,7 +437,6 @@ int visual_beat_reset_adapt(VisBeat *beat)
     memset(beat->TCHist, 0, beat->TCHistSize*sizeof(VisBeatType));
     memset(beat->smoother, 0, beat->smSize*sizeof(int));
     memset(beat->half_discriminated, 0, beat->TCHistSize*sizeof(int));
-    visual_time_set(&beat->lastTC, 0, 0);
     
     return VISUAL_OK;
 }
@@ -475,13 +473,13 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
     int resyncin=FALSE;
     int resyncout=FALSE;
     VisTime now;
-    long TCNow;
+    clock_t TCNow;
 
     visual_time_init(&now);
 
     visual_time_get(&now);
 
-    TCNow = visual_time_get_msecs(&now);
+    TCNow = clock() / CLOCKS_PER_SEC * 1000;
 
     if (isBeat) // Show the beat received from AVS
         beat_slider_step(beat, VISUAL_BEAT_SLIDE_IN, &beat->inSlide);
@@ -549,7 +547,6 @@ int visual_beat_refine_beat(VisBeat *beat, int isBeat)
         }
         if (TCNow < beat->predictionLastTC + (60000 / beat->predictionBpm)*0.3)
         {
-            int b;
             resyncout = TRUE;
             b = (int)((float)beat->predictionBpm * 0.98);
         }
@@ -709,7 +706,7 @@ int beat_song_changed(VisBeat *beat)
 }
 
 // Insert a beat in history table. May be either real beat or guessed 
-void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, uint32_t TC, int type, int i)
+void beat_insert_hist_step(VisBeat *beat, VisBeatType *t, clock_t TC, int type, int i)
 {
     visual_log_return_if_fail(beat != NULL); 
 
@@ -772,31 +769,26 @@ void beat_half_beat(VisBeat *beat)
 //        accepted = beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_REAL);
 //            beat_TC_hist_step(beat, beat->TCHist, &beat->hdPos, TCNow, BEAT_GUESSED);
 
-int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int type)
+int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, clock_t TC, int type)
 {
     visual_log_return_val_if_fail(beat != NULL, FALSE); 
 
     int i=0;
     int offI;
-    int thisLen;
+    clock_t thisLen;
     int learning = beat_ready_to_learn(beat);
-    thisLen = TC - visual_time_get_msecs(&beat->lastTC);
+    thisLen = TC - beat->lastTC;
     thisLen = thisLen>=0?thisLen:0;
     
     // If this beat is sooner than half the average - 20%, throw it away
-    // FIXME: Why doesn't this work?
-    if (thisLen < beat->avg/2.0 - beat->avg*0.2)
+    if (thisLen < beat->avg/2 - beat->avg*0.1)
     {
-        printf("inside level 1\n");
         if (learning)
         {
-            printf("inside level 2 %d %d %d\n", TC, t[0].TC, t[1].TC);
-            printf("inside %d < %d\n", abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)));
-            printf("inside %ld < %ld\n", beat->avg - (TC - t[1].TC), beat->avg - (t[0].TC - t[1].TC));
             if (abs(beat->avg - (TC - t[1].TC)) < abs(beat->avg - (t[0].TC - t[1].TC)))
             {
                 printf("inside level 3\n");
-                t->TC = TC;// + visual_time_get_msecs(&beat->startTC);
+                t->TC = TC;
                 t->type = type;
                 return TRUE;
             }
@@ -817,7 +809,7 @@ int beat_TC_hist_step(VisBeat *beat, VisBeatType *t, int *_hdPos, int TC, int ty
     (*_hdPos)%=8;
     
     // Remember this tick count
-    visual_time_set_from_msecs(&beat->lastTC, TC + visual_time_get_msecs(&beat->startTC));
+    beat->lastTC = TC + beat->startTC;
 
     // Insert this beat.
     beat_insert_hist_step(beat, t, TC, type, 0); 

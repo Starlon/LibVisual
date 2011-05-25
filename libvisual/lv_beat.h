@@ -134,8 +134,8 @@ struct _VisBeat {
     int sticked;
     int arbVal, skipVal;        // Values of arbitrary beat and beat skip
     int bpm, confidence, confidence1, confidence2; // Calculated BPM  (realtime), confidence computation
-    VisTime lastTC;             // Last beat tick count
-    VisTime startTC;            // Time we started
+    clock_t lastTC;             // Last beat tick count
+    clock_t startTC;            // Time we started
     VisBeatType *TCHist;         // History of last 8 beats
     int *smoother;            // History of last 8 BPM values, used to smooth changes
     int *half_discriminated;    // Discriminated beats table
@@ -148,9 +148,9 @@ struct _VisBeat {
     int offIMax;                // Max divisor/multiplier used to guess/discriminate beats
     int lastBPM;                // Last calculated BPM, used by the smoother to detect new entry
     int insertionCount;          // Remembers how many beats were guessed
-    int32_t predictionLastTC;   // Last tick count guessed/accepted beat
-    int32_t avg;                // Average tick count interval between beats
-    int32_t avg2;               // Average tick count interval between beats
+    clock_t predictionLastTC;   // Last tick count guessed/accepted beat
+    clock_t avg;                // Average tick count interval between beats
+    clock_t avg2;               // Average tick count interval between beats
     int skipCount;              // Beat counter used by beat skipper
     int inInc, outInc;          // +1/-1, Used by the nifty beatsynced sliders
     int inSlide, outSlide;      // Position of sliders
@@ -171,7 +171,7 @@ struct _VisBeat {
     unsigned char logtab[256];
 };
 
-VisBeat *visual_beat_new();
+VisBeat *visual_beat_new(void);
 int visual_beat_init(VisBeat *beat);
 int visual_beat_refine_beat(VisBeat *beat, int beat_in);
 int visual_beat_change_song(VisBeat *beat);
@@ -186,7 +186,7 @@ VisBeatPeak *visual_beat_get_peak(VisBeat *beat);
 VisBeatAdv *visual_beat_get_adv(VisBeat *beat);
 char *visual_beat_get_info(VisBeat *beat);
 
-VisBeatAdv *visual_beat_adv_new();
+VisBeatAdv *visual_beat_adv_new(void);
 int visual_beat_adv_init(VisBeatAdv *adv);
 int visual_beat_adv_set_config(VisBeatAdv *adv, int sensitive, int max_bpm, int thick_on_beats);
 int visual_beat_adv_set_sensitivity(VisBeatAdv *adv, int sensitive);
