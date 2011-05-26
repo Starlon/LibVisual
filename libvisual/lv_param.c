@@ -201,16 +201,16 @@ int visual_param_container_add_with_defaults (VisParamContainer *paramcontainer,
     visual_log_return_val_if_fail (param != NULL, -VISUAL_ERROR_PARAM_NULL);
 
     param->parent = paramcontainer;
-    if(param->type == VISUAL_PARAM_ENTRY_TYPE_INTEGER ||
-        param->type == VISUAL_PARAM_ENTRY_TYPE_FLOAT ||
-        param->type == VISUAL_PARAM_ENTRY_TYPE_DOUBLE)
-            visual_mem_copy(&param->defaultnum, &param->numeric, sizeof(param->defaultnum));
+
+    visual_mem_copy(&param->defaultnum, &param->numeric, sizeof(param->defaultnum));
 
     if(param->type == VISUAL_PARAM_ENTRY_TYPE_STRING)
         param->defaultstring = strdup(param->string);
 
+/*
     if(param->type == VISUAL_PARAM_ENTRY_TYPE_COLOR)
         visual_color_copy(&param->defaultcolor, &param->color);
+*/
 
     /* On container add, we always set changed once, so vars can be synchronised in the plugin
      * it's event loop */
@@ -240,7 +240,7 @@ int visual_param_container_add_many (VisParamContainer *paramcontainer, VisParam
         pnew = visual_param_entry_new (visual_param_entry_get_name (&params[i]));
         visual_param_entry_set_from_param (pnew, &params[i]);
 
-        visual_param_container_add (paramcontainer, pnew);
+        visual_param_container_add_with_defaults (paramcontainer, pnew);
 
         i++;
     }
