@@ -1564,11 +1564,11 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
     visual_log_return_val_if_fail(audio != NULL, -VISUAL_ERROR_AUDIO_NULL);
 
     VisBuffer pcm;
-    float buffer[BEAT_ADV_SIZE], *p;
-    unsigned char visdata[BEAT_ADV_SIZE];
+    float buffer[BEAT_MAX_SIZE], *p;
+    unsigned char visdata[BEAT_MAX_SIZE];
     int i;
 
-    visual_buffer_set_data_pair(&pcm, buffer, BEAT_ADV_SIZE * sizeof(float));
+    visual_buffer_set_data_pair(&pcm, buffer, BEAT_MAX_SIZE * sizeof(float));
 
     visual_audio_get_sample_mixed (audio, &pcm, TRUE, 2,
         VISUAL_AUDIO_CHANNEL_LEFT,
@@ -1576,11 +1576,11 @@ int visual_audio_is_beat(VisAudio *audio, VisBeatAlgorithm algo)
         1.0,
         1.0);
 
-    for(i = 0; i < BEAT_ADV_SIZE; i++)
+    for(i = 0; i < BEAT_MAX_SIZE; i++)
     {
-	visdata[i] = (buffer[i] + 1) / 2.0 * UCHAR_MAX;
+        visdata[i] = (buffer[i] + 1) / 2.0 * UCHAR_MAX;
     }
-    return visual_audio_is_beat_with_data(audio, algo, visdata, BEAT_ADV_SIZE);
+    return visual_audio_is_beat_with_data(audio, algo, visdata, BEAT_MAX_SIZE);
 }
 
 int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsigned char *visdata, int size)
@@ -1601,14 +1601,14 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
 
     if(algo == VISUAL_BEAT_ALGORITHM_ADV)
     {
-        for(x = 1; x < BEAT_ADV_SIZE; x++)
+        for(x = 1; x < BEAT_MAX_SIZE; x++)
         {
             if(visdata[x] < visdata[imin[ch]])
                 imin[ch] = x;
             if(visdata[x] > visdata[imax[ch]])
                 imin[ch] = imax[ch] = x;
-            delta_sum[ch] += abs(visdata[x] * INT16_MAX - visdata[x - 1] * INT16_MAX);
-            if(x == BEAT_ADV_SIZE / 2)
+            delta_sum[ch] += abs(visdata[x] - visdata[x - 1]);
+            if(x == BEAT_MAX_SIZE / 2)
                 ch++;
         }
     
@@ -1621,18 +1621,18 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
     }
     else if(algo == VISUAL_BEAT_ALGORITHM_PEAK)
     {
-	int size = BEAT_ADV_SIZE / 2;
-	for(ch = 0; ch < 2; ch++)
-	{
-		unsigned char *f = (unsigned char*)(visdata + ch * size);
-		for(x = 0; x < size; x++)
-		{
-			int r = *f++^128;
-			r-=128;
-			if(r<0)r=-r;
-			lt[ch]+=r;
-		}
-	}
+        int size = BEAT_MAX_SIZE / 2;
+        for(ch = 0; ch < 2; ch++)
+        {
+                char *f = (char*)(visdata + ch * size);
+                for(x = 0; x < size; x++)
+                {
+                        int r = *f++^128;
+                        r-=128;
+                        if(r<0)r=-r;
+                        lt[ch]+=r;
+                }
+        }
     
         lt[0] = max(lt[0], lt[1]);
     
@@ -1655,8 +1655,8 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
             peak->beat_peak2 = lt[0];
         }
         else
-            peak->beat_peak2 = (peak->beat_peak2*14)/17;
-    
+            peak->beat_peak2 = (peak->beat_peak2*14)/18;
+
     } else {
         visual_log(VISUAL_LOG_INFO, "%s", "Bad algorithm for beat detection");
         return FALSE;
