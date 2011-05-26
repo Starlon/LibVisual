@@ -187,7 +187,7 @@ int visual_param_container_add (VisParamContainer *paramcontainer, VisParamEntry
 }
 
 /**
- * Adds a VisParamEntry to a VisParamContainer.
+ * Adds a VisParamEntry to a VisParamContainer, storing default values in the process.
  *
  * @param paramcontainer A pointer to the VisParamContainer in which the VisParamEntry is added.
  * @param param A pointer to the VisParamEntry that is added to the VisParamContainer.
