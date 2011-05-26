@@ -74,7 +74,7 @@ VISUAL_BEGIN_DECLS
 #define BEAT_STICKY_THRESHOLD_LOW   85
 
 #define BEAT_ADV_MAX 200
-#define BEAT_MAX_SIZE 4096
+#define BEAT_MAX_SIZE 4096 // This is two channels in length length from left to right, so half by 2 for actual size.
 
 typedef struct _VisBeat VisBeat;
 typedef struct _VisBeatType VisBeatType;
