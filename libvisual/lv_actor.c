@@ -731,7 +731,8 @@ int visual_actor_run (VisActor *actor, VisAudio *audio)
 	}
 
 	/* Songinfo handling */
-	if (visual_songinfo_compare (&actor->songcompare, &actplugin->songinfo) == FALSE) {
+	if (visual_songinfo_compare (&actor->songcompare, &actplugin->songinfo) == FALSE ||
+        actor->songcompare.elapsed != actplugin->songinfo.elapsed) {
 		visual_songinfo_mark (&actplugin->songinfo);
 
 		visual_event_queue_add_newsong (
