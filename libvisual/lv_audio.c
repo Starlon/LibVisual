@@ -1655,7 +1655,7 @@ int visual_audio_is_beat_with_data(VisAudio *audio, VisBeatAlgorithm algo, unsig
             peak->beat_peak2 = lt[0];
         }
         else
-            peak->beat_peak2 = (peak->beat_peak2*14)/18;
+            peak->beat_peak2 = (peak->beat_peak2*14)/16;
 
     } else {
         visual_log(VISUAL_LOG_INFO, "%s", "Bad algorithm for beat detection");
