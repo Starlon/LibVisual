@@ -2,7 +2,6 @@
 
 <pipeline_preset>
  <container_main>
-  <avs_clearscreen></avs_clearscreen>
   <avs_superscope>
    <init type="string">
    n=500;
@@ -51,6 +50,6 @@
    <channel_source type="integer">0</channel_source>
    <drawmode type="integer">1</drawmode>
   </avs_superscope>
-  <avs_blur></avs_blur>
+  <avs_blur/>
  </container_main>
 </pipeline_preset>
