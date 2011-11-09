@@ -205,7 +205,7 @@ int visual_param_container_add_with_defaults (VisParamContainer *paramcontainer,
     visual_mem_copy(&param->defaultnum, &param->numeric, sizeof(param->defaultnum));
 
     if(param->type == VISUAL_PARAM_ENTRY_TYPE_STRING)
-        param->defaultstring = strdup(param->string);
+        ;//param->defaultstring = strdup(param->string);
 
 /*
     if(param->type == VISUAL_PARAM_ENTRY_TYPE_COLOR)
